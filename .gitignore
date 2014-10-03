@@ -52,3 +52,10 @@ coverage.xml
 # Sphinx documentation
 docs/_build/
 
+
+*.iml
+.idea
+.idea/*
+celerybeat-schedule
+message-one.json
+worker.log
