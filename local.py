@@ -1,5 +1,3 @@
-from flask import Flask
-import celery
 import deployer.celery
 from deployer.tasks.deployment import create
 
@@ -17,7 +15,7 @@ if __name__ == '__main__':
                 'commit': '12313345'
             }
         },
-        'deployment':{
+        'deployment': {
             'name': 'totem-cluster-deployer-develop',
             'version': 'v1'
         },
