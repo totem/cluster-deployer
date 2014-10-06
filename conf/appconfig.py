@@ -1,5 +1,4 @@
 from collections import defaultdict
-import copy
 import os
 
 DEFAULT_DEPLOYMENT_TYPE = 'github-quay'
@@ -17,7 +16,7 @@ DEPLOYMENT_DEFAULTS = defaultdict(dict, {
             'default-app': {
                 'args': {
                     'image': QUAY_PATH_PREFIX +
-                             '{GIT_OWNER}/{GIT_REPO}:{GIT_COMMIT}',
+                    '{GIT_OWNER}/{GIT_REPO}:{GIT_COMMIT}',
                     'environment': {},
                     'docker-args': ''
                 },

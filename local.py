@@ -1,4 +1,5 @@
 import deployer.celery
+import os
 from deployer.tasks.deployment import create
 
 from deployer.server import app
@@ -41,4 +42,5 @@ if __name__ == '__main__':
         }
     })
     print result.get(propagate=True, timeout=60)
-    app.run(debug=True)
+    app.run(debug=True,
+            port=int(os.getenv('API_PORT', '9000')))

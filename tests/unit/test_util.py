@@ -1,7 +1,7 @@
-import nose
 from nose.tools import eq_
-import sys
+
 from deployer.util import dict_merge
+
 
 __author__ = 'sukrit'
 
@@ -19,15 +19,15 @@ def test_dict_merge():
     dict1 = {
         'key1': 'value1',
         'key2': {
-            'key2.1':  'value2.1a'
+            'key2.1': 'value2.1a'
         }
     }
 
     dict2 = {
         'key3': 'value3',
         'key2': {
-            'key2.1':  'value2.1b',
-            'key2.2':  'value2.2a'
+            'key2.1': 'value2.1b',
+            'key2.2': 'value2.2a'
         }
     }
 
@@ -38,8 +38,8 @@ def test_dict_merge():
     eq_(merged_dict, {
         'key1': 'value1',
         'key2': {
-            'key2.1':  'value2.1a',
-            'key2.2':  'value2.2a'
+            'key2.1': 'value2.1a',
+            'key2.2': 'value2.2a'
         },
         'key3': 'value3',
     })

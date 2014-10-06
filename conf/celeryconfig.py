@@ -1,10 +1,11 @@
 from datetime import timedelta
 import os
 from ast import literal_eval
+
 from celery.schedules import crontab
 
-MONGO_URL = os.getenv('MONGO_URL', 'mongodb://localhost:27017/totem_deployer')
 
+MONGO_URL = os.getenv('MONGO_URL', 'mongodb://localhost:27017/totem_deployer')
 
 BROKER_URL = MONGO_URL
 
