@@ -79,8 +79,15 @@ In order to run fully integrated server using docker using latest docker , run
 command: 
 
 ```
-sudo docker run -it --rm -h cluster-deployer-${USER} --name cluster-deployer  -e MONGO_HOST=mongodb://172.17.42.1:27017/totem_deployer -e MONGO_RESULTS_DB=totem_deployer -P totem/cluster-deployer
+sudo docker run -it --rm -h cluster-deployer-${USER} --name cluster-deployer  -e MONGO_URL=mongodb://172.17.42.1:27017/totem_deployer -e MONGO_RESULTS_DB=totem_deployer -P totem/cluster-deployer
 ```
+
+### Run Configuration (Environment Variables)  
+| Env Variable | Description |  Default Value (Local) | Default Value (Docker)|
+| ------------ | ----------- | ---------------------- | --------------------- |
+| MONGO_URL | Mongo server url | mongodb://172.17.42.1:27017/totem_deployer | mongodb://localhost:27017/totem_deployer|
+| MONGO_RESULTS_DB | Database to store task results | totem_deployer | totem_deployer | 
+| QUAY_ORGANIZATION | Organization in quay to pull images from | totem | totem
 
 ## Coding Standards and Guidelines
 
