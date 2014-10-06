@@ -34,7 +34,7 @@ RUN pip install -r /opt/requirements.txt
 ADD etc/supervisor /etc/supervisor
 
 #Confd Defaults
-ADD ./bin/confd-wrapper.sh /usr/sbin/confd-wrapper.sh
+ADD bin/confd-wrapper.sh /usr/sbin/confd-wrapper.sh
 RUN chmod 550 /usr/sbin/confd-wrapper.sh
 ADD etc/confd /etc/confd
 
