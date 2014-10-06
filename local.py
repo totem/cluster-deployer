@@ -22,7 +22,6 @@ if __name__ == '__main__':
         'type': 'github-quay',
         'templates': {
             'default-app': {
-                'name': 'default-app',
                 'args': {
                     'image': 'quay.io/totem/totem-cluster-deployer:12313345',
                     'environment': {},
