@@ -1,4 +1,7 @@
-cluster-deployer [![Build Status](https://travis-ci.org/totem/cluster-deployer.svg)](https://travis-ci.org/totem/cluster-deployer) [![Coverage Status](https://coveralls.io/repos/totem/cluster-deployer/badge.png)](https://coveralls.io/r/totem/cluster-deployer)
+cluster-deployer [![Build Status](https://travis-ci.org/totem/cluster-deployer.svg)](https://travis-ci.org/totem/cluster-deployer)
+[![Coverage Status](https://coveralls.io/repos/totem/cluster-deployer/badge.png)](https://coveralls.io/r/totem/cluster-deployer)
+[![Documentation Status](https://readthedocs.org/projects/cluster-deployer/badge/?version=latest)](https://readthedocs.org/projects/cluster-deployer/?badge=latest)
+
 ================
 
 Totem Cluster Deployer
