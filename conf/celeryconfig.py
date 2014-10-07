@@ -35,3 +35,5 @@ CELERYBEAT_SCHEDULE = {
         'args': (),
     }
 }
+
+CELERY_CHORD_PROPAGATES = True
