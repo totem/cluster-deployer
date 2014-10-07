@@ -10,8 +10,11 @@ DEFAULT_DEPLOYMENT_TYPE = 'github-quay'
 QUAY_PATH_PREFIX = 'quay.io/%s/totem-' % \
                    (os.getenv('QUAY_ORGANIZATION', 'totem'))
 
+DEPLOYMENT_TYPE_GITHUB_QUAY = 'github-quay'
+DEPLOYMENT_TYPE_DEFAULT = 'default'
+
 DEPLOYMENT_DEFAULTS = {
-    'github-quay': {
+    DEPLOYMENT_TYPE_GITHUB_QUAY: {
         'deployment': {
             'name': '{GIT_OWNER}-{GIT_REPO}-{GIT_BRANCH}',
             'type': 'github-quay',
@@ -37,7 +40,7 @@ DEPLOYMENT_DEFAULTS = {
             }
         }
     },
-    'default': {
+    DEPLOYMENT_TYPE_DEFAULT: {
         'meta-info': {
             'job-id': 'not_set',
             'github': {

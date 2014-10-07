@@ -31,6 +31,8 @@ The project has following dependencies
 - Mongo 2.6+  
 - Virtualenv (Recommended)
 - Python pip
+- etcd 0.4.6 (Required if using docker based deployment)
+- docker 1.2 (Required if using docker based deployment)
 
 ### Dependencies
 
@@ -87,7 +89,14 @@ sudo docker run -it --rm -h cluster-deployer-${USER} --name cluster-deployer  -e
 | ------------ | ----------- | ---------------------- | --------------------- |
 | MONGO_URL | Mongo server url | mongodb://172.17.42.1:27017/totem_deployer | mongodb://localhost:27017/totem_deployer|
 | MONGO_RESULTS_DB | Database to store task results | totem_deployer | totem_deployer | 
-| QUAY_ORGANIZATION | Organization in quay to pull images from | totem | totem
+| QUAY_ORGANIZATION | Organization in quay to pull images from | totem | totem|
+| ETCD_URL | Etcd server url. | 127.0.0.1:4001 | 172.17.42.1:4001 |
+| ETCD_TOTEM_BASE | Base path for totem configurations | /totem | /totem |
+| ETCD_YODA_BASE | Base path for yoda proxy configurations | /yoda | /yoda |
+| TASK_EXECUTORS | No. of processes to be created for celery task executions | Not Used | 2 |
+| API_EXECUTORS | No. of uwsgi processes to be created for serving API | Not Used | 2 |
+
+ 
 
 ## Coding Standards and Guidelines
 

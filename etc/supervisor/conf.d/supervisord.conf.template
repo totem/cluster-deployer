@@ -29,15 +29,10 @@ startsecs=5
 redirect_stderr=true
 stdout_logfile=syslog
 
-[program:celery-node-1]
-command=/usr/local/bin/celery -n celery-node-1 -A deployer -P gevent  worker --loglevel=info
-autorestart=true
-startsecs=5
-redirect_stderr=true
-stdout_logfile=syslog
-
-[program:celery-node-2]
-command=/usr/local/bin/celery -n celery-node-2 -A deployer -P gevent  worker --loglevel=info
+[program:celery-node]
+process_name=%(program_name)s-%(process_num)02d
+command=/usr/local/bin/celery -n %(program_name)s-%(process_num)02d -A deployer -P gevent  worker --loglevel=info
+numprocs=${TASK_EXECUTORS}
 autorestart=true
 startsecs=5
 redirect_stderr=true
@@ -51,7 +46,7 @@ redirect_stderr=true
 stdout_logfile=syslog
 
 [program:uwsgi]
-command=/usr/local/bin/uwsgi --master --processes 2 --gevent 100 --http :9000 --module deployer.server --callable app
+command=/usr/local/bin/uwsgi --master --processes %(ENV_API_EXECUTORS)s --gevent 100 --http :9000 --module deployer.server --callable app
 autorestart=true
 startsecs=5
 redirect_stderr=true
