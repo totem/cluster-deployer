@@ -52,8 +52,15 @@ DEPLOYMENT_DEFAULTS = {
         },
         'deployment': {
             'type': 'default',
+            'version': None
         },
         'templates': {
         }
     }
+}
+
+TEMPLATE_DEFAULTS = {
+    'priority': 1,
+    'enabled': True,
+    'args': {}
 }

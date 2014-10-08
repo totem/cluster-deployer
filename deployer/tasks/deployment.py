@@ -1,4 +1,5 @@
 import logging
+import time
 
 __author__ = 'sukrit'
 
@@ -7,7 +8,8 @@ Defines celery tasks for deployment
 """
 
 from deployer.celery import app
-from conf.appconfig import DEPLOYMENT_DEFAULTS, DEPLOYMENT_TYPE_GITHUB_QUAY
+from conf.appconfig import DEPLOYMENT_DEFAULTS, DEPLOYMENT_TYPE_GITHUB_QUAY, \
+    TEMPLATE_DEFAULTS
 
 from deployer.util import dict_merge
 
@@ -57,11 +59,18 @@ def _deployment_defaults(deployment):
         deployment_upd = dict_merge(deployment_upd,
                                     DEPLOYMENT_DEFAULTS[deployment_type])
     deployment_upd = dict_merge(deployment_upd,
-                                DEPLOYMENT_DEFAULTS[deployment_type],
                                 DEPLOYMENT_DEFAULTS['default'])
 
     if deployment_type == DEPLOYMENT_TYPE_GITHUB_QUAY:
         deployment_upd = _github_quay_defaults(deployment_upd)
+
+    for template_name, template in deployment_upd['templates'].iteritems():
+        deployment_upd['templates'][template_name] = \
+            dict_merge(template, TEMPLATE_DEFAULTS)
+
+    deployment_upd['deployment']['version'] = \
+        deployment_upd['deployment']['version'] or \
+        int(round(time.time() * 1000))
 
     return deployment_upd
 
