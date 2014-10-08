@@ -1,4 +1,5 @@
 from ast import literal_eval
+from celery.result import ResultBase
 import deployer.celery
 import os
 from deployer.tasks.deployment import create
@@ -8,7 +9,7 @@ from deployer.server import app
 if __name__ == '__main__':
     deployer.celery.app.conf.CELERY_ALWAYS_EAGER = \
         literal_eval(os.getenv('CELERY_ALWAYS_EAGER', 'True'))
-    result = create.delay({
+    dep_task = create.s({
         'meta-info': {
             'github': {
                 'owner': 'totem',
@@ -35,8 +36,38 @@ if __name__ == '__main__':
             }
         }
     })
-    print result.get(propagate=False, timeout=60)
-    if result._traceback:
-        print(result._traceback)
+
+    # result = deployer.celery.app.AsyncResult(
+    #    '88e812ec-6afc-45a8-90fb-9c513ba8cfa6')
+    result = dep_task.delay()
+    result.get(propagate=False)
+    # print result.ready()
+    print result
+
+    if result.ready():
+        output = result.get(propagate=False)
+        while isinstance(output, ResultBase):
+            output = output.get(propagate=False)
+
+    # print deployer.celery.app.AsyncResult(
+    # u'0fe50924-80b3-41ff-8bc3-717000c83ba5').result
+
+    # if result.failed():
+    #     print(result._traceback)
+    # elif output.failed():
+    #     print(output._traceback)
+    # else:
+    #     print(output)
+
+    # result = add.delay(1,2)
+    # output = result.get(propagate=False)
+    # print(output)
+    # if result.failed():
+    #     print(result._traceback)
+    # elif output.failed():
+    #     print(output._traceback)
+    # else:
+    #     print(output.get())
+
     app.run(debug=True,
             port=int(os.getenv('API_PORT', '9000')))

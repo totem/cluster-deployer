@@ -14,9 +14,9 @@ CELERY_IMPORTS = ('deployer.tasks', 'celery.task')
 CELERY_MONGODB_BACKEND_SETTINGS = {
     'database': os.getenv('MONGO_RESULTS_DB', 'totem_deployer'),
 }
-CELERY_ACCEPT_CONTENT = ['json']
+CELERY_ACCEPT_CONTENT = ['json', 'pickle']
 CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'pickle'
 CELERY_ALWAYS_EAGER = literal_eval(os.getenv('CELERY_ALWAYS_EAGER', 'False'))
 CELERYD_CONCURRENCY = 50
 

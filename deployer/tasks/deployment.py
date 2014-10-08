@@ -1,11 +1,14 @@
 import logging
 import time
+from celery.canvas import group, chain
 
 __author__ = 'sukrit'
 
 """
 Defines celery tasks for deployment
 """
+
+__all__ = ['create', 'wire', 'unwire', 'delete']
 
 from deployer.celery import app
 from conf.appconfig import DEPLOYMENT_DEFAULTS, DEPLOYMENT_TYPE_GITHUB_QUAY, \
@@ -14,6 +17,29 @@ from conf.appconfig import DEPLOYMENT_DEFAULTS, DEPLOYMENT_TYPE_GITHUB_QUAY, \
 from deployer.util import dict_merge
 
 logger = logging.getLogger(__name__)
+
+
+@app.task(name='deployment.create')
+def create(deployment):
+    chain_tasks = _deployment_defaults.s(deployment) | _deploy_all.s()
+    # result = chain()
+    # result.get(propagate=False, timeout=60)
+    return chain_tasks.apply_async()
+
+
+@app.task(name='deployment.wire')
+def wire(proxy):
+    print(str(proxy))
+
+
+@app.task(name='deployment.unwire')
+def unwire(proxy):
+    print(str(proxy))
+
+
+@app.task(name='deployment.unwire')
+def delete(deployment):
+    print(str(deployment))
 
 
 def _github_quay_defaults(deployment):
@@ -38,6 +64,7 @@ def _github_quay_defaults(deployment):
     return deployment
 
 
+@app.task(name='deployment._deployment_defaults')
 def _deployment_defaults(deployment):
     """
     Applies the defaults for the deployment
@@ -75,23 +102,57 @@ def _deployment_defaults(deployment):
     return deployment_upd
 
 
-@app.task(name='deployment.create')
-def create(deployment):
-    deployment_upd = _deployment_defaults(deployment)
-    logger.info(str(deployment_upd))
-    return deployment_upd
+@app.task(name='deployment.fleet_deploy')
+def fleet_deploy(name, version, template_name, template):
+    logger.info('Deploying %s:%s:%s %r', name, version, template_name,
+                template)
+    if template['service-type'] == 'app1':
+        raise ValueError('Hmmmmm')
+    time.sleep(1)
+    return template_name
 
 
-@app.task(name='deployment.wire')
-def wire(proxy):
-    print(str(proxy))
+@app.task(name='deployment._processed_deployment')
+def _processed_templates(template_names, deployment):
+    logger.info('Deployed templates %r', template_names)
+    return deployment
 
 
-@app.task(name='deployment.unwire')
-def unwire(proxy):
-    print(str(proxy))
+@app.task(name='deployment._deploy_all')
+def _deploy_all(deployment):
+    priorities = sorted({template['priority']
+                         for template in deployment['templates'].values()
+                         if template['enabled']})
+    tasks = []
+    for priority in priorities:
+        fleet_tasks = [
+            fleet_deploy.si(deployment['deployment']['name'],
+                            deployment['deployment']['version'],
+                            template_name, template)
+            for template_name, template in deployment['templates'].iteritems()
+            if template['priority'] == priority and template['enabled']]
+        tasks.append(group(fleet_tasks) | _processed_templates.s(deployment))
+    return chain(tasks)()
 
-
-@app.task(name='deployment.unwire')
-def delete(deployment):
-    print(str(deployment))
+# @app.task
+# def _add(a, b):
+#     print(a, b)
+#     return a + b
+#
+# @app.task
+# def _add_all(numbers, callback=None):
+#     result = sum(numbers)
+#     if callback:
+#         return callback(result)()
+#     else:
+#         return result
+#
+# @app.task
+# def _join_sum(results):
+#     return sum(results)
+#
+# @app.task
+# def myadd():
+#     group1 = group(_add.s(1,2), _add.s(3,4)) | _join_sum.s()
+#     group2 = group(_add.s(2), _add.s(4)) | _join_sum.s()
+#     return (group1 | group2)()

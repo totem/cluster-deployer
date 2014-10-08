@@ -27,16 +27,16 @@ DEPLOYMENT_DEFAULTS = {
                     'environment': {},
                     'docker-args': ''
                 },
-                'enabled': True,
                 'priority': 1,
+                'service-type': 'app'
             },
-            'yoda-register': {
-                'enabled': True,
+            'yoda-ec2-register': {
                 'priority': 2,
+                'service-type': 'yoda-register'
             },
             'default-logger': {
-                'enabled': True,
                 'priority': 2,
+                'service-type': 'logger'
             }
         }
     },
@@ -62,5 +62,6 @@ DEPLOYMENT_DEFAULTS = {
 TEMPLATE_DEFAULTS = {
     'priority': 1,
     'enabled': True,
+    'service-type': 'app',
     'args': {}
 }

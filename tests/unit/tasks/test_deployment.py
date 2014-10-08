@@ -72,17 +72,20 @@ def test_deployment_defaults_for_type_github_quay(mock_time):
                     'image': 'quay.io/totem/totem-testowner/'
                              'testrepo:testcommit'
                 },
-                'enabled': True
+                'enabled': True,
+                'service-type': 'app'
             },
-            'yoda-register': {
+            'yoda-ec2-register': {
                 'args': {},
                 'priority': 2,
-                'enabled': True
+                'enabled': True,
+                'service-type': 'yoda-register'
             },
             'default-logger': {
                 'args': {},
                 'priority': 2,
-                'enabled': True
+                'enabled': True,
+                'service-type': 'logger'
             }
         }
     })
@@ -100,15 +103,17 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
     }
 
     deployment['templates'] = {
-        'custom-app1': {
-            'args': {
-                'arg1': 'value1'
-            }
-        },
-        'custom-app2': {
+        'custom-app': {
             'args': {
                 'arg1': 'value1'
             },
+            'service-type': 'app'
+        },
+        'custom-logger': {
+            'args': {
+                'arg1': 'value1'
+            },
+            'service-type': 'logger',
             'priority': 2,
             'enabled': False
         }
@@ -138,19 +143,21 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
             'version': 1000
         },
         'templates': {
-            'custom-app1': {
+            'custom-app': {
                 'args': {
                     'arg1': 'value1'
                 },
                 'priority': 1,
-                'enabled': True
+                'enabled': True,
+                'service-type': 'app'
             },
-            'custom-app2': {
+            'custom-logger': {
                 'args': {
                     'arg1': 'value1'
                 },
                 'priority': 2,
-                'enabled': False
+                'enabled': False,
+                'service-type': 'logger'
             }
         }
     })
