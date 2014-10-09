@@ -28,7 +28,7 @@ if __name__ == '__main__':
                 'enabled': True,
                 'priority': 1,
             },
-            'yoda-register': {
+            'yoda-ec2-register': {
                 'enabled': False
             },
             'default-logger': {
@@ -48,6 +48,7 @@ if __name__ == '__main__':
         output = result.get(propagate=False)
         while isinstance(output, ResultBase):
             output = output.get(propagate=False)
+        print(output)
 
     # print deployer.celery.app.AsyncResult(
     # u'0fe50924-80b3-41ff-8bc3-717000c83ba5').result

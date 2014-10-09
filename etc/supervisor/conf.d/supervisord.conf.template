@@ -31,7 +31,7 @@ stdout_logfile=syslog
 
 [program:celery-node]
 process_name=%(program_name)s-%(process_num)02d
-command=/usr/local/bin/celery -n %(program_name)s-%(process_num)02d -A deployer -P gevent  worker --loglevel=info
+command=/usr/local/bin/celery -n %(program_name)s-%(ENV_HOSTNAME)-%(process_num)02d -A deployer -P gevent  worker --loglevel=info
 numprocs=${TASK_EXECUTORS}
 autorestart=true
 startsecs=5

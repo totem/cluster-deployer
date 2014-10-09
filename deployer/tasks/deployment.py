@@ -22,8 +22,6 @@ logger = logging.getLogger(__name__)
 @app.task(name='deployment.create')
 def create(deployment):
     chain_tasks = _deployment_defaults.s(deployment) | _deploy_all.s()
-    # result = chain()
-    # result.get(propagate=False, timeout=60)
     return chain_tasks.apply_async()
 
 
@@ -40,6 +38,23 @@ def unwire(proxy):
 @app.task(name='deployment.unwire')
 def delete(deployment):
     print(str(deployment))
+
+
+@app.task(name='deployment._deploy_all')
+def _deploy_all(deployment):
+    priorities = sorted({template['priority']
+                         for template in deployment['templates'].values()
+                         if template['enabled']})
+    tasks = []
+    for priority in priorities:
+        fleet_tasks = [
+            fleet_deploy.si(deployment['deployment']['name'],
+                            deployment['deployment']['version'],
+                            template_name, template)
+            for template_name, template in deployment['templates'].iteritems()
+            if template['priority'] == priority and template['enabled']]
+        tasks.append(group(fleet_tasks) | _processed_templates.s(deployment))
+    return chain(tasks)()
 
 
 def _github_quay_defaults(deployment):
@@ -106,9 +121,6 @@ def _deployment_defaults(deployment):
 def fleet_deploy(name, version, template_name, template):
     logger.info('Deploying %s:%s:%s %r', name, version, template_name,
                 template)
-    if template['service-type'] == 'app1':
-        raise ValueError('Hmmmmm')
-    time.sleep(1)
     return template_name
 
 
@@ -117,22 +129,6 @@ def _processed_templates(template_names, deployment):
     logger.info('Deployed templates %r', template_names)
     return deployment
 
-
-@app.task(name='deployment._deploy_all')
-def _deploy_all(deployment):
-    priorities = sorted({template['priority']
-                         for template in deployment['templates'].values()
-                         if template['enabled']})
-    tasks = []
-    for priority in priorities:
-        fleet_tasks = [
-            fleet_deploy.si(deployment['deployment']['name'],
-                            deployment['deployment']['version'],
-                            template_name, template)
-            for template_name, template in deployment['templates'].iteritems()
-            if template['priority'] == priority and template['enabled']]
-        tasks.append(group(fleet_tasks) | _processed_templates.s(deployment))
-    return chain(tasks)()
 
 # @app.task
 # def _add(a, b):
