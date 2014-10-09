@@ -2,7 +2,7 @@ from ast import literal_eval
 from celery.result import ResultBase
 import deployer.celery
 import os
-from deployer.tasks.deployment import create
+from deployer.tasks.deployment import create, _fleet_check_running
 
 from deployer.server import app
 
@@ -13,13 +13,14 @@ if __name__ == '__main__':
         'meta-info': {
             'github': {
                 'owner': 'totem',
-                'repo': 'cluster-deployer'
+                'repo': 'cluster-deployer',
+                'commit': '',
+                'branch': 'master'
             }
 
         },
         'deployment': {
             'name': 'totem-cluster-deployer-develop',
-            'version': 'v1',
             'type': 'github-quay',
         },
 
@@ -27,6 +28,9 @@ if __name__ == '__main__':
             'default-app': {
                 'enabled': True,
                 'priority': 1,
+                'args': {
+                    'image': ''
+                }
             },
             'yoda-ec2-register': {
                 'enabled': False
@@ -44,11 +48,18 @@ if __name__ == '__main__':
     # print result.ready()
     print result
 
-    if result.ready():
-        output = result.get(propagate=False)
-        while isinstance(output, ResultBase):
-            output = output.get(propagate=False)
-        print(output)
+    def ready(result):
+        if result.ready():
+            output = result.get(propagate=False)
+            while isinstance(output, ResultBase):
+                output = output.get(propagate=False)
+            print(output)
+    ready(result)
+
+    result = _fleet_check_running.delay('test', 'v1', 1, 'app')
+    result.get(propagate=False)
+    # print result.ready()
+    ready(result)
 
     # print deployer.celery.app.AsyncResult(
     # u'0fe50924-80b3-41ff-8bc3-717000c83ba5').result

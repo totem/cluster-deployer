@@ -1,6 +1,8 @@
 import logging
 import time
 from celery.canvas import group, chain
+from fleet.deploy.deployer import Deployment, status
+from deployer.fleet import get_fleet_provider, jinja_env
 
 __author__ = 'sukrit'
 
@@ -46,11 +48,14 @@ def _deploy_all(deployment):
                          for template in deployment['templates'].values()
                          if template['enabled']})
     tasks = []
+    name, version, nodes = deployment['deployment']['name'], \
+        deployment['deployment']['version'], \
+        deployment['deployment']['nodes']
     for priority in priorities:
         fleet_tasks = [
-            fleet_deploy.si(deployment['deployment']['name'],
-                            deployment['deployment']['version'],
-                            template_name, template)
+            _fleet_deploy.si(name, version, nodes, template_name, template) |
+            _fleet_check_all_running.s(template_name, name, version, nodes,
+                                       template['service-type'])
             for template_name, template in deployment['templates'].iteritems()
             if template['priority'] == priority and template['enabled']]
         tasks.append(group(fleet_tasks) | _processed_templates.s(deployment))
@@ -117,18 +122,47 @@ def _deployment_defaults(deployment):
     return deployment_upd
 
 
-@app.task(name='deployment.fleet_deploy')
-def fleet_deploy(name, version, template_name, template):
-    logger.info('Deploying %s:%s:%s %r', name, version, template_name,
-                template)
+@app.task(name='deployment._fleet_deploy')
+def _fleet_deploy(name, version, nodes, template_name, template):
+    logger.info('Deploying %s:%s:%s nodes:%d %r', name, version, template_name,
+                nodes, template)
+    fleet_deployment = Deployment(
+        fleet_provider=get_fleet_provider(), jinja_env=jinja_env, name=name,
+        version=version, template=template_name+'.service',
+        template_args=template['args'], service_type=template['service-type'])
+    fleet_deployment.deploy()
     return template_name
 
 
+@app.task(name='deployment._fleet_status', default_retry_delay=20, bind=True,
+          max_retries=15)
+def _fleet_check_running(self, name, version, node_num,
+                         service_type):
+    try:
+        if status(get_fleet_provider(), name, version, node_num, service_type)\
+                is not 'running':
+            raise NodeNotRunningException()
+    except NodeNotRunningException as exc:
+        self.retry(exc=exc)
+    return '%s:%s:%d:%s is running' % (name, version, node_num, service_type)
+
+
+@app.task
+def _fleet_check_all_running(template_name, name, version, nodes,
+                             service_type):
+    return group(
+        [_fleet_check_running.si(name, version, node_num, service_type)
+         for node_num in range(1, nodes+1)])()
+
+
 @app.task(name='deployment._processed_deployment')
-def _processed_templates(template_names, deployment):
-    logger.info('Deployed templates %r', template_names)
+def _processed_templates(node_status, deployment):
+    logger.info('Deployed nodes %r', node_status)
     return deployment
 
+
+class NodeNotRunningException(Exception):
+    pass
 
 # @app.task
 # def _add(a, b):

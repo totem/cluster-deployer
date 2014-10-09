@@ -17,7 +17,7 @@ DEPLOYMENT_DEFAULTS = {
     DEPLOYMENT_TYPE_GITHUB_QUAY: {
         'deployment': {
             'name': '{GIT_OWNER}-{GIT_REPO}-{GIT_BRANCH}',
-            'type': 'github-quay',
+            'type': 'github-quay'
         },
         'templates': {
             'default-app': {
@@ -52,7 +52,8 @@ DEPLOYMENT_DEFAULTS = {
         },
         'deployment': {
             'type': 'default',
-            'version': None
+            'version': None,
+            'nodes': 2
         },
         'templates': {
         }
@@ -64,4 +65,8 @@ TEMPLATE_DEFAULTS = {
     'enabled': True,
     'service-type': 'app',
     'args': {}
+}
+
+FLEET_SETTINGS = {
+    'host': os.getenv('FLEET_HOST', '172.17.42.1')
 }

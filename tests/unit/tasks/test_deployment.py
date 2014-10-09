@@ -61,7 +61,8 @@ def test_deployment_defaults_for_type_github_quay(mock_time):
         'deployment': {
             'name': 'testowner-testrepo-testbranch',
             'type': 'github-quay',
-            'version': 101
+            'version': 101,
+            'nodes': 2
         },
         'templates': {
             'default-app': {
@@ -100,7 +101,7 @@ def test_deployment_defaults_for_type_github_quay_with_overrides(mock_time):
     deployment['templates'] = {
         'default-logger': {
             'priority': 3,
-            'enabled': False
+            'enabled': False,
         }
     }
 
@@ -125,7 +126,8 @@ def test_deployment_defaults_for_type_github_quay_with_overrides(mock_time):
         'deployment': {
             'name': 'testowner-testrepo-testbranch',
             'type': 'github-quay',
-            'version': 1000
+            'version': 1000,
+            'nodes': 2
         },
         'templates': {
             'default-app': {
@@ -163,7 +165,8 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
     deployment = _create_test_deployment()
     deployment['deployment'] = {
         'name': 'testdeployment',
-        'type': 'custom'
+        'type': 'custom',
+        'nodes': 3
     }
 
     deployment['templates'] = {
@@ -204,7 +207,8 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
         'deployment': {
             'name': 'testdeployment',
             'type': 'custom',
-            'version': 1000
+            'version': 1000,
+            'nodes': 3
         },
         'templates': {
             'custom-app': {
