@@ -1,14 +1,8 @@
 from __future__ import absolute_import
-import json
 from flask import Flask
-from deployer.tasks.deployment import create
+from deployer.views import root
 
 app = Flask(__name__)
 app.config['PROPAGATE_EXCEPTIONS'] = True
 
-
-@app.route('/')
-def hello_world():
-    return json.dumps(
-        create.delay({'message': 'Hello World'})
-        .get(propagate=True, timeout=60))
+root.register(app)
