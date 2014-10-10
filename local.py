@@ -13,31 +13,16 @@ if __name__ == '__main__':
         'meta-info': {
             'github': {
                 'owner': 'totem',
-                'repo': 'cluster-deployer',
-                'commit': '',
+                'repo': 'spec-python',
+                'commit': '9b3597b9da3957df7a91207ef4332d1efb400d7d',
                 'branch': 'master'
             }
 
         },
         'deployment': {
-            'name': 'totem-cluster-deployer-develop',
+            'name': 'spec-python',
             'type': 'github-quay',
-        },
-
-        'templates': {
-            'default-app': {
-                'enabled': True,
-                'priority': 1,
-                'args': {
-                    'image': ''
-                }
-            },
-            'yoda-ec2-register': {
-                'enabled': False
-            },
-            'default-logger': {
-                'enabled': True
-            }
+            'version': 'v2'
         }
     })
 

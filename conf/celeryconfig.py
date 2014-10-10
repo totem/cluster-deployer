@@ -5,14 +5,14 @@ from ast import literal_eval
 from celery.schedules import crontab
 
 
-MONGO_URL = os.getenv('MONGO_URL', 'mongodb://localhost:27017/totem_deployer')
+MONGO_URL = os.getenv('MONGO_URL', 'mongodb://localhost:27017/cluster-deployer')
 
 BROKER_URL = MONGO_URL
 
 CELERY_RESULT_BACKEND = MONGO_URL
 CELERY_IMPORTS = ('deployer.tasks', 'celery.task')
 CELERY_MONGODB_BACKEND_SETTINGS = {
-    'database': os.getenv('MONGO_RESULTS_DB', 'totem_deployer'),
+    'database': os.getenv('MONGO_RESULTS_DB') or os.path.basename(MONGO_URL),
 }
 CELERY_ACCEPT_CONTENT = ['json', 'pickle']
 CELERY_TASK_SERIALIZER = 'json'
