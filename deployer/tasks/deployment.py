@@ -1,6 +1,7 @@
 import logging
 import time
 from celery.canvas import group, chain
+from celery.result import GroupResult
 from fleet.deploy.deployer import Deployment, status
 from deployer.fleet import get_fleet_provider, jinja_env
 
@@ -24,7 +25,7 @@ logger = logging.getLogger(__name__)
 @app.task(name='deployment.create')
 def create(deployment):
     chain_tasks = _deployment_defaults.s(deployment) | _deploy_all.s()
-    return chain_tasks.apply_async()
+    return chain_tasks()
 
 
 @app.task(name='deployment.wire')
@@ -54,10 +55,11 @@ def _deploy_all(deployment):
     for priority in priorities:
         fleet_tasks = [
             _fleet_deploy.si(name, version, nodes, template_name, template) |
-            _fleet_check_all_running.s(template_name, name, version, nodes,
+            _fleet_check_all_running.s(name, version, nodes,
                                        template['service-type'])
             for template_name, template in deployment['templates'].iteritems()
             if template['priority'] == priority and template['enabled']]
+        # tasks.append(chord(fleet_tasks)(_processed_templates.s(deployment)))
         tasks.append(group(fleet_tasks) | _processed_templates.s(deployment))
     return chain(tasks)()
 
@@ -138,6 +140,8 @@ def _fleet_deploy(name, version, nodes, template_name, template):
           max_retries=15)
 def _fleet_check_running(self, name, version, node_num,
                          service_type):
+    # raise NodeNotRunningException
+    # return '%s:%s:%d:%s is running' % (name, version, node_num, service_type)
     try:
         if status(get_fleet_provider(), name, version, node_num, service_type)\
                 is not 'running':
@@ -157,17 +161,15 @@ def _fleet_check_all_running(template_name, name, version, nodes,
 
 @app.task(name='deployment._processed_deployment')
 def _processed_templates(node_status, deployment):
-    logger.info('Deployed nodes %r', node_status)
+    deployed_nodes = [status.join() if isinstance(status, GroupResult)
+                      else status for status in node_status]
+    logger.info('Deployed nodes %r', deployed_nodes)
     return deployment
 
 
 class NodeNotRunningException(Exception):
     pass
 
-# @app.task
-# def _add(a, b):
-#     print(a, b)
-#     return a + b
 #
 # @app.task
 # def _add_all(numbers, callback=None):
