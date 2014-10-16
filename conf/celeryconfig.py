@@ -8,13 +8,14 @@ from celery.schedules import crontab
 MONGO_URL = os.getenv('MONGO_URL',
                       'mongodb://localhost:27017/cluster-deployer')
 CLUSTER_NAME = os.getenv('CLUSTER_NAME', 'local')
+MONGO_RESULTS_DB = os.getenv('MONGO_RESULTS_DB') or os.path.basename(MONGO_URL)
 
 
 BROKER_URL = os.getenv('BROKER_URL', 'amqp://guest:guest@localhost:5672/')
-CELERY_RESULT_BACKEND = os.path.dirname(MONGO_URL)
+CELERY_RESULT_BACKEND = MONGO_URL
 CELERY_IMPORTS = ('deployer.tasks', 'celery.task')
 CELERY_MONGODB_BACKEND_SETTINGS = {
-    'database': os.getenv('MONGO_RESULTS_DB') or os.path.basename(MONGO_URL),
+    'database': MONGO_RESULTS_DB,
     'taskmeta_collection': os.getenv('MONGO_RESULTS_COLLECTION') or
     'celery_taskmeta_%s' % CLUSTER_NAME
 }
@@ -22,7 +23,7 @@ CELERY_ACCEPT_CONTENT = ['json', 'pickle']
 CELERY_TASK_SERIALIZER = 'pickle'
 CELERY_RESULT_SERIALIZER = 'pickle'
 CELERY_ALWAYS_EAGER = literal_eval(os.getenv('CELERY_ALWAYS_EAGER', 'False'))
-CELERYD_CONCURRENCY = 50
+CELERYD_CONCURRENCY = int(os.getenv('CELERYD_CONCURRENCY', '50'))
 CELERY_CHORD_PROPAGATES = True
 
 CELERY_STORE_ERRORS_EVEN_IF_IGNORED = True
