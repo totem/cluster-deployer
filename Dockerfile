@@ -7,8 +7,8 @@ RUN apt-get install -y openssh-server openssh-client libffi-dev gettext nano
 
 ##SSH Server (To troubleshoot issues with discover)
 RUN mkdir /var/run/sshd
-ADD .root/.ssh /root/.ssh
-RUN chmod -R 400 /root/.ssh/* && chmod  500 /root/.ssh & chown -R root:root /root/.ssh
+RUN mkdir /root/.ssh
+RUN chmod  chmod  500 /root/.ssh & chown -R root:root /root/.ssh
 
 #Syslog
 RUN echo '$PreserveFQDN on' | cat - /etc/rsyslog.conf > /tmp/rsyslog.conf && sudo mv /tmp/rsyslog.conf /etc/rsyslog.conf
@@ -33,11 +33,15 @@ RUN pip install -r /opt/requirements.txt
 #Supervisor Config
 RUN mkdir -p /var/log/supervisor
 ADD bin/supervisord-wrapper.sh /usr/sbin/supervisord-wrapper.sh
-RUN chmod 550 /usr/sbin/supervisord-wrapper.sh
+RUN chmod +x /usr/sbin/supervisord-wrapper.sh
 
 #Confd Defaults
 ADD bin/confd-wrapper.sh /usr/sbin/confd-wrapper.sh
-RUN chmod 550 /usr/sbin/confd-wrapper.sh
+RUN chmod +x /usr/sbin/confd-wrapper.sh
+
+#SSH Keys
+ADD bin/decrypt-ssh-keys.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/decrypt-ssh-keys.sh
 
 #Etc Config
 ADD etc /etc
