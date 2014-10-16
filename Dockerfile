@@ -48,7 +48,6 @@ RUN pip install -r /opt/cluster-deployer/requirements.txt
 ENV ETCD_URL 172.17.42.1:4001
 ENV ETCD_PROXY_BASE /totem
 ENV MONGO_URL mongodb://172.17.42.1:27017/totem_deployer
-ENV MONGO_RESULTS_DB totem_deployer
 ENV TASK_EXECUTORS 2
 ENV API_EXECUTORS 2
 ENV C_FORCE_ROOT true

@@ -122,7 +122,7 @@ def _deployment_defaults(deployment):
     return deployment_upd
 
 
-@app.task(name='deployment._fleet_deploy')
+@app.task(name='deployment._fleet_deploy', ignore_result=True)
 def _fleet_deploy(name, version, nodes, template_name, template):
     logger.info('Deploying %s:%s:%s nodes:%d %r', name, version, template_name,
                 nodes, template)
@@ -131,11 +131,13 @@ def _fleet_deploy(name, version, nodes, template_name, template):
         version=version, template=template_name+'.service',
         template_args=template['args'], service_type=template['service-type'])
     fleet_deployment.deploy()
-    return template_name
+
+def _fleet_undeploy(name, version):
+    pass
 
 
 @app.task(name='deployment._fleet_status', default_retry_delay=20, bind=True,
-          max_retries=15)
+          max_retries=15, ignore_result=True)
 def _fleet_check_running(self, name, version, node_num,
                          service_type):
     # raise NodeNotRunningException
@@ -146,8 +148,6 @@ def _fleet_check_running(self, name, version, node_num,
             raise NodeNotRunningException()
     except NodeNotRunningException as exc:
         self.retry(exc=exc)
-    return '%s:%s:%d:%s is running' % (name, version, node_num, service_type)
-
 
 @app.task
 def _fleet_check_all_running(name, version, nodes,
