@@ -1,5 +1,5 @@
 import logging
-from celery.result import AsyncResult
+from celery.result import AsyncResult, ResultBase
 import flask
 from flask.views import MethodView
 import deployer
@@ -13,33 +13,44 @@ class TaskApi(MethodView):
     """
 
     @staticmethod
+    def _find_error_task(task):
+        if not task or not isinstance(task, ResultBase):
+            return None
+
+        if isinstance(task, AsyncResult) and \
+                task.status in ['ERROR', 'FAILURE']:
+            return task
+        else:
+            for next_task in task.children or []:
+                ret_task = TaskApi._find_error_task(next_task)
+                if ret_task:
+                    return ret_task
+        return None
+
+    @staticmethod
     def _ready(id):
 
-        def next_output():
-            ret_status = 'READY'
-            ret_output = deployer.celery.app.AsyncResult(id)
-            ret_traceback = None
-            while isinstance(ret_output, AsyncResult) \
-                    and ret_status is 'READY':
-                ret_output = deployer.celery.app.AsyncResult(ret_output.id)
-                if ret_output.ready():
-                    if ret_output.failed():
-                        ret_status = 'ERROR'
-                        ret_traceback = ret_output.traceback
-                        try:
-                            ret_output = ret_output.result.to_dict() \
-                                if ret_output.result else None
-                        except AttributeError:
-                            ret_output = repr(ret_output.result)
-                    else:
-                        ret_output = ret_output.result
-                else:
-                    ret_status = 'PENDING'
-                    ret_output = None
-                yield ret_output, ret_status, ret_traceback
+        status = 'READY'
+        output = deployer.celery.app.AsyncResult(id)
+        traceback = None
+        error_task = TaskApi._find_error_task(output)
+        if error_task:
+            output, status, traceback =  \
+                error_task.result, error_task.status, error_task.traceback
 
-        for output, status, traceback in next_output():
-            pass
+        else:
+            while isinstance(output, AsyncResult) and status is 'READY':
+                output = deployer.celery.app.AsyncResult(output.id)
+                if output.ready():
+                    output = output.result
+                else:
+                    status = 'PENDING'
+                    output = None
+        try:
+            output = output.to_dict()
+        except AttributeError:
+            if not isinstance(output, dict) and not isinstance(output, list):
+                output = str(output)
 
         return {
             'status': status,

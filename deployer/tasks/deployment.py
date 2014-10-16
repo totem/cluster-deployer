@@ -1,7 +1,6 @@
 import logging
 import time
 from celery.canvas import group, chain
-from celery.result import GroupResult
 from fleet.deploy.deployer import Deployment, status
 from deployer.fleet import get_fleet_provider, jinja_env
 
@@ -55,12 +54,11 @@ def _deploy_all(deployment):
     for priority in priorities:
         fleet_tasks = [
             _fleet_deploy.si(name, version, nodes, template_name, template) |
-            _fleet_check_all_running.s(name, version, nodes,
-                                       template['service-type'])
+            _fleet_check_all_running.si(name, version, nodes,
+                                        template['service-type'])
             for template_name, template in deployment['templates'].iteritems()
             if template['priority'] == priority and template['enabled']]
-        # tasks.append(chord(fleet_tasks)(_processed_templates.s(deployment)))
-        tasks.append(group(fleet_tasks) | _processed_templates.s(deployment))
+        tasks.append(group(fleet_tasks) | _processed_templates.si(deployment))
     return chain(tasks)()
 
 
@@ -152,7 +150,7 @@ def _fleet_check_running(self, name, version, node_num,
 
 
 @app.task
-def _fleet_check_all_running(template_name, name, version, nodes,
+def _fleet_check_all_running(name, version, nodes,
                              service_type):
     return group(
         [_fleet_check_running.si(name, version, node_num, service_type)
@@ -160,31 +158,10 @@ def _fleet_check_all_running(template_name, name, version, nodes,
 
 
 @app.task(name='deployment._processed_deployment')
-def _processed_templates(node_status, deployment):
-    deployed_nodes = [status.join() if isinstance(status, GroupResult)
-                      else status for status in node_status]
-    logger.info('Deployed nodes %r', deployed_nodes)
+def _processed_templates(deployment):
+    logger.info('_processed_templates for deployment %r', deployment)
     return deployment
 
 
 class NodeNotRunningException(Exception):
     pass
-
-#
-# @app.task
-# def _add_all(numbers, callback=None):
-#     result = sum(numbers)
-#     if callback:
-#         return callback(result)()
-#     else:
-#         return result
-#
-# @app.task
-# def _join_sum(results):
-#     return sum(results)
-#
-# @app.task
-# def myadd():
-#     group1 = group(_add.s(1,2), _add.s(3,4)) | _join_sum.s()
-#     group2 = group(_add.s(2), _add.s(4)) | _join_sum.s()
-#     return (group1 | group2)()
