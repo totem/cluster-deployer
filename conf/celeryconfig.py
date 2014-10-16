@@ -14,8 +14,7 @@ BROKER_URL = os.getenv('BROKER_URL', 'amqp://guest:guest@localhost:5672/')
 CELERY_RESULT_BACKEND = os.path.dirname(MONGO_URL)
 CELERY_IMPORTS = ('deployer.tasks', 'celery.task')
 CELERY_MONGODB_BACKEND_SETTINGS = {
-    'database': 'clusterdeployer' or os.getenv('MONGO_RESULTS_DB')
-                or os.path.basename(MONGO_URL),
+    'database': os.getenv('MONGO_RESULTS_DB') or os.path.basename(MONGO_URL),
     'taskmeta_collection': os.getenv('MONGO_RESULTS_COLLECTION') or
     'celery_taskmeta_%s' % CLUSTER_NAME
 }
