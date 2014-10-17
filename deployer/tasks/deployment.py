@@ -1,8 +1,10 @@
 import logging
 import time
-from celery.canvas import group, chain
-from fleet.deploy.deployer import Deployment, status
+from celery.canvas import group, chain, chord
+from fleet.deploy.deployer import Deployment, status, undeploy
 from deployer.fleet import get_fleet_provider, jinja_env
+from deployer.tasks import util
+from deployer.tasks.util import TaskNotReadyException, simple_group_results
 
 __author__ = 'sukrit'
 
@@ -23,7 +25,10 @@ logger = logging.getLogger(__name__)
 
 @app.task(name='deployment.create')
 def create(deployment):
-    chain_tasks = _deployment_defaults.s(deployment) | _deploy_all.s()
+    chain_tasks = _deployment_defaults.s(deployment) | \
+                  _fleet_undeploy.s(all_versions=True) | \
+                  _deploy_all.s() | \
+                  _processed_deployment.s()
     return chain_tasks()
 
 
@@ -42,24 +47,29 @@ def delete(deployment):
     print(str(deployment))
 
 
+@app.task(name='deployment._deploy_priority')
+def _deploy_priority(deployment, priority):
+    name, version, nodes = deployment['deployment']['name'], \
+                           deployment['deployment']['version'], \
+                           deployment['deployment']['nodes']
+    fleet_tasks = [
+        _fleet_deploy.si(name, version, nodes, template_name, template) |
+        _fleet_check_all_running.si(name, version, nodes,
+                                    template['service-type'])
+        for template_name, template in deployment['templates'].iteritems()
+        if template['priority'] == priority and template['enabled']]
+    return chord(group(fleet_tasks), _processed_priority.s(deployment,
+                                                            priority))()
+
+
+
 @app.task(name='deployment._deploy_all')
 def _deploy_all(deployment):
     priorities = sorted({template['priority']
                          for template in deployment['templates'].values()
                          if template['enabled']})
-    tasks = []
-    name, version, nodes = deployment['deployment']['name'], \
-        deployment['deployment']['version'], \
-        deployment['deployment']['nodes']
-    for priority in priorities:
-        fleet_tasks = [
-            _fleet_deploy.si(name, version, nodes, template_name, template) |
-            _fleet_check_all_running.si(name, version, nodes,
-                                        template['service-type'])
-            for template_name, template in deployment['templates'].iteritems()
-            if template['priority'] == priority and template['enabled']]
-        tasks.append(group(fleet_tasks) | _processed_templates.si(deployment))
-    return chain(tasks)()
+    return chain([_deploy_priority.si(deployment, priority)
+                  for priority in priorities])()
 
 
 def _github_quay_defaults(deployment):
@@ -122,30 +132,40 @@ def _deployment_defaults(deployment):
     return deployment_upd
 
 
-@app.task(name='deployment._fleet_deploy', ignore_result=True)
+@app.task(name='deployment._fleet_deploy')
 def _fleet_deploy(name, version, nodes, template_name, template):
     logger.info('Deploying %s:%s:%s nodes:%d %r', name, version, template_name,
                 nodes, template)
     fleet_deployment = Deployment(
         fleet_provider=get_fleet_provider(), jinja_env=jinja_env, name=name,
-        version=version, template=template_name+'.service',
+        version=version, template=template_name+'.service', nodes=nodes,
         template_args=template['args'], service_type=template['service-type'])
     fleet_deployment.deploy()
 
 
-def _fleet_undeploy(name, version):
-    pass
+@app.task(name='deployment._fleet_undeploy')
+def _fleet_undeploy(deployment, all_versions=False):
+    version = deployment['deployment']['version'] if not all_versions else None
+    undeploy(get_fleet_provider(), deployment['deployment']['name'], version)
+    time.sleep(10)
+    return deployment
 
 
-@app.task(name='deployment._fleet_status', default_retry_delay=20, bind=True,
-          max_retries=15, ignore_result=True)
+@app.task(name='deployment._fleet_status', default_retry_delay=30, bind=True,
+          max_retries=2)
 def _fleet_check_running(self, name, version, node_num,
                          service_type):
     # raise NodeNotRunningException
     # return '%s:%s:%d:%s is running' % (name, version, node_num, service_type)
-        if status(get_fleet_provider(), name, version, node_num, service_type)\
-                is not 'running':
-            self.retry(exc=NodeNotRunningException())
+    unit_status = status(get_fleet_provider(), name, version, node_num,
+                         service_type)
+    logger.info('Status for %s:%s:%d:%s is <%s>', name, version, node_num,
+                service_type, unit_status)
+    if unit_status == 'running':
+        return
+    else:
+        self.retry(exc=NodeNotRunningException(name, version, node_num,
+                                               service_type, unit_status))
 
 
 @app.task
@@ -155,12 +175,53 @@ def _fleet_check_all_running(name, version, nodes,
         [_fleet_check_running.si(name, version, node_num, service_type)
          for node_num in range(1, nodes+1)])()
 
+@app.task(name='deployment._processed_priority', default_retry_delay=30,
+          bind=True, max_retries=2)
+def _processed_priority(self, results, deployment, priority):
+    try:
+        results = simple_group_results(results)
+    except TaskNotReadyException as exc:
+        self.retry(exc=exc)
+    logger.info('Processed priority: %d for deployment %r  %r', priority,
+                deployment, results)
+    return deployment
 
-@app.task(name='deployment._processed_deployment')
-def _processed_templates(deployment):
-    logger.info('_processed_templates for deployment %r', deployment)
+@app.task
+def _processed_deployment(deployment):
+    logger.info('Processed deployment %r', deployment)
     return deployment
 
 
 class NodeNotRunningException(Exception):
-    pass
+    def __init__(self, name, version, node_num, service_type, status,
+                 retryable=True, expected_status='running'):
+        self.name = name
+        self.version = version
+        self.node_num = node_num
+        self.service_type = service_type
+        self.status = status
+        self.retryable = retryable
+        self.expected_status = expected_status
+        super(NodeNotRunningException,self).__init__(
+            name, version, node_num, service_type, status, retryable)
+
+    def to_dict(self):
+        return {
+            'message': 'Status for application:%s version:%s node_num:%d '
+                       'service_type:%s is %s instead of %s' %
+                       (self.name, self.version, self.node_num,
+                        self.service_type, self.unit_status,
+                        self.expected_status),
+            'code': 'NODE_NOT_RUNNING',
+            'details': {
+                'name': self.name,
+                'version': self.version,
+                'node_num': self.node_num,
+                'service_type': self.service_type,
+                'status': self.status,
+                'expected_status': self.expected_status
+            },
+            'retryable': self.retryable
+        }
+
+

@@ -7,8 +7,8 @@ LOG_ROOT_LEVEL = os.getenv('LOG_ROOT_LEVEL', 'INFO').upper()
 
 
 DEFAULT_DEPLOYMENT_TYPE = 'github-quay'
-QUAY_PATH_PREFIX = 'quay.io/%s/totem-' % \
-                   (os.getenv('QUAY_ORGANIZATION', 'totem'))
+QUAY_PATH_PREFIX = 'quay.io/%s/%s' % (os.getenv('QUAY_ORGANIZATION', 'totem'),
+                                      os.getenv('QUAY_PREFIX','totem-'))
 
 DEPLOYMENT_TYPE_GITHUB_QUAY = 'github-quay'
 DEPLOYMENT_TYPE_DEFAULT = 'default'
@@ -22,8 +22,7 @@ DEPLOYMENT_DEFAULTS = {
         'templates': {
             'default-app': {
                 'args': {
-                    'image': QUAY_PATH_PREFIX +
-                    '{GIT_OWNER}/{GIT_REPO}:{GIT_COMMIT}',
+                    'image': QUAY_PATH_PREFIX + '{GIT_REPO}:{GIT_COMMIT}',
                     'environment': {},
                     'docker-args': ''
                 },
@@ -69,4 +68,10 @@ TEMPLATE_DEFAULTS = {
 
 FLEET_SETTINGS = {
     'host': os.getenv('FLEET_HOST', '172.17.42.1')
+}
+
+FLEET_TEMPLATE_SETTINGS = {
+    'github': {
+        'token': os.getenv('GITHUB_TOKEN')
+    }
 }
