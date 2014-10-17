@@ -1,5 +1,4 @@
 from celery.result import ResultBase, AsyncResult, GroupResult
-from fleet.deploy import deployer
 
 __author__ = 'sukrit'
 
@@ -9,7 +8,7 @@ def find_error_task(task):
         return None
 
     if isinstance(task, AsyncResult) and \
-                    task.status in ['ERROR', 'FAILURE']:
+            task.status in ['ERROR', 'FAILURE']:
         return task
     else:
         for next_task in task.children or []:
@@ -55,4 +54,3 @@ class TaskNotReadyException(Exception):
 
 class NotASimpleResultException(Exception):
     pass
-

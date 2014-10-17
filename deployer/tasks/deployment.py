@@ -3,7 +3,6 @@ import time
 from celery.canvas import group, chain, chord
 from fleet.deploy.deployer import Deployment, status, undeploy
 from deployer.fleet import get_fleet_provider, jinja_env
-from deployer.tasks import util
 from deployer.tasks.util import TaskNotReadyException, simple_group_results
 
 __author__ = 'sukrit'
@@ -16,7 +15,7 @@ __all__ = ['create', 'wire', 'unwire', 'delete']
 
 from deployer.celery import app
 from conf.appconfig import DEPLOYMENT_DEFAULTS, DEPLOYMENT_TYPE_GITHUB_QUAY, \
-    TEMPLATE_DEFAULTS
+    TEMPLATE_DEFAULTS, TASK_SETTINGS
 
 from deployer.util import dict_merge
 
@@ -26,9 +25,9 @@ logger = logging.getLogger(__name__)
 @app.task(name='deployment.create')
 def create(deployment):
     chain_tasks = _deployment_defaults.s(deployment) | \
-                  _fleet_undeploy.s(all_versions=True) | \
-                  _deploy_all.s() | \
-                  _processed_deployment.s()
+        _fleet_undeploy.s(all_versions=True) | \
+        _deploy_all.s() | \
+        _processed_deployment.s()
     return chain_tasks()
 
 
@@ -50,8 +49,8 @@ def delete(deployment):
 @app.task(name='deployment._deploy_priority')
 def _deploy_priority(deployment, priority):
     name, version, nodes = deployment['deployment']['name'], \
-                           deployment['deployment']['version'], \
-                           deployment['deployment']['nodes']
+        deployment['deployment']['version'], \
+        deployment['deployment']['nodes']
     fleet_tasks = [
         _fleet_deploy.si(name, version, nodes, template_name, template) |
         _fleet_check_all_running.si(name, version, nodes,
@@ -59,8 +58,7 @@ def _deploy_priority(deployment, priority):
         for template_name, template in deployment['templates'].iteritems()
         if template['priority'] == priority and template['enabled']]
     return chord(group(fleet_tasks), _processed_priority.s(deployment,
-                                                            priority))()
-
+                                                           priority))()
 
 
 @app.task(name='deployment._deploy_all')
@@ -151,12 +149,11 @@ def _fleet_undeploy(deployment, all_versions=False):
     return deployment
 
 
-@app.task(name='deployment._fleet_status', default_retry_delay=30, bind=True,
-          max_retries=2)
+@app.task(name='deployment._fleet_status', bind=True,
+          default_retry_delay=TASK_SETTINGS['DEFAULT_RETRY_DELAY'],
+          max_retries=TASK_SETTINGS['DEFAULT_RETRIES'])
 def _fleet_check_running(self, name, version, node_num,
                          service_type):
-    # raise NodeNotRunningException
-    # return '%s:%s:%d:%s is running' % (name, version, node_num, service_type)
     unit_status = status(get_fleet_provider(), name, version, node_num,
                          service_type)
     logger.info('Status for %s:%s:%d:%s is <%s>', name, version, node_num,
@@ -175,8 +172,10 @@ def _fleet_check_all_running(name, version, nodes,
         [_fleet_check_running.si(name, version, node_num, service_type)
          for node_num in range(1, nodes+1)])()
 
-@app.task(name='deployment._processed_priority', default_retry_delay=30,
-          bind=True, max_retries=2)
+
+@app.task(name='deployment._processed_priority', bind=True,
+          default_retry_delay=TASK_SETTINGS['DEFAULT_RETRY_DELAY'],
+          max_retries=TASK_SETTINGS['DEFAULT_RETRIES'])
 def _processed_priority(self, results, deployment, priority):
     try:
         results = simple_group_results(results)
@@ -185,6 +184,7 @@ def _processed_priority(self, results, deployment, priority):
     logger.info('Processed priority: %d for deployment %r  %r', priority,
                 deployment, results)
     return deployment
+
 
 @app.task
 def _processed_deployment(deployment):
@@ -202,7 +202,7 @@ class NodeNotRunningException(Exception):
         self.status = status
         self.retryable = retryable
         self.expected_status = expected_status
-        super(NodeNotRunningException,self).__init__(
+        super(NodeNotRunningException, self).__init__(
             name, version, node_num, service_type, status, retryable)
 
     def to_dict(self):
@@ -220,8 +220,6 @@ class NodeNotRunningException(Exception):
                 'service_type': self.service_type,
                 'status': self.status,
                 'expected_status': self.expected_status
-            },
+                },
             'retryable': self.retryable
         }
-
-

@@ -9,4 +9,4 @@ jinja_env = default_jinja_environment(
 
 
 def get_fleet_provider():
-    return Provider(hosts=FLEET_SETTINGS['host'])
+    return Provider(**FLEET_SETTINGS)

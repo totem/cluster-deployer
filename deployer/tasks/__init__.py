@@ -1,5 +1,4 @@
 from deployer.celery import app
-import deployer.tasks.deployment  # noqa
 
 
 @app.task

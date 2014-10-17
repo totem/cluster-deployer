@@ -8,7 +8,7 @@ LOG_ROOT_LEVEL = os.getenv('LOG_ROOT_LEVEL', 'INFO').upper()
 
 DEFAULT_DEPLOYMENT_TYPE = 'github-quay'
 QUAY_PATH_PREFIX = 'quay.io/%s/%s' % (os.getenv('QUAY_ORGANIZATION', 'totem'),
-                                      os.getenv('QUAY_PREFIX','totem-'))
+                                      os.getenv('QUAY_PREFIX', 'totem-'))
 
 DEPLOYMENT_TYPE_GITHUB_QUAY = 'github-quay'
 DEPLOYMENT_TYPE_DEFAULT = 'default'
@@ -67,11 +67,20 @@ TEMPLATE_DEFAULTS = {
 }
 
 FLEET_SETTINGS = {
-    'host': os.getenv('FLEET_HOST', '172.17.42.1')
+    'hosts': os.getenv('FLEET_HOST', '172.17.42.1'),
+    'fab_settings': {
+        'key_filename': os.getenv('SSH_HOST_KEY',
+                                  os.getenv('HOME')+'/.ssh/id_rsa')
+    }
 }
 
 FLEET_TEMPLATE_SETTINGS = {
     'github': {
         'token': os.getenv('GITHUB_TOKEN')
     }
+}
+
+TASK_SETTINGS = {
+    'DEFAULT_RETRIES': 10,
+    'DEFAULT_RETRY_DELAY': 30
 }
