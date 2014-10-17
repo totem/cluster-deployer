@@ -132,6 +132,7 @@ def _fleet_deploy(name, version, nodes, template_name, template):
         template_args=template['args'], service_type=template['service-type'])
     fleet_deployment.deploy()
 
+
 def _fleet_undeploy(name, version):
     pass
 
@@ -142,12 +143,10 @@ def _fleet_check_running(self, name, version, node_num,
                          service_type):
     # raise NodeNotRunningException
     # return '%s:%s:%d:%s is running' % (name, version, node_num, service_type)
-    try:
         if status(get_fleet_provider(), name, version, node_num, service_type)\
                 is not 'running':
-            raise NodeNotRunningException()
-    except NodeNotRunningException as exc:
-        self.retry(exc=exc)
+            self.retry(exc=NodeNotRunningException())
+
 
 @app.task
 def _fleet_check_all_running(name, version, nodes,
