@@ -70,8 +70,7 @@ def test_deployment_defaults_for_type_github_quay(mock_time):
                 'args': {
                     'environment': {},
                     'docker-args': '',
-                    'image': 'quay.io/totem/totem-testowner/'
-                             'testrepo:testcommit'
+                    'image': 'quay.io/totem/totem-testrepo:testcommit'
                 },
                 'enabled': True,
                 'service-type': 'app'
@@ -135,8 +134,7 @@ def test_deployment_defaults_for_type_github_quay_with_overrides(mock_time):
                 'args': {
                     'environment': {},
                     'docker-args': '',
-                    'image': 'quay.io/totem/totem-testowner/'
-                             'testrepo:testcommit'
+                    'image': 'quay.io/totem/totem-testrepo:testcommit'
                 },
                 'enabled': True,
                 'service-type': 'app'
