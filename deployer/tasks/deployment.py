@@ -1,9 +1,12 @@
 import logging
 import time
-from celery.canvas import group, chain, chord
+
+from celery.canvas import group, chord
 from fleet.deploy.deployer import Deployment, status, undeploy
+
 from deployer.fleet import get_fleet_provider, jinja_env
-from deployer.tasks.util import TaskNotReadyException, simple_group_results
+from deployer.tasks.util import TaskNotReadyException, simple_result
+
 
 __author__ = 'sukrit'
 
@@ -22,13 +25,68 @@ from deployer.util import dict_merge
 logger = logging.getLogger(__name__)
 
 
-@app.task(name='deployment.create')
+@app.task
+def tsk(args):
+    return args
+
+
+@app.task
+def a1(arg1):
+    return tsk.s(arg1)()
+
+
+@app.task(default_retry_delay=5, max_retries=2, bind=True)
+def a2(self, arg1):
+    # self.retry(exc=ValueError('Some Error'))
+    return tsk.s(arg1)()
+
+
+@app.task
+def b1():
+    return (a1.s(2) | a2.si(2))()
+
+
+@app.task
+def chord1():
+    return chord(group([b1.si(), a2.si(2)]), callback1.s())()
+
+
+@app.task
+def chord2():
+    return chord(group([b1.si(), a1.si(2)]), callback2.s())()
+
+
+@app.task
+def final_callback(result=None):
+    pass
+
+
+@app.task
+def callback(result):
+    pass
+
+
+@app.task
+def callback1(result=None):
+    return chord2.s()()
+
+
+@app.task
+def callback2(result):
+    return final_callback.s()()
+
+
+@app.task
 def create(deployment):
-    chain_tasks = _deployment_defaults.s(deployment) | \
-        _fleet_undeploy.s(all_versions=True) | \
-        _deploy_all.s() | \
-        _processed_deployment.s()
-    return chain_tasks()
+    return (
+        _deployment_defaults.s(deployment) |
+        _fleet_undeploy.s(all_versions=True) |
+        _deploy_all.s()
+    )()
+    # ch = chord(group([b1.si(), a2.si(2)]), callback.s())()
+    # return None
+    # return (chord1.si() | chord2.si() | final_callback.s())()
+    # return chord1.s()()
 
 
 @app.task(name='deployment.wire')
@@ -46,28 +104,26 @@ def delete(deployment):
     print(str(deployment))
 
 
-@app.task(name='deployment._deploy_priority')
-def _deploy_priority(deployment, priority):
-    name, version, nodes = deployment['deployment']['name'], \
-        deployment['deployment']['version'], \
-        deployment['deployment']['nodes']
-    fleet_tasks = [
-        _fleet_deploy.si(name, version, nodes, template_name, template) |
-        _fleet_check_all_running.si(name, version, nodes,
-                                    template['service-type'])
-        for template_name, template in deployment['templates'].iteritems()
-        if template['priority'] == priority and template['enabled']]
-    return chord(group(fleet_tasks), _processed_priority.s(deployment,
-                                                           priority))()
-
-
 @app.task(name='deployment._deploy_all')
 def _deploy_all(deployment):
     priorities = sorted({template['priority']
                          for template in deployment['templates'].values()
                          if template['enabled']})
-    return chain([_deploy_priority.si(deployment, priority)
-                  for priority in priorities])()
+    service_types = {template['service-type'] for template in
+                     deployment['templates'].itervalues()
+                     if template['enabled']}
+    name, version, nodes = deployment['deployment']['name'], \
+        deployment['deployment']['version'], \
+        deployment['deployment']['nodes']
+    return chord(
+        group(
+            _fleet_deploy.si(name, version, nodes, template_name, template)
+            for priority in priorities
+            for template_name, template in deployment['templates'].iteritems()
+            if template['priority'] == priority and template['enabled']
+        ),
+        _fleet_check_deploy.si(name, version, nodes, service_types, deployment)
+    )()
 
 
 def _github_quay_defaults(deployment):
@@ -136,7 +192,7 @@ def _fleet_deploy(name, version, nodes, template_name, template):
                 nodes, template)
     fleet_deployment = Deployment(
         fleet_provider=get_fleet_provider(), jinja_env=jinja_env, name=name,
-        version=version, template=template_name+'.service', nodes=nodes,
+        version=version, template=template_name + '.service', nodes=nodes,
         template_args=template['args'], service_type=template['service-type'])
     fleet_deployment.deploy()
 
@@ -166,29 +222,44 @@ def _fleet_check_running(self, name, version, node_num,
 
 
 @app.task
-def _fleet_check_all_running(name, version, nodes,
-                             service_type):
-    return group(
-        [_fleet_check_running.si(name, version, node_num, service_type)
-         for node_num in range(1, nodes+1)])()
-
-
-@app.task(name='deployment._processed_priority', bind=True,
-          default_retry_delay=TASK_SETTINGS['DEFAULT_RETRY_DELAY'],
-          max_retries=TASK_SETTINGS['DEFAULT_RETRIES'])
-def _processed_priority(self, results, deployment, priority):
-    try:
-        results = simple_group_results(results)
-    except TaskNotReadyException as exc:
-        self.retry(exc=exc)
-    logger.info('Processed priority: %d for deployment %r  %r', priority,
-                deployment, results)
-    return deployment
+def _fleet_unit_deployed(name, version, node_num, service_type):
+    logger.info('Unit deployed successfully %s:%s:%d:%s ', name,
+                version, node_num, service_type)
+    return 'Unit deployed successfully %s:%s:%d:%s ' % (name, version,
+                                                        node_num, service_type)
 
 
 @app.task
-def _processed_deployment(deployment):
-    logger.info('Processed deployment %r', deployment)
+def _fleet_check_unit(name, version, node_num, service_type):
+    return (
+        _fleet_check_running.si(name, version, node_num, service_type) |
+        _fleet_unit_deployed.si(name, version, node_num, service_type)
+    )()
+
+
+@app.task
+def _fleet_check_deploy(name, version, nodes, service_types, deployment):
+    return chord(
+        group(
+            _fleet_check_unit.si(name, version, node_num, service_type)
+            for service_type in service_types
+            for node_num in range(1, nodes + 1)
+        ),
+        _processed_deploy.s(name, version, nodes, deployment)
+    )()
+
+
+@app.task(bind=True, default_retry_delay=TASK_SETTINGS['DEFAULT_RETRY_DELAY'],
+          max_retries=TASK_SETTINGS['DEFAULT_RETRIES'])
+def _processed_deploy(self, results, name, version, nodes, deployment):
+    try:
+        extracted_results = simple_result(results)
+    except TaskNotReadyException as exc:
+        self.retry(exc=exc)
+
+    logger.info('Processed: %s:%s for %d nodes. result:%s', name, version,
+                nodes,
+                extracted_results)
     return deployment
 
 
