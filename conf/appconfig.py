@@ -13,6 +13,12 @@ QUAY_PATH_PREFIX = 'quay.io/%s/%s' % (os.getenv('QUAY_ORGANIZATION', 'totem'),
 DEPLOYMENT_TYPE_GITHUB_QUAY = 'github-quay'
 DEPLOYMENT_TYPE_DEFAULT = 'default'
 
+DEPLOYMENT_MODE_BLUEGREEN = 'blue-green'
+DEPLOYMENT_MODE_REDGREEN = 'red-green'
+DEPLOYMENT_MODE_AB = 'a/b'
+DEPLOYMENT_MODE_CUSTOM = 'custom'
+
+
 DEPLOYMENT_DEFAULTS = {
     DEPLOYMENT_TYPE_GITHUB_QUAY: {
         'deployment': {
@@ -52,6 +58,7 @@ DEPLOYMENT_DEFAULTS = {
         'deployment': {
             'type': 'default',
             'version': None,
+            'mode': DEPLOYMENT_MODE_BLUEGREEN,
             'nodes': 2
         },
         'templates': {

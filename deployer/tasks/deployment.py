@@ -1,3 +1,9 @@
+"""
+Defines celery tasks for deployment (e.g.: create, undeploy, wire, unwire)
+"""
+__author__ = 'sukrit'
+__all__ = ['create', 'wire', 'unwire', 'delete']
+
 import logging
 import time
 
@@ -6,19 +12,10 @@ from fleet.deploy.deployer import Deployment, status, undeploy
 
 from deployer.fleet import get_fleet_provider, jinja_env
 from deployer.tasks.util import TaskNotReadyException, simple_result
-
-
-__author__ = 'sukrit'
-
-"""
-Defines celery tasks for deployment
-"""
-
-__all__ = ['create', 'wire', 'unwire', 'delete']
-
 from deployer.celery import app
 from conf.appconfig import DEPLOYMENT_DEFAULTS, DEPLOYMENT_TYPE_GITHUB_QUAY, \
-    TEMPLATE_DEFAULTS, TASK_SETTINGS
+    TEMPLATE_DEFAULTS, TASK_SETTINGS, DEPLOYMENT_MODE_BLUEGREEN, \
+    DEPLOYMENT_MODE_REDGREEN
 
 from deployer.util import dict_merge
 
@@ -26,85 +23,41 @@ logger = logging.getLogger(__name__)
 
 
 @app.task
-def tsk(args):
-    return args
-
-
-@app.task
-def a1(arg1):
-    return tsk.s(arg1)()
-
-
-@app.task(default_retry_delay=5, max_retries=2, bind=True)
-def a2(self, arg1):
-    # self.retry(exc=ValueError('Some Error'))
-    return tsk.s(arg1)()
-
-
-@app.task
-def b1():
-    return (a1.s(2) | a2.si(2))()
-
-
-@app.task
-def chord1():
-    return chord(group([b1.si(), a2.si(2)]), callback1.s())()
-
-
-@app.task
-def chord2():
-    return chord(group([b1.si(), a1.si(2)]), callback2.s())()
-
-
-@app.task
-def final_callback(result=None):
-    pass
-
-
-@app.task
-def callback(result):
-    pass
-
-
-@app.task
-def callback1(result=None):
-    return chord2.s()()
-
-
-@app.task
-def callback2(result):
-    return final_callback.s()()
-
-
-@app.task
 def create(deployment):
+    """
+    Task for creating deployment.
+
+    :param deployment: Deployment dictionary.
+    :type deployment: dict
+    :return: Newly created deploymentS
+    :rtype: dict
+    """
+    # Step1: Apply defaults
+    # Step2: Un-deploy existing versions
+    # Step3: Deploy all services for the deployment
     return (
         _deployment_defaults.s(deployment) |
-        _fleet_undeploy.s(all_versions=True) |
+        _pre_create_undeploy.s() |
         _deploy_all.s()
     )()
-    # ch = chord(group([b1.si(), a2.si(2)]), callback.s())()
-    # return None
-    # return (chord1.si() | chord2.si() | final_callback.s())()
-    # return chord1.s()()
 
 
-@app.task(name='deployment.wire')
+@app.task
 def wire(proxy):
     print(str(proxy))
 
 
-@app.task(name='deployment.unwire')
+@app.task
 def unwire(proxy):
     print(str(proxy))
 
 
-@app.task(name='deployment.unwire')
+@app.task
 def delete(deployment):
     print(str(deployment))
 
 
-@app.task(name='deployment._deploy_all')
+@app.task
 def _deploy_all(deployment):
     priorities = sorted({template['priority']
                          for template in deployment['templates'].values()
@@ -148,7 +101,7 @@ def _github_quay_defaults(deployment):
     return deployment
 
 
-@app.task(name='deployment._deployment_defaults')
+@app.task
 def _deployment_defaults(deployment):
     """
     Applies the defaults for the deployment
@@ -157,7 +110,7 @@ def _deployment_defaults(deployment):
     :return: Deployment with defaults applied
     :rtype: dict
     """
-    # Set the default deployment type
+    # Set the default deployment type.
     deployment_upd = dict_merge(deployment, {
         'deployment': {
             'type': 'default'
@@ -186,7 +139,7 @@ def _deployment_defaults(deployment):
     return deployment_upd
 
 
-@app.task(name='deployment._fleet_deploy')
+@app.task
 def _fleet_deploy(name, version, nodes, template_name, template):
     logger.info('Deploying %s:%s:%s nodes:%d %r', name, version, template_name,
                 nodes, template)
@@ -197,15 +150,32 @@ def _fleet_deploy(name, version, nodes, template_name, template):
     fleet_deployment.deploy()
 
 
-@app.task(name='deployment._fleet_undeploy')
-def _fleet_undeploy(deployment, all_versions=False):
-    version = deployment['deployment']['version'] if not all_versions else None
+@app.task
+def _pre_create_undeploy(deployment):
+    """
+    Un-deploys during pre-create phase. The versions un-deployed depends upon
+    mode of deployment.
+    :param deployment: Deployment parameters
+    :type deployment: dict
+    :return: deployment to continue deploy chain
+    :rtype: dict
+    """
+    deploy_mode = deployment['deployment']['mode']
+    if deploy_mode == DEPLOYMENT_MODE_BLUEGREEN:
+        # Undeploy only current version in pre-create phase.
+        version = deployment['deployment']['version']
+    elif deploy_mode == DEPLOYMENT_MODE_REDGREEN:
+        # Undeploy all versions in pre-create phase.
+        version = None
+    else:
+        # Do not undeploy anything when mode is custom or A/B
+        return deployment
     undeploy(get_fleet_provider(), deployment['deployment']['name'], version)
     time.sleep(10)
     return deployment
 
 
-@app.task(name='deployment._fleet_status', bind=True,
+@app.task(bind=True,
           default_retry_delay=TASK_SETTINGS['DEFAULT_RETRY_DELAY'],
           max_retries=TASK_SETTINGS['DEFAULT_RETRIES'])
 def _fleet_check_running(self, name, version, node_num,

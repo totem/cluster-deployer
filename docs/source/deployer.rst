@@ -7,6 +7,7 @@ Subpackages
 .. toctree::
 
     deployer.tasks
+    deployer.views
 
 Submodules
 ----------
@@ -15,6 +16,14 @@ deployer.celery module
 ----------------------
 
 .. automodule:: deployer.celery
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+deployer.fleet module
+---------------------
+
+.. automodule:: deployer.fleet
     :members:
     :undoc-members:
     :show-inheritance:

@@ -1,11 +1,13 @@
-from mock import patch
+from mock import patch, ANY
+from conf.appconfig import DEPLOYMENT_MODE_BLUEGREEN, DEPLOYMENT_MODE_REDGREEN
 
 from tests.helper import dict_compare
 
 
 __author__ = 'sukrit'
 
-from deployer.tasks.deployment import _deployment_defaults
+from deployer.tasks.deployment import _deployment_defaults, \
+    _pre_create_undeploy
 
 
 def test_create():
@@ -29,6 +31,27 @@ def _create_test_deployment():
         },
         'deployment': {
             'type': 'github-quay'
+        }
+    }
+
+
+def _create_test_deployment_with_defaults_applied():
+    return {
+        'meta-info': {
+            'job-id': 'test-job',
+            'github': {
+                'owner': 'testowner',
+                'repo': 'testrepo',
+                'branch': 'testbranch',
+                'commit': 'testcommit'
+
+            }
+        },
+        'deployment': {
+            'name': 'testowner-testrepo-testbranch',
+            'version': 1000,
+            'type': 'github-quay',
+            'mode': DEPLOYMENT_MODE_BLUEGREEN
         }
     }
 
@@ -62,7 +85,8 @@ def test_deployment_defaults_for_type_github_quay(mock_time):
             'name': 'testowner-testrepo-testbranch',
             'type': 'github-quay',
             'version': 101,
-            'nodes': 2
+            'nodes': 2,
+            'mode': DEPLOYMENT_MODE_BLUEGREEN
         },
         'templates': {
             'default-app': {
@@ -126,7 +150,8 @@ def test_deployment_defaults_for_type_github_quay_with_overrides(mock_time):
             'name': 'testowner-testrepo-testbranch',
             'type': 'github-quay',
             'version': 1000,
-            'nodes': 2
+            'nodes': 2,
+            'mode': DEPLOYMENT_MODE_BLUEGREEN
         },
         'templates': {
             'default-app': {
@@ -206,7 +231,8 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
             'name': 'testdeployment',
             'type': 'custom',
             'version': 1000,
-            'nodes': 3
+            'nodes': 3,
+            'mode': DEPLOYMENT_MODE_BLUEGREEN
         },
         'templates': {
             'custom-app': {
@@ -227,3 +253,65 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
             }
         }
     })
+
+
+@patch('deployer.tasks.deployment.undeploy')
+@patch('time.sleep')
+def test_pre_create_undeploy_for_red_green(mock_sleep, mock_undeploy):
+    """
+    Should undeploy all versions for mode: red-green
+    """
+
+    # Given: Deployment parameters
+    deployment = _create_test_deployment_with_defaults_applied()
+    deployment['deployment']['mode'] = DEPLOYMENT_MODE_REDGREEN
+
+    # When: I undeploy in pre-create phase
+    result = _pre_create_undeploy.s(deployment).apply()
+    ret_deployment = result.get(timeout=1)
+
+    # Then: All versions of application are un-deployed.
+    mock_undeploy.assert_called_with(ANY, deployment['deployment']['name'],
+                                     None)
+    ret_deployment == deployment
+
+
+@patch('deployer.tasks.deployment.undeploy')
+@patch('time.sleep')
+def test_pre_create_undeploy_for_blue_green(mock_sleep, mock_undeploy):
+    """
+    Should undeploy all versions for mode: red-green
+    """
+
+    # Given: Deployment parameters
+    deployment = _create_test_deployment_with_defaults_applied()
+    deployment['deployment']['mode'] = DEPLOYMENT_MODE_BLUEGREEN
+
+    # When: I undeploy in pre-create phase
+    result = _pre_create_undeploy.s(deployment).apply()
+    ret_deployment = result.get(timeout=1)
+
+    # Then: All versions of application are un-deployed.
+    mock_undeploy.assert_called_with(ANY, deployment['deployment']['name'],
+                                     deployment['deployment']['version'])
+    ret_deployment == deployment
+
+
+@patch('deployer.tasks.deployment.undeploy')
+@patch('time.sleep')
+def test_pre_create_undeploy_for_ab(mock_sleep, mock_undeploy):
+    """
+    Should undeploy all versions for mode: red-green
+    """
+
+    # Given: Deployment parameters
+    deployment = _create_test_deployment_with_defaults_applied()
+    deployment['deployment']['mode'] = DEPLOYMENT_MODE_BLUEGREEN
+
+    # When: I undeploy in pre-create phase
+    result = _pre_create_undeploy.s(deployment).apply()
+    ret_deployment = result.get(timeout=1)
+
+    # Then: All versions of application are un-deployed.
+    mock_undeploy.assert_not_called()
+    ret_deployment == deployment
