@@ -91,3 +91,10 @@ TASK_SETTINGS = {
     'DEFAULT_RETRIES': 5,
     'DEFAULT_RETRY_DELAY': 10
 }
+
+TOTEM_ETCD_SETTINGS = {
+    'base': '/totem',
+    'host': os.getenv('ETCD_HOST', '172.17.42.1'),
+    'port': int(os.getenv('ETCD_PORT', '4001')),
+
+}
