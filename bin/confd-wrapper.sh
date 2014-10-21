@@ -3,8 +3,8 @@
 ETCDCTL="etcdctl --peers $ETCD_URL"
 
 #Syslog ETCD Entries
-$ETCDCTL get $ETCD_PROXY_BASE/syslog/host || $ETCDCTL set $ETCD_PROXY_BASE/syslog/host ""
+$ETCDCTL get $ETCD_TOTEM_BASE/syslog/host || $ETCDCTL set $ETCD_TOTEM_BASE/syslog/host ""
 
 
-sed -i -e "s/172.17.42.1[:]4001/$ETCD_URL/g" -e "s|/totem|$ETCD_PROXY_BASE|g" /etc/confd/confd.toml
+sed -i -e "s/172.17.42.1[:]4001/$ETCD_URL/g" -e "s|/totem|$ETCD_TOTEM_BASE|g" /etc/confd/confd.toml
 confd
