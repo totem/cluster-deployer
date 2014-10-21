@@ -1,6 +1,9 @@
 """
 Defines celery tasks for deployment (e.g.: create, undeploy, wire, unwire)
 """
+from deployer.tasks.exceptions import NodeNotRunningException, \
+    NodeNotUndeployed
+
 __author__ = 'sukrit'
 __all__ = ['create', 'wire', 'unwire', 'delete']
 
@@ -8,7 +11,7 @@ import logging
 import time
 
 from celery.canvas import group, chord
-from fleet.deploy.deployer import Deployment, status, undeploy
+from fleet.deploy.deployer import Deployment, status, undeploy, filter_units
 
 from deployer.fleet import get_fleet_provider, jinja_env
 from deployer.tasks.util import TaskNotReadyException, simple_result
@@ -170,9 +173,37 @@ def _pre_create_undeploy(deployment):
     else:
         # Do not undeploy anything when mode is custom or A/B
         return deployment
-    undeploy(get_fleet_provider(), deployment['deployment']['name'], version)
-    time.sleep(10)
-    return deployment
+    name = deployment['deployment']['name']
+    return (
+        _fleet_undeploy.si(name, version) |
+        _wait_for_undeploy.si(name, version, ret_value=deployment)
+    )()
+
+
+@app.task
+def _fleet_undeploy(name, version):
+    """
+    Un-deploys fleet units with matching name and version
+    :param name: Name of application
+    :param version: Version of application
+    :return: None
+    """
+    undeploy(get_fleet_provider(), name, version)
+
+
+@app.task(bind=True, default_retry_delay=5, max_retries=5)
+def _wait_for_undeploy(self, name, version, ret_value=None):
+    """
+    Wait for undeploy to finish.
+    :param name: Name of application
+    :param version : Version of application.
+    :param ret_value : Value to be returned on successfull call.
+    :return: ret_value
+    """
+    deployed_units = filter_units(name, version)
+    if deployed_units:
+        self.retry(exc=NodeNotUndeployed(name, version, deployed_units))
+    return ret_value
 
 
 @app.task(bind=True,
@@ -231,36 +262,3 @@ def _processed_deploy(self, results, name, version, nodes, deployment):
                 nodes,
                 extracted_results)
     return deployment
-
-
-class NodeNotRunningException(Exception):
-    def __init__(self, name, version, node_num, service_type, status,
-                 retryable=True, expected_status='running'):
-        self.name = name
-        self.version = version
-        self.node_num = node_num
-        self.service_type = service_type
-        self.status = status
-        self.retryable = retryable
-        self.expected_status = expected_status
-        super(NodeNotRunningException, self).__init__(
-            name, version, node_num, service_type, status, retryable)
-
-    def to_dict(self):
-        return {
-            'message': 'Status for application:%s version:%s node_num:%d '
-                       'service_type:%s is %s instead of %s' %
-                       (self.name, self.version, self.node_num,
-                        self.service_type, self.unit_status,
-                        self.expected_status),
-            'code': 'NODE_NOT_RUNNING',
-            'details': {
-                'name': self.name,
-                'version': self.version,
-                'node_num': self.node_num,
-                'service_type': self.service_type,
-                'status': self.status,
-                'expected_status': self.expected_status
-                },
-            'retryable': self.retryable
-        }
