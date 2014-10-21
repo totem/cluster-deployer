@@ -36,13 +36,14 @@ def create(deployment):
     :rtype: dict
     """
     # Step1: Apply defaults
+    deployment = _deployment_defaults(deployment)
+
     # Step2: Un-deploy existing versions
     # Step3: Deploy all services for the deployment
-    return (
-        _deployment_defaults.s(deployment) |
-        _pre_create_undeploy.s() |
-        _deploy_all.s()
-    )()
+    # Note: We will use callback instead of chain as chain of chains do not
+    # yield expected results.
+    return _pre_create_undeploy.si(
+        deployment, _deploy_all.si(deployment))()
 
 
 @app.task
@@ -60,8 +61,19 @@ def delete(deployment):
     print(str(deployment))
 
 
-@app.task
-def _deploy_all(deployment):
+@app.task(bind=True, default_retry_delay=10, max_retries=5)
+def _deploy_all(self, deployment):
+    """
+    Deploys all services for a given deployment
+    :param deployment: Deployment parameters
+    :type deployment: dict
+    :return:
+    """
+    try:
+        deployment = simple_result(deployment)
+    except TaskNotReadyException as exc:
+        self.retry(exc=exc)
+
     priorities = sorted({template['priority']
                          for template in deployment['templates'].values()
                          if template['enabled']})
@@ -104,7 +116,6 @@ def _github_quay_defaults(deployment):
     return deployment
 
 
-@app.task
 def _deployment_defaults(deployment):
     """
     Applies the defaults for the deployment
@@ -154,7 +165,7 @@ def _fleet_deploy(name, version, nodes, template_name, template):
 
 
 @app.task
-def _pre_create_undeploy(deployment):
+def _pre_create_undeploy(deployment, callback=None):
     """
     Un-deploys during pre-create phase. The versions un-deployed depends upon
     mode of deployment.
@@ -172,12 +183,14 @@ def _pre_create_undeploy(deployment):
         version = None
     else:
         # Do not undeploy anything when mode is custom or A/B
-        return deployment
+        return
     name = deployment['deployment']['name']
-    return (
+
+    undeploy_chain = (
         _fleet_undeploy.si(name, version) |
-        _wait_for_undeploy.si(name, version, ret_value=deployment)
-    )()
+        _wait_for_undeploy.si(name, version)
+    )
+    return undeploy_chain.apply_async(link=callback)
 
 
 @app.task
@@ -197,7 +210,7 @@ def _wait_for_undeploy(self, name, version, ret_value=None):
     Wait for undeploy to finish.
     :param name: Name of application
     :param version : Version of application.
-    :param ret_value : Value to be returned on successfull call.
+    :param ret_value : Value to be returned on successful call.
     :return: ret_value
     """
     deployed_units = filter_units(name, version)

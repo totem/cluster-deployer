@@ -6,7 +6,7 @@ __author__ = 'sukrit'
 def simple_result(result):
     if isinstance(result, GroupResult):
         return simple_result(result.results)
-    elif hasattr(result, '__iter__'):
+    elif hasattr(result, '__iter__') and not isinstance(result, dict):
         return [simple_result(each_result) for each_result in result]
     elif isinstance(result, ResultBase):
         result = AsyncResult(result.id)

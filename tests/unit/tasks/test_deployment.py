@@ -1,8 +1,8 @@
 from mock import patch, ANY
 from nose.tools import raises, eq_
+
 from conf.appconfig import DEPLOYMENT_MODE_BLUEGREEN, DEPLOYMENT_MODE_REDGREEN
 from deployer.tasks.exceptions import NodeNotUndeployed
-
 from tests.helper import dict_compare
 
 
@@ -272,13 +272,11 @@ def test_pre_create_undeploy_for_red_green(mock_filter_units, mock_undeploy):
     mock_filter_units.return_value = []
 
     # When: I un-deploy in pre-create phase
-    result = _pre_create_undeploy.s(deployment).apply_async()
-    ret_deployment = result.get(timeout=1).result
+    _pre_create_undeploy.s(deployment).apply_async()
 
     # Then: All versions of application are un-deployed.
     mock_undeploy.assert_called_with(ANY, deployment['deployment']['name'],
                                      None)
-    eq_(ret_deployment, deployment)
 
 
 @patch('deployer.tasks.deployment.undeploy')
@@ -296,13 +294,11 @@ def test_pre_create_undeploy_for_blue_green(mock_filter_units, mock_undeploy):
     mock_filter_units.return_value = []
 
     # When: I undeploy in pre-create phase
-    result = _pre_create_undeploy.s(deployment).apply_async()
-    ret_deployment = result.get(timeout=1).result
+    _pre_create_undeploy.s(deployment).apply_async()
 
     # Then: All versions of application are un-deployed.
     mock_undeploy.assert_called_with(ANY, deployment['deployment']['name'],
                                      deployment['deployment']['version'])
-    eq_(ret_deployment, deployment)
 
 
 @patch('deployer.tasks.deployment.undeploy')
@@ -320,12 +316,10 @@ def test_pre_create_undeploy_for_ab(mock_filter_units, mock_undeploy):
     mock_filter_units.return_value = []
 
     # When: I un-deploy in pre-create phase
-    result = _pre_create_undeploy.s(deployment).apply_async()
-    ret_deployment = result.get(timeout=1).result
+    _pre_create_undeploy.s(deployment).apply_async()
 
     # Then: All versions of application are un-deployed.
     mock_undeploy.assert_not_called()
-    eq_(ret_deployment, deployment)
 
 
 @raises(NodeNotUndeployed)
