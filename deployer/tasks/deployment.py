@@ -10,7 +10,7 @@ __all__ = ['create', 'wire', 'unwire', 'delete']
 import logging
 import time
 
-from celery.canvas import group, chord
+from celery.canvas import group, chord, chain
 from fleet.deploy.deployer import Deployment, status, undeploy, filter_units
 
 from deployer.fleet import get_fleet_provider, jinja_env
@@ -183,14 +183,16 @@ def _pre_create_undeploy(deployment, callback=None):
         version = None
     else:
         # Do not undeploy anything when mode is custom or A/B
-        return
+        return callback()
     name = deployment['deployment']['name']
 
-    undeploy_chain = (
-        _fleet_undeploy.si(name, version) |
+    undeploy_chain = [
+        _fleet_undeploy.si(name, version),
         _wait_for_undeploy.si(name, version)
-    )
-    return undeploy_chain.apply_async(link=callback)
+    ]
+    if callback:
+        undeploy_chain.append(callback)
+    return chain(undeploy_chain)()
 
 
 @app.task
@@ -213,7 +215,7 @@ def _wait_for_undeploy(self, name, version, ret_value=None):
     :param ret_value : Value to be returned on successful call.
     :return: ret_value
     """
-    deployed_units = filter_units(name, version)
+    deployed_units = filter_units(get_fleet_provider(), name, version)
     if deployed_units:
         self.retry(exc=NodeNotUndeployed(name, version, deployed_units))
     return ret_value

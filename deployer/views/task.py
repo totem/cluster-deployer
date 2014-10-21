@@ -46,11 +46,13 @@ class TaskApi(MethodView):
                 else:
                     status = 'PENDING'
                     output = None
-        try:
-            output = output.to_dict()
-        except AttributeError:
-            if not isinstance(output, dict) and not isinstance(output, list):
-                output = str(output)
+        if output:
+            try:
+                output = output.to_dict()
+            except AttributeError:
+                if not isinstance(output, dict)\
+                        and not isinstance(output, list):
+                    output = str(output)
 
         return {
             'status': status,
