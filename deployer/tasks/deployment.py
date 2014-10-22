@@ -1,6 +1,8 @@
 """
 Defines celery tasks for deployment (e.g.: create, undeploy, wire, unwire)
 """
+from deployer.services.distributed_lock import LockService, \
+    ResourceLockedException
 from deployer.tasks.exceptions import NodeNotRunningException, \
     NodeNotUndeployed
 
@@ -38,12 +40,20 @@ def create(deployment):
     # Step1: Apply defaults
     deployment = _deployment_defaults(deployment)
 
-    # Step2: Un-deploy existing versions
-    # Step3: Deploy all services for the deployment
+    # Step2: Apply Lock
+    # Step3: Un-deploy existing versions
+    # Step4: Deploy all services for the deployment
+    # Step5: Releoase lock
+
     # Note: We will use callback instead of chain as chain of chains do not
     # yield expected results.
-    return _pre_create_undeploy.si(
-        deployment, _deploy_all.si(deployment))()
+    return _using_lock.si(
+        deployment['deployment']['name'],
+        do_task=_pre_create_undeploy.si(
+            deployment,
+            _deploy_all.si(deployment)
+        ),
+    )()
 
 
 @app.task
@@ -61,19 +71,59 @@ def delete(deployment):
     print(str(deployment))
 
 
-@app.task(bind=True, default_retry_delay=10, max_retries=5)
-def _deploy_all(self, deployment):
+@app.task(bind=True, default_retry_delay=TASK_SETTINGS['LOCK_RETRY_DELAY'],
+          max_retries=TASK_SETTINGS['LOCK_RETRIES'])
+def _using_lock(self, name, do_task, cleanup_tasks=None):
+    """
+    Applies lock for the deployment
+    :return: Lock object (dictionary)
+    :rtype: dict
+    """
+    try:
+        lock = LockService().apply_lock(name)
+    except ResourceLockedException as lock_error:
+        self.retry(exc=lock_error)
+
+    _release_lock_s = _release_lock.si(lock)
+    cleanup_tasks = cleanup_tasks or []
+    cleanup_tasks.append(_release_lock_s)
+
+    return (
+        do_task |
+        _async_wait.s(max_retries=TASK_SETTINGS['DEPLOYMENT_WAIT_RETRIES'],
+                      default_retry_delay=TASK_SETTINGS[
+                          'DEPLOYMENT_WAIT_RETRY_DELAY'])
+    ).apply_async(
+        link=cleanup_tasks,
+        link_error=cleanup_tasks
+    )
+
+
+@app.task(bind=True)
+def _async_wait(self, result,
+                default_retry_delay=TASK_SETTINGS['DEFAULT_RETRY_DELAY'],
+                max_retries=TASK_SETTINGS['DEFAULT_RETRIES']):
+    try:
+        return simple_result(result)
+    except TaskNotReadyException as exc:
+        self.retry(exc=exc,
+                   countdown=default_retry_delay,
+                   max_retries=max_retries)
+
+
+@app.task
+def _release_lock(lock):
+    return LockService().release(lock)
+
+
+@app.task
+def _deploy_all(deployment):
     """
     Deploys all services for a given deployment
     :param deployment: Deployment parameters
     :type deployment: dict
     :return:
     """
-    try:
-        deployment = simple_result(deployment)
-    except TaskNotReadyException as exc:
-        self.retry(exc=exc)
-
     priorities = sorted({template['priority']
                          for template in deployment['templates'].values()
                          if template['enabled']})

@@ -34,6 +34,7 @@ class TaskApi(MethodView):
         output = deployer.celery.app.AsyncResult(id)
         traceback = None
         error_task = TaskApi._find_error_task(output)
+
         if error_task:
             output, status, traceback =  \
                 error_task.result, error_task.status, error_task.traceback

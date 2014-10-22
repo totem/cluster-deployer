@@ -88,6 +88,8 @@ class LockService:
                 return True
             except KeyError:
                 return False
+            except ValueError:
+                return False
         else:
             return False
 
