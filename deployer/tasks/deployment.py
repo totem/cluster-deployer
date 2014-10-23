@@ -16,7 +16,6 @@ from celery.canvas import group, chord, chain
 from fleet.deploy.deployer import Deployment, status, undeploy, filter_units
 
 from deployer.fleet import get_fleet_provider, jinja_env
-from deployer.tasks.util import TaskNotReadyException, simple_result
 from deployer.celery import app
 from conf.appconfig import DEPLOYMENT_DEFAULTS, DEPLOYMENT_TYPE_GITHUB_QUAY, \
     TEMPLATE_DEFAULTS, TASK_SETTINGS, DEPLOYMENT_MODE_BLUEGREEN, \
@@ -53,6 +52,7 @@ def create(deployment):
             deployment,
             _deploy_all.si(deployment)
         ),
+        ret_value=deployment
     )()
 
 
@@ -73,7 +73,8 @@ def delete(deployment):
 
 @app.task(bind=True, default_retry_delay=TASK_SETTINGS['LOCK_RETRY_DELAY'],
           max_retries=TASK_SETTINGS['LOCK_RETRIES'])
-def _using_lock(self, name, do_task, cleanup_tasks=None):
+def _using_lock(self, name, do_task, cleanup_tasks=None, ret_value=None,
+                _async_wait=None):
     """
     Applies lock for the deployment
     :return: Lock object (dictionary)
@@ -92,23 +93,13 @@ def _using_lock(self, name, do_task, cleanup_tasks=None):
         do_task |
         _async_wait.s(max_retries=TASK_SETTINGS['DEPLOYMENT_WAIT_RETRIES'],
                       default_retry_delay=TASK_SETTINGS[
-                          'DEPLOYMENT_WAIT_RETRY_DELAY'])
+                          'DEPLOYMENT_WAIT_RETRY_DELAY'],
+                      ret_value=ret_value
+                      )
     ).apply_async(
         link=cleanup_tasks,
         link_error=cleanup_tasks
     )
-
-
-@app.task(bind=True)
-def _async_wait(self, result,
-                default_retry_delay=TASK_SETTINGS['DEFAULT_RETRY_DELAY'],
-                max_retries=TASK_SETTINGS['DEFAULT_RETRIES']):
-    try:
-        return simple_result(result)
-    except TaskNotReadyException as exc:
-        self.retry(exc=exc,
-                   countdown=default_retry_delay,
-                   max_retries=max_retries)
 
 
 @app.task
@@ -305,25 +296,22 @@ def _fleet_check_unit(name, version, node_num, service_type):
 
 @app.task
 def _fleet_check_deploy(name, version, nodes, service_types, deployment):
-    return chord(
-        group(
-            _fleet_check_unit.si(name, version, node_num, service_type)
-            for service_type in service_types
-            for node_num in range(1, nodes + 1)
-        ),
-        _processed_deploy.s(name, version, nodes, deployment)
+    return group(
+        _fleet_check_unit.si(name, version, node_num, service_type)
+        for service_type in service_types
+        for node_num in range(1, nodes + 1)
     )()
 
 
-@app.task(bind=True, default_retry_delay=TASK_SETTINGS['DEFAULT_RETRY_DELAY'],
-          max_retries=TASK_SETTINGS['DEFAULT_RETRIES'])
-def _processed_deploy(self, results, name, version, nodes, deployment):
-    try:
-        extracted_results = simple_result(results)
-    except TaskNotReadyException as exc:
-        self.retry(exc=exc)
-
-    logger.info('Processed: %s:%s for %d nodes. result:%s', name, version,
-                nodes,
-                extracted_results)
-    return deployment
+# @app.task(bind=True, default_retry_delay=TASK_SETTINGS['DEFAULT_RETRY_DELAY']
+# ,max_retries=TASK_SETTINGS['DEFAULT_RETRIES'])
+# def _processed_deploy(self, results, name, version, nodes, deployment):
+#     try:
+#         extracted_results = simple_result(results)
+#     except TaskNotReadyException as exc:
+#         self.retry(exc=exc)
+#
+#     logger.info('Processed: %s:%s for %d nodes. result:%s', name, version,
+#                 nodes,
+#                 extracted_results)
+#     return deployment

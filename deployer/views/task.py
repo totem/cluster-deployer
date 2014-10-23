@@ -3,6 +3,7 @@ from celery.result import AsyncResult, ResultBase
 import flask
 from flask.views import MethodView
 import deployer
+from deployer.tasks.exceptions import TaskExecutionException
 
 logger = logging.getLogger(__name__)
 
@@ -15,33 +16,34 @@ class TaskApi(MethodView):
     @staticmethod
     def _find_error_task(task):
         if not task or not isinstance(task, ResultBase):
-            return None
+            return
 
-        if isinstance(task, AsyncResult) and \
-                task.status in ['ERROR', 'FAILURE']:
-            return task
+        if isinstance(task, AsyncResult):
+            if task.status in ['FAILURE']:
+                return task
+            else:
+                return TaskApi._find_error_task(task.result)
         else:
-            for next_task in task.children or []:
-                ret_task = TaskApi._find_error_task(next_task)
-                if ret_task:
-                    return ret_task
-        return None
+            return
 
     @staticmethod
     def _ready(id):
-
         status = 'READY'
+        # DO not remove line below
+        # Explanation: https://github.com/celery/celery/issues/2315
+        deployer.celery.app.set_current()
+
         output = deployer.celery.app.AsyncResult(id)
-        traceback = None
+        # print('%r', output.result.backend.database)
         error_task = TaskApi._find_error_task(output)
 
         if error_task:
-            output, status, traceback =  \
-                error_task.result, error_task.status, error_task.traceback
-
+            output, status =  \
+                error_task.result, error_task.status
+            if not isinstance(output, TaskExecutionException):
+                output = TaskExecutionException(output, error_task.traceback)
         else:
             while isinstance(output, AsyncResult) and status is 'READY':
-                output = deployer.celery.app.AsyncResult(output.id)
                 if output.ready():
                     output = output.result
                 else:
@@ -57,8 +59,7 @@ class TaskApi(MethodView):
 
         return {
             'status': status,
-            'output': output,
-            'traceback': traceback
+            'output': output
         }
 
     def get(self, id=None):

@@ -21,7 +21,7 @@ class NodeNotRunningException(Exception):
             'message': 'Status for application:%s version:%s node_num:%d '
                        'service_type:%s is %s instead of %s' %
                        (self.name, self.version, self.node_num,
-                        self.service_type, self.unit_status,
+                        self.service_type, self.status,
                         self.expected_status),
             'code': 'NODE_NOT_RUNNING',
             'details': {
@@ -57,4 +57,30 @@ class NodeNotUndeployed(Exception):
                 'name': self.name,
                 'version': self.version
                 }
+        }
+
+
+class TaskExecutionException(Exception):
+    """
+    Exception wrapping the final exception returned.
+    """
+
+    def __init__(self, cause, traceback=None):
+        try:
+            dict_repr = cause.to_dict()
+        except AttributeError:
+            dict_repr = {}
+
+        self.message = dict_repr.get('message', str(cause))
+        self.code = dict_repr.get('code', 'INTERNAL')
+        self.traceback = traceback
+        self.details = dict_repr.get('details', None)
+        super(TaskExecutionException, self).__init__(cause, traceback)
+
+    def to_dict(self):
+        return {
+            'message': self.message,
+            'code': self.code,
+            'details': self.details,
+            'traceback': self.traceback
         }
