@@ -4,10 +4,10 @@ from deployer.tasks.util import simple_result, TaskNotReadyException
 
 
 @app.task(bind=True)
-def _async_wait(self, result,
-                default_retry_delay=TASK_SETTINGS['DEFAULT_RETRY_DELAY'],
-                max_retries=TASK_SETTINGS['DEFAULT_RETRIES'],
-                ret_value=None):
+def async_wait(self, result,
+               default_retry_delay=TASK_SETTINGS['DEFAULT_RETRY_DELAY'],
+               max_retries=TASK_SETTINGS['DEFAULT_RETRIES'],
+               ret_value=None):
     """
     Performs asynchronous wait for result. It uses retry approach for result
     to be available rather calling get() . This way the trask do not directly

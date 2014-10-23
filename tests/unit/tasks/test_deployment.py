@@ -115,7 +115,8 @@ def test_deployment_defaults_for_type_github_quay(mock_time):
                 'enabled': True,
                 'service-type': 'logger'
             }
-        }
+        },
+        'id': 'testowner-testrepo-testbranch+101'
     })
 
 
@@ -180,7 +181,8 @@ def test_deployment_defaults_for_type_github_quay_with_overrides(mock_time):
                 'enabled': False,
                 'service-type': 'logger'
             }
-        }
+        },
+        'id': 'testowner-testrepo-testbranch+1000'
     })
 
 
@@ -255,7 +257,8 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
                 'enabled': False,
                 'service-type': 'logger'
             }
-        }
+        },
+        'id': 'testdeployment+1000'
     })
 
 
@@ -285,7 +288,7 @@ def test_pre_create_undeploy_for_red_green(mock_filter_units, mock_undeploy):
 
     # Then: All versions of application are un-deployed.
     mock_undeploy.assert_called_with(ANY, deployment['deployment']['name'],
-                                     None)
+                                     None, exclude_version=None)
     eq_(ret_value, True)
 
 
@@ -310,7 +313,8 @@ def test_pre_create_undeploy_for_blue_green(mock_filter_units, mock_undeploy):
 
     # Then: All versions of application are un-deployed.
     mock_undeploy.assert_called_with(ANY, deployment['deployment']['name'],
-                                     deployment['deployment']['version'])
+                                     deployment['deployment']['version'],
+                                     exclude_version=None)
     eq_(ret_value, True)
 
 

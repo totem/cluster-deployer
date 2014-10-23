@@ -66,7 +66,7 @@ class LockService:
         lock_value = uuid.uuid4()
         try:
             self.etcd_cl.write(lock_key, lock_value, ttl=self.lock_ttl,
-                               prevExists=False)
+                               prevExist=False)
         except KeyError:
             raise ResourceLockedException(name=app_name, key=lock_key)
         return {

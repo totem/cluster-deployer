@@ -21,6 +21,8 @@ from conf.appconfig import DEPLOYMENT_DEFAULTS, DEPLOYMENT_TYPE_GITHUB_QUAY, \
     TEMPLATE_DEFAULTS, TASK_SETTINGS, DEPLOYMENT_MODE_BLUEGREEN, \
     DEPLOYMENT_MODE_REDGREEN
 
+from deployer.tasks.common import async_wait
+
 from deployer.util import dict_merge
 
 logger = logging.getLogger(__name__)
@@ -42,7 +44,7 @@ def create(deployment):
     # Step2: Apply Lock
     # Step3: Un-deploy existing versions
     # Step4: Deploy all services for the deployment
-    # Step5: Releoase lock
+    # Step5: Release lock
 
     # Note: We will use callback instead of chain as chain of chains do not
     # yield expected results.
@@ -50,10 +52,22 @@ def create(deployment):
         deployment['deployment']['name'],
         do_task=_pre_create_undeploy.si(
             deployment,
-            _deploy_all.si(deployment)
+            _deploy_all.si(deployment) |
+            async_wait.s(
+                default_retry_delay=TASK_SETTINGS[
+                    'DEPLOYMENT_WAIT_RETRY_DELAY'],
+                max_retries=TASK_SETTINGS['DEPLOYMENT_WAIT_RETRIES'],
+                ret_value=deployment
+            ) |
+            _fleet_undeploy.si(
+                deployment['deployment']['name'],
+                exclude_version=deployment['deployment']['version'],
+                ret_value=deployment)
         ),
-        ret_value=deployment
-    )()
+        error_tasks=_fleet_undeploy.si(
+            deployment['deployment']['name'],
+            version=deployment['deployment']['version'])
+    ).apply_async()
 
 
 @app.task
@@ -72,9 +86,8 @@ def delete(deployment):
 
 
 @app.task(bind=True, default_retry_delay=TASK_SETTINGS['LOCK_RETRY_DELAY'],
-          max_retries=TASK_SETTINGS['LOCK_RETRIES'])
-def _using_lock(self, name, do_task, cleanup_tasks=None, ret_value=None,
-                _async_wait=None):
+          max_retries=10)
+def _using_lock(self, name, do_task, cleanup_tasks=None, error_tasks=None):
     """
     Applies lock for the deployment
     :return: Lock object (dictionary)
@@ -87,23 +100,32 @@ def _using_lock(self, name, do_task, cleanup_tasks=None, ret_value=None,
 
     _release_lock_s = _release_lock.si(lock)
     cleanup_tasks = cleanup_tasks or []
+    if not isinstance(cleanup_tasks, list):
+        cleanup_tasks = [cleanup_tasks]
+
+    error_tasks = error_tasks or []
+    if not isinstance(error_tasks, list):
+        error_tasks = [error_tasks]
+
+    error_tasks.append(_release_lock_s)
     cleanup_tasks.append(_release_lock_s)
 
-    return (
-        do_task |
-        _async_wait.s(max_retries=TASK_SETTINGS['DEPLOYMENT_WAIT_RETRIES'],
-                      default_retry_delay=TASK_SETTINGS[
-                          'DEPLOYMENT_WAIT_RETRY_DELAY'],
-                      ret_value=ret_value
-                      )
-    ).apply_async(
-        link=cleanup_tasks,
-        link_error=cleanup_tasks
+    return do_task.apply_async(
+        link=chain(cleanup_tasks),
+        link_error=chain(error_tasks)
     )
 
 
 @app.task
 def _release_lock(lock):
+    """
+    Releases lock acquired during deletion or creation.
+
+    :param lock: Lock dictionary
+    :type lock: dict
+    :return: True: If lock was released.
+            False: Otherwise
+    """
     return LockService().release(lock)
 
 
@@ -131,13 +153,14 @@ def _deploy_all(deployment):
             for template_name, template in deployment['templates'].iteritems()
             if template['priority'] == priority and template['enabled']
         ),
-        _fleet_check_deploy.si(name, version, nodes, service_types, deployment)
+        _fleet_check_deploy.si(name, version, nodes, service_types)
     )()
 
 
 def _github_quay_defaults(deployment):
     """
     Applies defaults for github-quay deployment
+
     :param deployment: Deployment that needs to be updated
     :type deployment: dict
     :return: Updated deployment
@@ -160,11 +183,13 @@ def _github_quay_defaults(deployment):
 def _deployment_defaults(deployment):
     """
     Applies the defaults for the deployment
+
     :param deployment: Dictionary representing deployment
     :type deployment: dict
     :return: Deployment with defaults applied
     :rtype: dict
     """
+
     # Set the default deployment type.
     deployment_upd = dict_merge(deployment, {
         'deployment': {
@@ -190,6 +215,13 @@ def _deployment_defaults(deployment):
     deployment_upd['deployment']['version'] = \
         deployment_upd['deployment']['version'] or \
         int(round(time.time() * 1000))
+
+    # Set the deployment identifier.  We will use deployment name and version
+    # as unique identifier as there can only be one deployment with same name
+    # and version
+
+    deployment_upd['id'] = '%s+%s' % (deployment_upd['deployment']['name'],
+                                      deployment_upd['deployment']['version'])
 
     return deployment_upd
 
@@ -237,14 +269,18 @@ def _pre_create_undeploy(deployment, callback=None):
 
 
 @app.task
-def _fleet_undeploy(name, version):
+def _fleet_undeploy(name, version=None, exclude_version=None, ret_value=None):
     """
     Un-deploys fleet units with matching name and version
     :param name: Name of application
-    :param version: Version of application
-    :return: None
+    :keyword version: Version of application
+    :keyword exclude_version: Version of deployment to be excluded
+    :keyword ret_value: Value to be returned after successful deployment
+    :return: ret_value
     """
-    undeploy(get_fleet_provider(), name, version)
+    undeploy(get_fleet_provider(), name, version,
+             exclude_version=exclude_version)
+    return ret_value
 
 
 @app.task(bind=True, default_retry_delay=5, max_retries=5)
@@ -252,8 +288,9 @@ def _wait_for_undeploy(self, name, version, ret_value=None):
     """
     Wait for undeploy to finish.
     :param name: Name of application
-    :param version : Version of application.
-    :param ret_value : Value to be returned on successful call.
+    :param version: Version of application.
+    :type version: str
+    :keyword ret_value: Value to be returned on successful call.
     :return: ret_value
     """
     deployed_units = filter_units(get_fleet_provider(), name, version)
@@ -262,8 +299,7 @@ def _wait_for_undeploy(self, name, version, ret_value=None):
     return ret_value
 
 
-@app.task(bind=True,
-          default_retry_delay=TASK_SETTINGS['DEFAULT_RETRY_DELAY'],
+@app.task(bind=True, default_retry_delay=TASK_SETTINGS['DEFAULT_RETRY_DELAY'],
           max_retries=TASK_SETTINGS['DEFAULT_RETRIES'])
 def _fleet_check_running(self, name, version, node_num,
                          service_type):
@@ -282,8 +318,13 @@ def _fleet_check_running(self, name, version, node_num,
 def _fleet_unit_deployed(name, version, node_num, service_type):
     logger.info('Unit deployed successfully %s:%s:%d:%s ', name,
                 version, node_num, service_type)
-    return 'Unit deployed successfully %s:%s:%d:%s ' % (name, version,
-                                                        node_num, service_type)
+    return {
+        'name': name,
+        'version': version,
+        'node_num': node_num,
+        'service_type': service_type,
+        'status': 'success'
+    }
 
 
 @app.task
@@ -295,13 +336,12 @@ def _fleet_check_unit(name, version, node_num, service_type):
 
 
 @app.task
-def _fleet_check_deploy(name, version, nodes, service_types, deployment):
+def _fleet_check_deploy(name, version, nodes, service_types):
     return group(
         _fleet_check_unit.si(name, version, node_num, service_type)
         for service_type in service_types
         for node_num in range(1, nodes + 1)
     )()
-
 
 # @app.task(bind=True, default_retry_delay=TASK_SETTINGS['DEFAULT_RETRY_DELAY']
 # ,max_retries=TASK_SETTINGS['DEFAULT_RETRIES'])
