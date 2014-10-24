@@ -82,9 +82,12 @@ def unwire(proxy):
 
 @app.task
 def delete(name, version):
-    return (
-        _fleet_undeploy.s(name, version) |
-        _wait_for_undeploy.s(name, version)
+    return _using_lock.si(
+        name,
+        do_task=(
+            _fleet_undeploy.si(name, version) |
+            _wait_for_undeploy.si(name, version, ret_value='done')
+        )
     )()
 
 

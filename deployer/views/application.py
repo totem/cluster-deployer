@@ -10,7 +10,7 @@ class ApplicationApi(MethodView):
     def post(self):
         deployment = json.loads(request.data)
         result = create.apply_async([deployment])
-        return flask.jsonify({'task_id': str(result)})
+        return flask.jsonify({'task_id': str(result)}), 202
 
     def delete(self, id):
         id_split = id.split('+')
@@ -18,7 +18,7 @@ class ApplicationApi(MethodView):
             flask.abort(400)
         else:
             result = delete.delay(id_split[0], id_split[1])
-            return flask.jsonify({'task_id': str(result)})
+            return flask.jsonify({'task_id': str(result)}), 202
 
 
 def register(app):
