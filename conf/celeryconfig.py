@@ -35,6 +35,9 @@ CELERYD_TASK_TIME_LIMIT = 330
 CELERY_SEND_TASK_SENT_EVENT = True
 CELERY_TASK_RESULT_EXPIRES = timedelta(days=7)
 
+# Messages older than 1 hour will be discarded
+CELERY_EVENT_QUEUE_TTL = 3600
+
 # Queue Settings
 CELERY_QUEUE_HA_POLICY = 'all'
 

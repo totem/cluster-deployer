@@ -8,7 +8,7 @@ __author__ = 'sukrit'
 def check_or_raise_task_exception(result):
     if isinstance(result, AsyncResult) and result.failed():
         if isinstance(result.result, TaskExecutionException):
-            raise
+            raise result.result
         else:
             raise TaskExecutionException(result.result, result.traceback)
 

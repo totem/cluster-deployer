@@ -19,8 +19,14 @@ class TaskApi(MethodView):
             return
 
         if isinstance(task, AsyncResult):
-            if task.status in ['FAILURE']:
+            if task.failed():
                 return task
+            elif task.status in ['PENDING'] and task.parent:
+                while task.parent:
+                    if task.parent.failed():
+                        return task.parent
+                    else:
+                        task = task.parent
             else:
                 return TaskApi._find_error_task(task.result)
         else:

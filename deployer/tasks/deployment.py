@@ -81,8 +81,11 @@ def unwire(proxy):
 
 
 @app.task
-def delete(deployment):
-    print(str(deployment))
+def delete(name, version):
+    return (
+        _fleet_undeploy.s(name, version) |
+        _wait_for_undeploy.s(name, version)
+    )()
 
 
 @app.task(bind=True, default_retry_delay=TASK_SETTINGS['LOCK_RETRY_DELAY'],
@@ -110,7 +113,13 @@ def _using_lock(self, name, do_task, cleanup_tasks=None, error_tasks=None):
     error_tasks.append(_release_lock_s)
     cleanup_tasks.append(_release_lock_s)
 
-    return do_task.apply_async(
+    return (
+        do_task |
+        async_wait.s(
+            default_retry_delay=TASK_SETTINGS['DEPLOYMENT_WAIT_RETRY_DELAY'],
+            max_retries=TASK_SETTINGS['DEPLOYMENT_WAIT_RETRIES']
+        )
+    ).apply_async(
         link=chain(cleanup_tasks),
         link_error=chain(error_tasks)
     )
@@ -193,7 +202,7 @@ def _deployment_defaults(deployment):
     # Set the default deployment type.
     deployment_upd = dict_merge(deployment, {
         'deployment': {
-            'type': 'default'
+            'type': DEPLOYMENT_TYPE_GITHUB_QUAY
         }
     })
     deployment_type = deployment_upd['deployment']['type']
@@ -299,8 +308,9 @@ def _wait_for_undeploy(self, name, version, ret_value=None):
     return ret_value
 
 
-@app.task(bind=True, default_retry_delay=TASK_SETTINGS['DEFAULT_RETRY_DELAY'],
-          max_retries=TASK_SETTINGS['DEFAULT_RETRIES'])
+@app.task(bind=True,
+          default_retry_delay=TASK_SETTINGS['CHECK_RUNNING_RETRY_DELAY'],
+          max_retries=TASK_SETTINGS['CHECK_RUNNING_RETRIES'])
 def _fleet_check_running(self, name, version, node_num,
                          service_type):
     unit_status = status(get_fleet_provider(), name, version, node_num,
