@@ -6,6 +6,9 @@ from deployer.tasks.deployment import create, delete
 
 
 class ApplicationApi(MethodView):
+    """
+    API for create, deleting, fetching applications
+    """
 
     def post(self):
         deployment = json.loads(request.data)

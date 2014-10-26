@@ -26,22 +26,19 @@ DEPLOYMENT_DEFAULTS = {
             'type': 'github-quay'
         },
         'templates': {
-            'default-app': {
+            'app': {
                 'args': {
                     'image': QUAY_PATH_PREFIX + '{GIT_REPO}:{GIT_COMMIT}',
                     'environment': {},
                     'docker-args': ''
                 },
-                'priority': 1,
-                'service-type': 'app'
+                'name': 'default-app',
             },
-            'yoda-ec2-register': {
-                'priority': 2,
-                'service-type': 'yoda-register'
+            'yoda-register': {
+                'name': 'yoda-ec2-register'
             },
-            'default-logger': {
-                'priority': 2,
-                'service-type': 'logger'
+            'logger': {
+                'name': 'default-logger'
             }
         }
     },
@@ -67,9 +64,7 @@ DEPLOYMENT_DEFAULTS = {
 }
 
 TEMPLATE_DEFAULTS = {
-    'priority': 1,
     'enabled': True,
-    'service-type': 'app',
     'args': {}
 }
 

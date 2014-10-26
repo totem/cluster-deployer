@@ -82,6 +82,13 @@ def unwire(proxy):
 
 @app.task
 def delete(name, version):
+    """
+    Deletes the application with given name and version
+
+    :param name:
+    :param version:
+    :return:
+    """
     return _using_lock.si(
         name,
         do_task=(
@@ -92,10 +99,11 @@ def delete(name, version):
 
 
 @app.task(bind=True, default_retry_delay=TASK_SETTINGS['LOCK_RETRY_DELAY'],
-          max_retries=10)
+          max_retries=TASK_SETTINGS['LOCK_RETRIES'])
 def _using_lock(self, name, do_task, cleanup_tasks=None, error_tasks=None):
     """
     Applies lock for the deployment
+
     :return: Lock object (dictionary)
     :rtype: dict
     """
@@ -149,21 +157,29 @@ def _deploy_all(deployment):
     :type deployment: dict
     :return:
     """
-    priorities = sorted({template['priority']
-                         for template in deployment['templates'].values()
-                         if template['enabled']})
-    service_types = {template['service-type'] for template in
-                     deployment['templates'].itervalues()
+
+    templates = deployment['templates']
+    app_template = templates['app']
+    if not app_template['enabled']:
+        return []
+
+    sidekicks = {service_type for service_type, template in
+                 deployment['templates'].iteritems()
+                 if template['enabled'] and service_type != 'app'}
+
+    service_types = {service_type for service_type, template in
+                     deployment['templates'].iteritems()
                      if template['enabled']}
+
+    app_template['args']['sidekicks'] = sidekicks
     name, version, nodes = deployment['deployment']['name'], \
         deployment['deployment']['version'], \
         deployment['deployment']['nodes']
     return chord(
         group(
-            _fleet_deploy.si(name, version, nodes, template_name, template)
-            for priority in priorities
-            for template_name, template in deployment['templates'].iteritems()
-            if template['priority'] == priority and template['enabled']
+            _fleet_deploy.si(name, version, nodes, service_type, template)
+            for service_type, template in deployment['templates'].iteritems()
+            if template['enabled']
         ),
         _fleet_check_deploy.si(name, version, nodes, service_types)
     )()
@@ -178,7 +194,7 @@ def _github_quay_defaults(deployment):
     :return: Updated deployment
     :rtype: dict
     """
-    deploy_args = deployment['templates']['default-app']['args']
+    deploy_args = deployment['templates']['app']['args']
     git_meta = deployment['meta-info']['github']
     deploy_args['image'] = deploy_args['image'] \
         .format(GIT_OWNER=git_meta['owner'],
@@ -239,13 +255,13 @@ def _deployment_defaults(deployment):
 
 
 @app.task
-def _fleet_deploy(name, version, nodes, template_name, template):
-    logger.info('Deploying %s:%s:%s nodes:%d %r', name, version, template_name,
+def _fleet_deploy(name, version, nodes, service_type, template):
+    logger.info('Deploying %s:%s:%s nodes:%d %r', name, version, service_type,
                 nodes, template)
     fleet_deployment = Deployment(
         fleet_provider=get_fleet_provider(), jinja_env=jinja_env, name=name,
-        version=version, template=template_name + '.service', nodes=nodes,
-        template_args=template['args'], service_type=template['service-type'])
+        version=version, template=template['name'] + '.service', nodes=nodes,
+        template_args=template['args'], service_type=service_type)
     fleet_deployment.deploy()
 
 

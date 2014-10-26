@@ -7,3 +7,4 @@ uWSGI==2.0.7
 supervisor==3.1.2
 python-etcd==0.3.2
 https://github.com/totem/fleet-py/archive/master.tar.gz
+https://github.com/totem/yoda-py/archive/master.tar.gz
