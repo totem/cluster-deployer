@@ -1,6 +1,7 @@
 """
 Defines celery tasks for deployment (e.g.: create, undeploy, wire, unwire)
 """
+import copy
 from deployer.services.distributed_lock import LockService, \
     ResourceLockedException
 from deployer.tasks.exceptions import NodeNotRunningException, \
@@ -155,7 +156,7 @@ def _deploy_all(deployment):
     """
 
     templates = deployment['templates']
-    app_template = templates['app']
+    app_template = copy.deepcopy(templates['app'])
     if not app_template['enabled']:
         return []
 
