@@ -7,7 +7,7 @@ from deployer.tasks.exceptions import NodeNotRunningException, \
     NodeNotUndeployed
 
 __author__ = 'sukrit'
-__all__ = ['create', 'wire', 'unwire', 'delete']
+__all__ = ['create', 'delete']
 
 import logging
 import time
@@ -22,6 +22,7 @@ from conf.appconfig import DEPLOYMENT_DEFAULTS, DEPLOYMENT_TYPE_GITHUB_QUAY, \
     DEPLOYMENT_MODE_REDGREEN
 
 from deployer.tasks.common import async_wait
+from deployer.tasks.proxy import wire_proxy
 
 from deployer.util import dict_merge
 
@@ -52,32 +53,27 @@ def create(deployment):
         deployment['deployment']['name'],
         do_task=_pre_create_undeploy.si(
             deployment,
-            _deploy_all.si(deployment) |
+            next_task=_deploy_all.si(deployment) |
             async_wait.s(
                 default_retry_delay=TASK_SETTINGS[
                     'DEPLOYMENT_WAIT_RETRY_DELAY'],
-                max_retries=TASK_SETTINGS['DEPLOYMENT_WAIT_RETRIES'],
-                ret_value=deployment
+                max_retries=TASK_SETTINGS['DEPLOYMENT_WAIT_RETRIES']
             ) |
-            _fleet_undeploy.si(
+            wire_proxy.si(
                 deployment['deployment']['name'],
-                exclude_version=deployment['deployment']['version'],
-                ret_value=deployment)
+                deployment['deployment']['version'],
+                deployment['proxy'],
+                next_task=_fleet_undeploy.si(
+                    deployment['deployment']['name'],
+                    exclude_version=deployment['deployment']['version'],
+                    ret_value=deployment
+                )
+            )
         ),
         error_tasks=_fleet_undeploy.si(
             deployment['deployment']['name'],
             version=deployment['deployment']['version'])
     ).apply_async()
-
-
-@app.task
-def wire(proxy):
-    print(str(proxy))
-
-
-@app.task
-def unwire(proxy):
-    print(str(proxy))
 
 
 @app.task
@@ -266,7 +262,7 @@ def _fleet_deploy(name, version, nodes, service_type, template):
 
 
 @app.task
-def _pre_create_undeploy(deployment, callback=None):
+def _pre_create_undeploy(deployment, next_task=None):
     """
     Un-deploys during pre-create phase. The versions un-deployed depends upon
     mode of deployment.
@@ -284,15 +280,15 @@ def _pre_create_undeploy(deployment, callback=None):
         version = None
     else:
         # Do not undeploy anything when mode is custom or A/B
-        return callback()
+        return next_task() if next_task else None
     name = deployment['deployment']['name']
 
     undeploy_chain = [
         _fleet_undeploy.si(name, version),
         _wait_for_undeploy.si(name, version)
     ]
-    if callback:
-        undeploy_chain.append(callback)
+    if next_task:
+        undeploy_chain.append(next_task)
     return chain(undeploy_chain)()
 
 

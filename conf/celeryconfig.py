@@ -14,7 +14,7 @@ MONGO_RESULTS_DB = os.getenv('MONGO_RESULTS_DB') or os.path.basename(MONGO_URL)
 BROKER_URL = os.getenv('BROKER_URL', 'amqp://guest:guest@localhost:5672/')
 CELERY_RESULT_BACKEND = MONGO_URL
 CELERY_IMPORTS = ('deployer.tasks', 'deployer.tasks.deployment',
-                  'deployer.tasks.common', 'deployer.tasks.yoda',
+                  'deployer.tasks.common', 'deployer.tasks.proxy',
                   'celery.task')
 CELERY_MONGODB_BACKEND_SETTINGS = {
     'database': MONGO_RESULTS_DB,

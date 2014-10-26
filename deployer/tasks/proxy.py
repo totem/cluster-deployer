@@ -16,7 +16,8 @@ logger = logging.getLogger(__name__)
 
 @app.task
 def wire_proxy(app_name, app_version, proxy,
-               deployment_mode=DEPLOYMENT_MODE_BLUEGREEN):
+               deployment_mode=DEPLOYMENT_MODE_BLUEGREEN,
+               ret_value=None, next_task=None):
     """
     Wires proxy with yoda.
 
@@ -39,7 +40,8 @@ def wire_proxy(app_name, app_version, proxy,
 
     return chord(
         group(proxy_host_tasks + proxy_listener_tasks),
-        _wire_done.si(app_name, app_version, proxy, deployment_mode)
+        _wire_done.si(app_name, app_version, proxy, deployment_mode,
+                      ret_value=ret_value, next_task=next_task)
     )()
 
 
@@ -112,7 +114,8 @@ def _wire_listener(listener, app_name, use_version):
 
 
 @app.task
-def _wire_done(app_name, app_version, proxy, deployment_mode):
+def _wire_done(app_name, app_version, proxy, deployment_mode, ret_value=None,
+               next_task=None):
     """
     Carries out post wiring actions (los, auditing, event streaming, ...)
     :param app_name:
@@ -124,7 +127,10 @@ def _wire_done(app_name, app_version, proxy, deployment_mode):
     logger.info('Proxy wired successfully for app_name:%s app_version:%s '
                 'proxy:%r deployment_mode:%s', app_name, app_version, proxy,
                 deployment_mode)
-    pass
+    if next_task:
+        return next_task()
+    else:
+        return ret_value
 
 
 def _get_yoda_cl():

@@ -59,6 +59,10 @@ DEPLOYMENT_DEFAULTS = {
             'nodes': 2
         },
         'templates': {
+        },
+        'proxy': {
+            'hosts': [],
+            'listeners': []
         }
     }
 }
