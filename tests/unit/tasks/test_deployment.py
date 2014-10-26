@@ -93,27 +93,24 @@ def test_deployment_defaults_for_type_github_quay(mock_time):
             'mode': DEPLOYMENT_MODE_BLUEGREEN
         },
         'templates': {
-            'default-app': {
-                'priority': 1,
+            'app': {
                 'args': {
                     'environment': {},
                     'docker-args': '',
                     'image': 'quay.io/totem/totem-testrepo:testcommit'
                 },
                 'enabled': True,
-                'service-type': 'app'
+                'name': 'default-app'
             },
-            'yoda-ec2-register': {
+            'yoda-register': {
                 'args': {},
-                'priority': 2,
                 'enabled': True,
-                'service-type': 'yoda-register'
+                'name': 'yoda-ec2-register'
             },
-            'default-logger': {
+            'logger': {
                 'args': {},
-                'priority': 2,
                 'enabled': True,
-                'service-type': 'logger'
+                'name': 'default-logger'
             }
         },
         'id': 'testowner-testrepo-testbranch+101'
@@ -127,8 +124,8 @@ def test_deployment_defaults_for_type_github_quay_with_overrides(mock_time):
     # Given: Deployment dictionary
     deployment = _create_test_deployment()
     deployment['templates'] = {
-        'default-logger': {
-            'priority': 3,
+        'logger': {
+            'name': 'default-logger',
             'enabled': False,
         }
     }
@@ -159,27 +156,24 @@ def test_deployment_defaults_for_type_github_quay_with_overrides(mock_time):
             'mode': DEPLOYMENT_MODE_BLUEGREEN
         },
         'templates': {
-            'default-app': {
-                'priority': 1,
+            'app': {
                 'args': {
                     'environment': {},
                     'docker-args': '',
                     'image': 'quay.io/totem/totem-testrepo:testcommit'
                 },
                 'enabled': True,
-                'service-type': 'app'
+                'name': 'default-app'
             },
-            'yoda-ec2-register': {
+            'yoda-register': {
                 'args': {},
-                'priority': 2,
                 'enabled': True,
-                'service-type': 'yoda-register'
+                'name': 'yoda-ec2-register'
             },
-            'default-logger': {
+            'logger': {
                 'args': {},
-                'priority': 3,
                 'enabled': False,
-                'service-type': 'logger'
+                'name': 'default-logger'
             }
         },
         'id': 'testowner-testrepo-testbranch+1000'
@@ -199,18 +193,17 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
     }
 
     deployment['templates'] = {
-        'custom-app': {
+        'app': {
             'args': {
                 'arg1': 'value1'
             },
-            'service-type': 'app'
+            'name': 'custom-app'
         },
-        'custom-logger': {
+        'logger': {
             'args': {
                 'arg1': 'value1'
             },
-            'service-type': 'logger',
-            'priority': 2,
+            'name': 'custom-logger',
             'enabled': False
         }
     }
@@ -241,21 +234,19 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
             'mode': DEPLOYMENT_MODE_BLUEGREEN
         },
         'templates': {
-            'custom-app': {
+            'app': {
                 'args': {
                     'arg1': 'value1'
                 },
-                'priority': 1,
                 'enabled': True,
-                'service-type': 'app'
+                'name': 'custom-app'
             },
-            'custom-logger': {
+            'logger': {
                 'args': {
                     'arg1': 'value1'
                 },
-                'priority': 2,
                 'enabled': False,
-                'service-type': 'logger'
+                'name': 'custom-logger'
             }
         },
         'id': 'testdeployment+1000'
