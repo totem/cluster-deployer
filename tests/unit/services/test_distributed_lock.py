@@ -46,7 +46,7 @@ class TestLockService():
             'value': MOCK_LOCK
         })
         self.etcd_cl.write.assert_called_once_with(
-            MOCK_KEY, MOCK_LOCK, prevExists=False, ttl=self.service.lock_ttl)
+            MOCK_KEY, MOCK_LOCK, prevExist=False, ttl=self.service.lock_ttl)
 
     @raises(ResourceLockedException)
     @patch('uuid.uuid4')

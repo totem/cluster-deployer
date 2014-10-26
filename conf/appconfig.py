@@ -95,8 +95,8 @@ TASK_SETTINGS = {
 }
 
 TOTEM_ETCD_SETTINGS = {
-    'base': '/totem',
+    'base': os.getenv('ETCD_TOTEM_BASE', '/totem'),
     'host': os.getenv('ETCD_HOST', '172.17.42.1'),
     'port': int(os.getenv('ETCD_PORT', '4001')),
-
+    'yoda_base': os.getenv('ETCD_YODA_BASE', '/yoda'),
 }
