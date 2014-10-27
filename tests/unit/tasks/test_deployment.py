@@ -113,7 +113,7 @@ def test_deployment_defaults_for_type_github_quay(mock_time):
                 'name': 'default-logger'
             }
         },
-        'id': 'testowner-testrepo-testbranch+101',
+        'id': 'testowner-testrepo-testbranch-101',
         'proxy': {
             'hosts': [],
             'listeners': []
@@ -180,7 +180,7 @@ def test_deployment_defaults_for_type_github_quay_with_overrides(mock_time):
                 'name': 'default-logger'
             }
         },
-        'id': 'testowner-testrepo-testbranch+1000',
+        'id': 'testowner-testrepo-testbranch-1000',
         'proxy': {
             'hosts': [],
             'listeners': []
@@ -257,7 +257,7 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
                 'name': 'custom-logger'
             }
         },
-        'id': 'testdeployment+1000',
+        'id': 'testdeployment-1000',
         'proxy': {
             'hosts': [],
             'listeners': []

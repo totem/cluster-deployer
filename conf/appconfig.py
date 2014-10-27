@@ -104,3 +104,8 @@ TOTEM_ETCD_SETTINGS = {
     'port': int(os.getenv('ETCD_PORT', '4001')),
     'yoda_base': os.getenv('ETCD_YODA_BASE', '/yoda'),
 }
+
+SEARCH_SETTINGS = {
+    'host': os.getenv('ELASTICSEARCH_HOST', '172.17.42.1'),
+    'port': os.getenv('ELASTICSEARCH_PORT', '172.17.42.1'),
+}

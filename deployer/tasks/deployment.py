@@ -78,12 +78,13 @@ def create(deployment):
 
 
 @app.task
-def delete(name, version):
+def delete(name, version=None):
     """
-    Deletes the application with given name and version
+    Deletes the application with given name and version.
 
-    :param name:
-    :param version:
+    :param name: Name of the application. Optionally it might also contain
+    :param version: Version of application to be undeployed. If none, all
+        versions are undeployed.
     :return:
     """
     return _using_lock.si(
@@ -245,7 +246,7 @@ def _deployment_defaults(deployment):
     # as unique identifier as there can only be one deployment with same name
     # and version
 
-    deployment_upd['id'] = '%s+%s' % (deployment_upd['deployment']['name'],
+    deployment_upd['id'] = '%s-%s' % (deployment_upd['deployment']['name'],
                                       deployment_upd['deployment']['version'])
 
     return deployment_upd
@@ -368,16 +369,3 @@ def _fleet_check_deploy(name, version, nodes, service_types):
         for service_type in service_types
         for node_num in range(1, nodes + 1)
     )()
-
-# @app.task(bind=True, default_retry_delay=TASK_SETTINGS['DEFAULT_RETRY_DELAY']
-# ,max_retries=TASK_SETTINGS['DEFAULT_RETRIES'])
-# def _processed_deploy(self, results, name, version, nodes, deployment):
-#     try:
-#         extracted_results = simple_result(results)
-#     except TaskNotReadyException as exc:
-#         self.retry(exc=exc)
-#
-#     logger.info('Processed: %s:%s for %d nodes. result:%s', name, version,
-#                 nodes,
-#                 extracted_results)
-#     return deployment

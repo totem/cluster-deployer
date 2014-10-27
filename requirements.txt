@@ -6,5 +6,6 @@ gevent==1.0.1
 uWSGI==2.0.7
 supervisor==3.1.2
 python-etcd==0.3.2
+elasticsearch==1.2.0
 https://github.com/totem/fleet-py/archive/master.tar.gz
 https://github.com/totem/yoda-py/archive/master.tar.gz
