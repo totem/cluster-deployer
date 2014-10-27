@@ -27,12 +27,13 @@ The documentation will be generated in docs/build folder.
 ## Requirements
 
 The project has following dependencies  
-- python 2.7.x  
+- python 2.7.x (Fabric library is not compatible with Python 3.x)  
 - Mongo 2.6+  
 - Virtualenv (Recommended)
 - Python pip
 - etcd 0.4.6 (Required if using docker based deployment)
 - docker 1.2 (Required if using docker based deployment)
+- Elasticsearch 1.3+
 
 ### Dependencies
 
