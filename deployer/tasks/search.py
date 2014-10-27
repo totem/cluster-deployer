@@ -2,28 +2,17 @@
 Module for updating/searching elastic search.
 """
 from functools import wraps
-from elasticsearch import Elasticsearch
 from conf.appconfig import SEARCH_SETTINGS
 from deployer.celery import app
+from deployer.elasticsearch import get_search_client
 
 TYPE_DEPLOYMENTS = 'deployments'
-
-
-def _get_search_client():
-    """
-    Creates the elasticsearch client instance use SEARCH_SETTINGS
-
-    :return: Instance of Elasticsearch
-    :rtype: elasticsearch.Elasticsearch
-    """
-    return Elasticsearch(hosts=SEARCH_SETTINGS['host'],
-                         port=SEARCH_SETTINGS['port'])
 
 
 def _deployment_search(fun):
     @wraps(fun)
     def outer(*args, **kwargs):
-        kwargs.setdefault('es', _get_search_client())
+        kwargs.setdefault('es', get_search_client())
         kwargs.setdefault('idx', SEARCH_SETTINGS['default-index'])
         return fun(*args, **kwargs)
     return outer
@@ -50,7 +39,7 @@ def update_deployment_state(id, state, ret_value=None, es=None, idx=None):
     :keyword ret_value: Value to be returned. If None, the updated search
      document is returned.
     """
-    es = _get_search_client()
+    es = get_search_client()
     updated_doc = es.update(idx, TYPE_DEPLOYMENTS, id, body={
         'doc': {
             'state': state
