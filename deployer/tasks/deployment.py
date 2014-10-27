@@ -2,10 +2,12 @@
 Defines celery tasks for deployment (e.g.: create, undeploy, wire, unwire)
 """
 import copy
+import datetime
 from deployer.services.distributed_lock import LockService, \
     ResourceLockedException
 from deployer.tasks.exceptions import NodeNotRunningException, \
     NodeNotUndeployed
+from deployer.tasks.search import index_deployment, update_deployment_state
 
 __author__ = 'sukrit'
 __all__ = ['create', 'delete']
@@ -20,7 +22,8 @@ from deployer.fleet import get_fleet_provider, jinja_env
 from deployer.celery import app
 from conf.appconfig import DEPLOYMENT_DEFAULTS, DEPLOYMENT_TYPE_GITHUB_QUAY, \
     TEMPLATE_DEFAULTS, TASK_SETTINGS, DEPLOYMENT_MODE_BLUEGREEN, \
-    DEPLOYMENT_MODE_REDGREEN
+    DEPLOYMENT_MODE_REDGREEN, DEPLOYMENT_STATE_STARTED, \
+    DEPLOYMENT_STATE_FAILED, DEPLOYMENT_STATE_PROMOTED
 
 from deployer.tasks.common import async_wait
 from deployer.tasks.proxy import wire_proxy
@@ -50,30 +53,29 @@ def create(deployment):
 
     # Note: We will use callback instead of chain as chain of chains do not
     # yield expected results.
-    return _using_lock.si(
-        deployment['deployment']['name'],
-        do_task=_pre_create_undeploy.si(
-            deployment,
-            next_task=_deploy_all.si(deployment) |
-            async_wait.s(
-                default_retry_delay=TASK_SETTINGS[
-                    'DEPLOYMENT_WAIT_RETRY_DELAY'],
-                max_retries=TASK_SETTINGS['DEPLOYMENT_WAIT_RETRIES']
-            ) |
-            wire_proxy.si(
-                deployment['deployment']['name'],
-                deployment['deployment']['version'],
-                deployment['proxy'],
-                next_task=_fleet_undeploy.si(
-                    deployment['deployment']['name'],
-                    exclude_version=deployment['deployment']['version'],
-                    ret_value=deployment
-                )
-            )
-        ),
-        error_tasks=_fleet_undeploy.si(
+    return (
+        index_deployment.si(deployment) |
+        _using_lock.si(
             deployment['deployment']['name'],
-            version=deployment['deployment']['version'])
+            do_task=_pre_create_undeploy.si(
+                deployment,
+                next_task=_deploy_all.si(deployment) |
+                async_wait.s(
+                    default_retry_delay=TASK_SETTINGS[
+                        'DEPLOYMENT_WAIT_RETRY_DELAY'],
+                    max_retries=TASK_SETTINGS['DEPLOYMENT_WAIT_RETRIES']
+                ) |
+                _promote_deployment.si(deployment)
+            ),
+            error_tasks=[
+                _fleet_undeploy.si(
+                    deployment['deployment']['name'],
+                    version=deployment['deployment']['version']
+                ),
+                update_deployment_state.si(deployment['id'],
+                                           DEPLOYMENT_STATE_FAILED)
+            ]
+        )
     ).apply_async()
 
 
@@ -242,13 +244,17 @@ def _deployment_defaults(deployment):
         deployment_upd['deployment']['version'] or \
         int(round(time.time() * 1000))
 
+    deployment_upd['deployment']['version'] = \
+        str(deployment_upd['deployment']['version'])
+
     # Set the deployment identifier.  We will use deployment name and version
     # as unique identifier as there can only be one deployment with same name
     # and version
 
     deployment_upd['id'] = '%s-%s' % (deployment_upd['deployment']['name'],
                                       deployment_upd['deployment']['version'])
-
+    deployment_upd['state'] = DEPLOYMENT_STATE_STARTED
+    deployment_upd['started-at'] = datetime.datetime.utcnow()
     return deployment_upd
 
 
@@ -298,6 +304,7 @@ def _pre_create_undeploy(deployment, next_task=None):
 def _fleet_undeploy(name, version=None, exclude_version=None, ret_value=None):
     """
     Un-deploys fleet units with matching name and version
+
     :param name: Name of application
     :keyword version: Version of application
     :keyword exclude_version: Version of deployment to be excluded
@@ -313,6 +320,7 @@ def _fleet_undeploy(name, version=None, exclude_version=None, ret_value=None):
 def _wait_for_undeploy(self, name, version, ret_value=None):
     """
     Wait for undeploy to finish.
+
     :param name: Name of application
     :param version: Version of application.
     :type version: str
@@ -368,4 +376,43 @@ def _fleet_check_deploy(name, version, nodes, service_types):
         _fleet_check_unit.si(name, version, node_num, service_type)
         for service_type in service_types
         for node_num in range(1, nodes + 1)
+    )()
+
+
+@app.task
+def _processed_deployment(deployment):
+    deployment['state'] = DEPLOYMENT_STATE_PROMOTED
+    deployment['promoted-at'] = datetime.datetime.utcnow()
+    return deployment
+
+
+@app.task
+def _promote_deployment(deployment):
+    """
+    Promotes the given deployment by wiring the proxy,
+    un-deploying existing (if needed) and updating search state.
+
+    :param deployment: Dictionary representing deployment
+    :type deployment: dict
+    """
+    tasks = []
+    if deployment['deployment']['mode'] == DEPLOYMENT_MODE_BLUEGREEN:
+        tasks.append(
+            _fleet_undeploy.si(
+                deployment['deployment']['name'],
+                exclude_version=deployment['deployment']['version'])
+        )
+    tasks.append(
+        update_deployment_state.si(deployment['id'], DEPLOYMENT_STATE_PROMOTED)
+    )
+
+    tasks.append(
+        _processed_deployment.si(deployment)
+    )
+
+    return wire_proxy.si(
+        deployment['deployment']['name'],
+        deployment['deployment']['version'],
+        deployment['proxy'],
+        next_task=(chain(tasks))
     )()

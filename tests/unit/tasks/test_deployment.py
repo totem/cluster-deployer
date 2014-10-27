@@ -1,7 +1,10 @@
+import datetime
+from freezegun import freeze_time
 from mock import patch, ANY
 from nose.tools import raises, eq_
 
-from conf.appconfig import DEPLOYMENT_MODE_BLUEGREEN, DEPLOYMENT_MODE_REDGREEN
+from conf.appconfig import DEPLOYMENT_MODE_BLUEGREEN, DEPLOYMENT_MODE_REDGREEN, \
+    DEPLOYMENT_STATE_STARTED
 from deployer.celery import app
 
 from deployer.tasks.exceptions import NodeNotUndeployed
@@ -12,6 +15,8 @@ __author__ = 'sukrit'
 
 from deployer.tasks.deployment import _deployment_defaults, \
     _pre_create_undeploy, _wait_for_undeploy
+
+NOW = datetime.datetime(2014, 01, 01)
 
 
 def test_create():
@@ -60,6 +65,7 @@ def _create_test_deployment_with_defaults_applied():
     }
 
 
+@freeze_time(NOW)
 @patch('time.time')
 def test_deployment_defaults_for_type_github_quay(mock_time):
     """Should get defaults for deployment of type github-quay"""
@@ -88,7 +94,7 @@ def test_deployment_defaults_for_type_github_quay(mock_time):
         'deployment': {
             'name': 'testowner-testrepo-testbranch',
             'type': 'github-quay',
-            'version': 101,
+            'version': '101',
             'nodes': 2,
             'mode': DEPLOYMENT_MODE_BLUEGREEN
         },
@@ -117,10 +123,13 @@ def test_deployment_defaults_for_type_github_quay(mock_time):
         'proxy': {
             'hosts': [],
             'listeners': []
-        }
+        },
+        'state': DEPLOYMENT_STATE_STARTED,
+        'started-at': NOW
     })
 
 
+@freeze_time(NOW)
 @patch('time.time')
 def test_deployment_defaults_for_type_github_quay_with_overrides(mock_time):
     """Should get defaults for deployment of type github-quay"""
@@ -155,7 +164,7 @@ def test_deployment_defaults_for_type_github_quay_with_overrides(mock_time):
         'deployment': {
             'name': 'testowner-testrepo-testbranch',
             'type': 'github-quay',
-            'version': 1000,
+            'version': '1000',
             'nodes': 2,
             'mode': DEPLOYMENT_MODE_BLUEGREEN
         },
@@ -184,10 +193,13 @@ def test_deployment_defaults_for_type_github_quay_with_overrides(mock_time):
         'proxy': {
             'hosts': [],
             'listeners': []
-        }
+        },
+        'state': DEPLOYMENT_STATE_STARTED,
+        'started-at': NOW
     })
 
 
+@freeze_time(NOW)
 @patch('time.time')
 def test_deployment_defaults_for_custom_deployment(mock_time):
     """Should get defaults for deployment of type github-quay"""
@@ -237,7 +249,7 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
         'deployment': {
             'name': 'testdeployment',
             'type': 'custom',
-            'version': 1000,
+            'version': '1000',
             'nodes': 3,
             'mode': DEPLOYMENT_MODE_BLUEGREEN
         },
@@ -261,7 +273,9 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
         'proxy': {
             'hosts': [],
             'listeners': []
-        }
+        },
+        'state': DEPLOYMENT_STATE_STARTED,
+        'started-at': NOW
     })
 
 

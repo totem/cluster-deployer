@@ -2,10 +2,13 @@ import logging
 from celery.result import AsyncResult, ResultBase
 import flask
 from flask.views import MethodView
+from conf.appconfig import TASK_SETTINGS
 import deployer
 from deployer.tasks.exceptions import TaskExecutionException
 
 logger = logging.getLogger(__name__)
+
+from flask import request
 
 
 class TaskApi(MethodView):
@@ -14,11 +17,14 @@ class TaskApi(MethodView):
     """
 
     @staticmethod
-    def _find_error_task(task):
+    def _find_error_task(task, wait=False,
+                         timeout=TASK_SETTINGS['DEFAULT_GET_TIMEOUT']):
         if not task or not isinstance(task, ResultBase):
             return
 
         if isinstance(task, AsyncResult):
+            if not task.ready() and wait:
+                task.get(propagate=False, timeout=timeout)
             if task.failed():
                 return task
             elif task.status in ['PENDING'] and task.parent:
@@ -33,7 +39,7 @@ class TaskApi(MethodView):
             return
 
     @staticmethod
-    def _ready(id):
+    def _ready(id, wait=False, timeout=TASK_SETTINGS['DEFAULT_GET_TIMEOUT']):
         status = 'READY'
         # DO not remove line below
         # Explanation: https://github.com/celery/celery/issues/2315
@@ -41,7 +47,8 @@ class TaskApi(MethodView):
 
         output = deployer.celery.app.AsyncResult(id)
         # print('%r', output.result.backend.database)
-        error_task = TaskApi._find_error_task(output)
+        error_task = TaskApi._find_error_task(output, wait=wait,
+                                              timeout=timeout)
 
         if error_task:
             output, status =  \
@@ -50,6 +57,8 @@ class TaskApi(MethodView):
                 output = TaskExecutionException(output, error_task.traceback)
         else:
             while isinstance(output, AsyncResult) and status is 'READY':
+                if wait:
+                    output.get(timeout=timeout, propagate=False)
                 if output.ready():
                     output = output.result
                 else:
@@ -72,7 +81,11 @@ class TaskApi(MethodView):
         if not id:
             flask.abort(404)
         else:
-            response = TaskApi._ready(id)
+            wait = request.args.get('wait', 'false').strip().lower()
+            wait = True if wait in {'true', 'y', 'yes', '1'} else False
+            timeout = int(request.args.get(
+                'timeout', TASK_SETTINGS['DEFAULT_GET_TIMEOUT']))
+            response = TaskApi._ready(id, wait=wait, timeout=timeout)
             return flask.jsonify(response)
 
 
