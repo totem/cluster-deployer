@@ -1,9 +1,9 @@
 from __future__ import absolute_import
 from flask import Flask
-from deployer.views import root, application, task
+from deployer.views import root, application, task, health
 
 app = Flask(__name__)
 app.config['PROPAGATE_EXCEPTIONS'] = True
 
-for module in [root, application, task]:
+for module in [root, application, task, health]:
     module.register(app)

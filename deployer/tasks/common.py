@@ -27,3 +27,8 @@ def async_wait(self, result,
                    countdown=default_retry_delay,
                    max_retries=max_retries)
     return ret_value or result
+
+
+@app.task
+def ping():
+    return 'pong'

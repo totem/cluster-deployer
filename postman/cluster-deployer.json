@@ -2,7 +2,10 @@
 	"id": "f8694d96-4519-331b-ed7f-445e3bd61926",
 	"name": "cluster-deployer",
 	"description": "",
-	"order": [],
+	"order": [
+		"c12f4630-1e0d-117f-e280-5760fa877683",
+		"1a8ce7b8-dc1e-f9f9-03b8-b66bcc94c2f0"
+	],
 	"folders": [
 		{
 			"id": "ad0677cd-6feb-b672-de66-c1842d06ef3b",
@@ -24,7 +27,7 @@
 		{
 			"id": "0979361b-ffdf-db94-866b-d8c4a3bef96e",
 			"headers": "Content-Type: application/json\n",
-			"url": "{{CLUSTER_DEPLOYER_URL}}/tasks/3e55f69a-a91c-4ffb-a4e6-0f63bd7c7b91",
+			"url": "{{CLUSTER_DEPLOYER_URL}}/tasks/1e693b49-f23a-4f74-9145-92eb3d91f7ab?wait=true",
 			"preRequestScript": "",
 			"pathVariables": {},
 			"method": "GET",
@@ -32,11 +35,30 @@
 			"dataMode": "params",
 			"version": 2,
 			"tests": "",
-			"time": 1412986378501,
+			"time": 1414396311925,
 			"name": "Task: GET",
 			"description": "",
 			"collectionId": "f8694d96-4519-331b-ed7f-445e3bd61926",
 			"responses": [],
+			"synced": false
+		},
+		{
+			"id": "1a8ce7b8-dc1e-f9f9-03b8-b66bcc94c2f0",
+			"headers": "Content-Type: application/json\n",
+			"url": "{{CLUSTER_DEPLOYER_URL}}/",
+			"pathVariables": {},
+			"preRequestScript": "",
+			"method": "GET",
+			"data": [],
+			"dataMode": "params",
+			"name": "Root: GET",
+			"description": "",
+			"descriptionFormat": "html",
+			"time": 1414407015742,
+			"version": 2,
+			"responses": [],
+			"tests": "",
+			"collectionId": "f8694d96-4519-331b-ed7f-445e3bd61926",
 			"synced": false
 		},
 		{
@@ -50,13 +72,13 @@
 			"dataMode": "raw",
 			"version": 2,
 			"tests": "",
-			"time": 1414310753087,
+			"time": 1414398616434,
 			"name": "App: Create",
 			"description": "",
 			"collectionId": "f8694d96-4519-331b-ed7f-445e3bd61926",
 			"responses": [],
 			"synced": false,
-			"rawModeData": "{\n  \"meta-info\": {\n    \"github\": {\n      \"owner\": \"totem\",\n      \"repo\": \"spec-python\",\n      \"commit\": \"9b3597b9da3957df7a91207ef4332d1efb400d7d\",\n      \"branch\": \"master\"\n    }\n  },\n  \"proxy\": {\n    \"hosts\": [\n      {\n        \"hostname\": \"spec-python.th.melt.sh\",\n        \"locations\":[\n          {\n            \"port\": 8080,\n            \"path\": \"/\"\n          }\n        ]\n        \n      }\n    ]\n  }\n}"
+			"rawModeData": "{\n  \"meta-info\": {\n    \"github\": {\n      \"owner\": \"totem\",\n      \"repo\": \"spec-python\",\n      \"commit\": \"9b3597b9da3957df7a91207ef4332d1efb400d7d\",\n      \"branch\": \"master\"\n    }\n  },\n  \"deployment\": {\n    \"version\": \"v1\"\n  },\n  \"proxy\": {\n    \"hosts\": [\n      {\n        \"hostname\": \"spec-python.west.th.melt.sh\",\n        \"locations\":[\n          {\n            \"port\": 8080,\n            \"path\": \"/\"\n          }\n        ]\n        \n      }\n    ]\n  }\n}"
 		},
 		{
 			"id": "361f5304-9f9b-8de0-0e60-39ef4091be18",
@@ -74,6 +96,25 @@
 			"description": "",
 			"collectionId": "f8694d96-4519-331b-ed7f-445e3bd61926",
 			"responses": [],
+			"synced": false
+		},
+		{
+			"id": "c12f4630-1e0d-117f-e280-5760fa877683",
+			"headers": "Content-Type: application/json\n",
+			"url": "{{CLUSTER_DEPLOYER_URL}}/health",
+			"pathVariables": {},
+			"preRequestScript": "",
+			"method": "GET",
+			"data": [],
+			"dataMode": "params",
+			"name": "Health: GET",
+			"description": "",
+			"descriptionFormat": "html",
+			"time": 1414406998826,
+			"version": 2,
+			"responses": [],
+			"tests": "",
+			"collectionId": "f8694d96-4519-331b-ed7f-445e3bd61926",
 			"synced": false
 		},
 		{
