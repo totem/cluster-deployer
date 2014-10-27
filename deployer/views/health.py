@@ -66,10 +66,16 @@ def _check_mongo():
 
 @_check
 def _check_celery():
+    """
+    Checks health for celery integration using ping-pong task output.
+    """
     output = ping.delay().get(timeout=10)
     return 'Celery ping:%s' % output
 
 
 @_check
 def _check_elasticsearch():
+    """
+    Checks elasticsearch health by querying info.
+    """
     return get_search_client().info()
