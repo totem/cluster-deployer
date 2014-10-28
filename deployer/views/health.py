@@ -13,10 +13,33 @@ HEALTH_FAILED = 'failed'
 
 class HealthApi(MethodView):
     """
-    API for getting system health.
+    API for monitoring system health.
     """
 
     def get(self):
+        """
+        Gets system health.
+
+        :return: Flask JSON response with status of
+            200: If overall health is OK
+            500: If health check fails for any of the component.
+            E.g. output:
+            {
+                "mongo": {
+                    "status": "ok",
+                    "details": "Successfully retrieved database names"
+                },
+                "celery": {
+                    "status": "ok",
+                    "details": "Celery ping:pong",
+                },
+                "elasticsearch": {
+                    "status": "failed",
+                    "details": "Failed to connect to elasticsearch instance"
+                }
+            }
+
+        """
         health = {
             'mongo': _check_mongo(),
             'celery': _check_celery(),
@@ -31,10 +54,32 @@ class HealthApi(MethodView):
 
 
 def register(app):
-    app.add_url_rule('/health', view_func=HealthApi.as_view('health'))
+    """
+    Registers the Health API (/health) with flask application.
+    Only GET operation is available.
+
+    :param app: Flask application
+    :return: None
+    """
+    app.add_url_rule('/health', view_func=HealthApi.as_view('health'),
+                     methods=['GET'])
 
 
 def _check(func):
+    """
+    Wrapper that creates a dictionary response  containing 'status' and
+    'details'.
+    where status can be
+        'ok': If wrapped function returns successfully.
+        'failed': If wrapped function throws error.
+    details is:
+        returned value from the wrapped function if no exception is thrown
+        else string representation of exception when exception is thrown
+
+    :param func: Function to be wrapped
+    :return: dictionary output containing keys 'status' and 'details'
+    :rtype: dict
+    """
 
     @wraps(func)
     def inner(*args, **kwargs):
@@ -58,8 +103,7 @@ def _check_mongo():
     """
     client = MongoClient(MONGO_URL, max_pool_size=1, _connect=False)
     try:
-        client.database_names()
-        return 'Successfully retrieved database names'
+        return client.server_info()
     finally:
         client.close() if client else None
 

@@ -19,8 +19,10 @@ class RootApi(MethodView):
 
 def register(app):
     """
-    Registers RootApi
-    :param app:
-    :return:
+    Registers RootApi ('/')
+    Only GET operation is available.
+
+    :param app: Flask application
+    :return: None
     """
-    app.add_url_rule('/', view_func=RootApi.as_view('root'))
+    app.add_url_rule('/', view_func=RootApi.as_view('root'), methods=['GET'])
