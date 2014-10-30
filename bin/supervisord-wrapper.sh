@@ -15,6 +15,7 @@ SSH_PASSPHRASE=$SSH_PASSPHRASE
 GITHUB_TOKEN=$GITHUB_TOKEN
 ELASTICSEARCH_HOST=$ELASTICSEARCH_HOST
 ELASTICSEARCH_PORT=$ELASTICSEARCH_PORT
+FLEET_HOST=$FLEET_HOST
 END
 
 envsubst  < /etc/supervisor/conf.d/supervisord.conf.template  > /etc/supervisor/conf.d/supervisord.conf
