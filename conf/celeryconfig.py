@@ -37,6 +37,9 @@ CELERYD_TASK_TIME_LIMIT = 330
 CELERY_SEND_TASK_SENT_EVENT = True
 CELERY_TASK_RESULT_EXPIRES = timedelta(days=7)
 
+#Remote Management
+CELERYD_POOL_RESTARTS = True
+
 # Messages older than 1 hour will be discarded
 CELERY_EVENT_QUEUE_TTL = 3600
 
