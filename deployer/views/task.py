@@ -5,6 +5,7 @@ from flask.views import MethodView
 from conf.appconfig import TASK_SETTINGS
 import deployer
 from deployer.tasks.exceptions import TaskExecutionException
+from deployer.views.hypermedia import HyperSchema
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +78,7 @@ class TaskApi(MethodView):
             'output': output
         }
 
+    @HyperSchema('task-v1')
     def get(self, id=None):
         if not id:
             flask.abort(404)

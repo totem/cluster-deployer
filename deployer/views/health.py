@@ -6,6 +6,7 @@ import sys
 from conf.celeryconfig import MONGO_URL
 from deployer.elasticsearch import get_search_client
 from deployer.tasks.common import ping
+from deployer.views.hypermedia import HyperSchema
 
 HEALTH_OK = 'ok'
 HEALTH_FAILED = 'failed'
@@ -16,6 +17,7 @@ class HealthApi(MethodView):
     API for monitoring system health.
     """
 
+    @HyperSchema('health-v1')
     def get(self):
         """
         Gets system health.

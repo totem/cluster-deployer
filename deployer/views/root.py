@@ -1,6 +1,7 @@
 import flask
 from flask.views import MethodView
 import deployer
+from deployer.views.hypermedia import HyperSchema
 
 
 class RootApi(MethodView):
@@ -8,6 +9,7 @@ class RootApi(MethodView):
     Root API
     """
 
+    @HyperSchema('root-v1')
     def get(self):
         """
         Gets the version for the Deployer API.
