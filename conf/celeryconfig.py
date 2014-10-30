@@ -1,5 +1,6 @@
 from datetime import timedelta
 import os
+import re
 from ast import literal_eval
 
 from celery.schedules import crontab
@@ -19,7 +20,7 @@ CELERY_IMPORTS = ('deployer.tasks', 'deployer.tasks.deployment',
 CELERY_MONGODB_BACKEND_SETTINGS = {
     'database': MONGO_RESULTS_DB,
     'taskmeta_collection': os.getenv('MONGO_RESULTS_COLLECTION') or
-    'celery_taskmeta_%s' % CLUSTER_NAME
+    'celery_taskmeta_%s' % re.sub('[^A-Za-z_0-9]', '_', CLUSTER_NAME)
 }
 CELERY_ACCEPT_CONTENT = ['json', 'pickle']
 CELERY_TASK_SERIALIZER = 'pickle'
