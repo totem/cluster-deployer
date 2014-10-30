@@ -34,6 +34,7 @@ RUN pip install -r /opt/requirements.txt
 RUN mkdir -p /var/log/supervisor
 ADD bin/supervisord-wrapper.sh /usr/sbin/supervisord-wrapper.sh
 RUN chmod +x /usr/sbin/supervisord-wrapper.sh
+RUN ln -sf /etc/supervisor/supervisord.conf /etc/supervisord.conf
 
 #Confd Defaults
 ADD bin/confd-wrapper.sh /usr/sbin/confd-wrapper.sh
