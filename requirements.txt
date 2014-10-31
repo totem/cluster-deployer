@@ -1,5 +1,6 @@
 Flask==0.10.1
-Celery[mongodb]==3.1.16
+# Celery[mongodb]==3.1.16
+https://github.com/totem/celery/archive/patch_task-deserialize-url-fix.tar.gz
 flower==0.7.2
 pymongo==2.7.2
 gevent==1.0.1
