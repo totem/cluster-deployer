@@ -16,9 +16,10 @@ import logging
 import time
 
 from celery.canvas import group, chord, chain
-from fleet.deploy.deployer import Deployment, status, undeploy, filter_units
 
 from deployer.fleet import get_fleet_provider, jinja_env
+from fleet.deploy.deployer import Deployment, status, undeploy, filter_units
+
 from deployer.celery import app
 from conf.appconfig import DEPLOYMENT_DEFAULTS, DEPLOYMENT_TYPE_GITHUB_QUAY, \
     TEMPLATE_DEFAULTS, TASK_SETTINGS, DEPLOYMENT_MODE_BLUEGREEN, \

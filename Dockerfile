@@ -50,17 +50,6 @@ ADD etc /etc
 ADD . /opt/cluster-deployer
 RUN pip install -r /opt/cluster-deployer/requirements.txt
 
-ENV ETCD_HOST 172.17.42.1
-ENV ETCD_PORT 4001
-ENV ETCD_TOTEM_BASE /totem
-ENV ETCD_YODA_BASE /yoda
-ENV MONGO_URL mongodb://172.17.42.1:27017/totem_deployer
-ENV TASK_EXECUTORS 2
-ENV API_EXECUTORS 2
-ENV C_FORCE_ROOT true
-ENV SSH_HOST_KEY /root/.ssh/id_rsa
-ENV FLEET_HOST 172.17.42.1
-
 EXPOSE 9000 5555 22
 
 WORKDIR /opt/cluster-deployer
