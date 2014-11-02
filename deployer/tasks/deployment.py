@@ -7,7 +7,12 @@ from deployer.services.distributed_lock import LockService, \
     ResourceLockedException
 from deployer.tasks.exceptions import NodeNotRunningException, \
     NodeNotUndeployed
-from deployer.tasks.search import index_deployment, update_deployment_state
+from deployer.tasks.search import index_deployment, update_deployment_state, \
+    EVENT_NEW_DEPLOYMENT, \
+    EVENT_ACQUIRED_LOCK, \
+    EVENT_UNDEPLOYED_EXISTING, EVENT_UNITS_DEPLOYED, \
+    EVENT_PROMOTED, EVENT_DEPLOYMENT_FAILED, create_search_parameters, \
+    add_search_event, EVENT_WIRED, EVENT_UNITS_ADDED
 
 __author__ = 'sukrit'
 __all__ = ['create', 'delete']
@@ -54,27 +59,37 @@ def create(deployment):
 
     # Note: We will use callback instead of chain as chain of chains do not
     # yield expected results.
+
+    search_params = create_search_parameters(deployment)
     return (
         index_deployment.si(deployment) |
+        add_search_event.si(EVENT_NEW_DEPLOYMENT, details=deployment,
+                            search_params=search_params) |
         _using_lock.si(
             deployment['deployment']['name'],
+            search_params,
             do_task=_pre_create_undeploy.si(
                 deployment,
-                next_task=_deploy_all.si(deployment) |
+                search_params,
+                next_task=_deploy_all.si(deployment, search_params) |
                 async_wait.s(
                     default_retry_delay=TASK_SETTINGS[
                         'DEPLOYMENT_WAIT_RETRY_DELAY'],
                     max_retries=TASK_SETTINGS['DEPLOYMENT_WAIT_RETRIES']
                 ) |
-                _promote_deployment.si(deployment)
+                add_search_event.si(
+                    EVENT_UNITS_DEPLOYED, search_params=search_params) |
+                _promote_deployment.si(deployment, search_params)
             ),
             error_tasks=[
+                _deployment_error_event.s(search_params),
+                update_deployment_state.si(deployment['id'],
+                                           DEPLOYMENT_STATE_FAILED),
                 _fleet_undeploy.si(
                     deployment['deployment']['name'],
-                    version=deployment['deployment']['version']
-                ),
-                update_deployment_state.si(deployment['id'],
-                                           DEPLOYMENT_STATE_FAILED)
+                    version=deployment['deployment']['version'],
+                    ignore_error=True
+                )
             ]
         )
     ).apply_async()
@@ -101,7 +116,8 @@ def delete(name, version=None):
 
 @app.task(bind=True, default_retry_delay=TASK_SETTINGS['LOCK_RETRY_DELAY'],
           max_retries=TASK_SETTINGS['LOCK_RETRIES'])
-def _using_lock(self, name, do_task, cleanup_tasks=None, error_tasks=None):
+def _using_lock(self, name, search_params, do_task, cleanup_tasks=None,
+                error_tasks=None):
     """
     Applies lock for the deployment
 
@@ -126,6 +142,11 @@ def _using_lock(self, name, do_task, cleanup_tasks=None, error_tasks=None):
     cleanup_tasks.append(_release_lock_s)
 
     return (
+        add_search_event.si(
+            EVENT_ACQUIRED_LOCK, search_params=search_params,
+            details={
+                'name': name
+            }) |
         do_task |
         async_wait.s(
             default_retry_delay=TASK_SETTINGS['DEPLOYMENT_WAIT_RETRY_DELAY'],
@@ -151,7 +172,7 @@ def _release_lock(lock):
 
 
 @app.task
-def _deploy_all(deployment):
+def _deploy_all(deployment, search_params):
     """
     Deploys all services for a given deployment
     :param deployment: Deployment parameters
@@ -178,7 +199,17 @@ def _deploy_all(deployment):
         deployment['deployment']['nodes']
     return chord(
         group(
-            _fleet_deploy.si(name, version, nodes, service_type, template)
+            _fleet_deploy.si(name, version, nodes, service_type, template) |
+            add_search_event.si(
+                EVENT_UNITS_ADDED,
+                search_params=search_params,
+                details={
+                    'name': name,
+                    'version': version,
+                    'nodes': nodes,
+                    'service_type': service_type,
+                    'template': template
+                })
             for service_type, template in deployment['templates'].iteritems()
             if template['enabled']
         ),
@@ -261,6 +292,16 @@ def _deployment_defaults(deployment):
 
 @app.task
 def _fleet_deploy(name, version, nodes, service_type, template):
+    """
+    Deploys the unit with given service type to multiple nodes using fleet.
+
+    :param name: Name of the application
+    :param version: Version of the application
+    :param nodes: No. of nodes/units to be created
+    :param service_type: Type of unit ('app', 'logger' etc)
+    :param template: Fleet Template settings.
+    :return:
+    """
     logger.info('Deploying %s:%s:%s nodes:%d %r', name, version, service_type,
                 nodes, template)
     fleet_deployment = Deployment(
@@ -271,7 +312,7 @@ def _fleet_deploy(name, version, nodes, service_type, template):
 
 
 @app.task
-def _pre_create_undeploy(deployment, next_task=None):
+def _pre_create_undeploy(deployment, search_params, next_task=None):
     """
     Un-deploys during pre-create phase. The versions un-deployed depends upon
     mode of deployment.
@@ -291,10 +332,17 @@ def _pre_create_undeploy(deployment, next_task=None):
         # Do not undeploy anything when mode is custom or A/B
         return next_task() if next_task else None
     name = deployment['deployment']['name']
-
     undeploy_chain = [
-        _fleet_undeploy.si(name, version),
-        _wait_for_undeploy.si(name, version)
+        _fleet_undeploy.si(name, version, ignore_error=False),
+        _wait_for_undeploy.si(name, version),
+        add_search_event.si(
+            EVENT_UNDEPLOYED_EXISTING,
+            search_params=search_params,
+            details={
+                'name': name,
+                'version': version
+            }
+        )
     ]
     if next_task:
         undeploy_chain.append(next_task)
@@ -302,7 +350,8 @@ def _pre_create_undeploy(deployment, next_task=None):
 
 
 @app.task
-def _fleet_undeploy(name, version=None, exclude_version=None, ret_value=None):
+def _fleet_undeploy(name, version=None, exclude_version=None, ret_value=None,
+                    ignore_error=False):
     """
     Un-deploys fleet units with matching name and version
 
@@ -312,9 +361,15 @@ def _fleet_undeploy(name, version=None, exclude_version=None, ret_value=None):
     :keyword ret_value: Value to be returned after successful deployment
     :return: ret_value
     """
-    undeploy(get_fleet_provider(), name, version,
-             exclude_version=exclude_version)
-    return ret_value
+    try:
+        undeploy(get_fleet_provider(), name, version,
+                 exclude_version=exclude_version)
+        return ret_value
+    except:
+        if ignore_error:
+            return ret_value
+        else:
+            raise
 
 
 @app.task(bind=True, default_retry_delay=5, max_retries=5)
@@ -388,15 +443,48 @@ def _processed_deployment(deployment):
 
 
 @app.task
-def _promote_deployment(deployment):
+def _deployment_error_event(task_id, search_params):
+    """
+    Handles deployment creation error
+
+    :param deployment: Deployment dictionary
+    :return: None
+    """
+    app.set_current()
+    output = app.AsyncResult(task_id)
+    return add_search_event.si(
+        EVENT_DEPLOYMENT_FAILED,
+        search_params=search_params,
+        details={
+            'error': str(output.result),
+            'traceback': output.traceback
+        })
+
+
+@app.task
+def _promote_deployment(deployment, search_params):
     """
     Promotes the given deployment by wiring the proxy,
     un-deploying existing (if needed) and updating search state.
 
     :param deployment: Dictionary representing deployment
+    :param search_params: Ductionary containing search parameters
     :type deployment: dict
     """
     tasks = []
+
+    # Add Proxy Wired to the chain
+    tasks.append(
+        add_search_event.si(
+            EVENT_WIRED, search_params=search_params,
+            details={
+                'name': deployment['deployment']['name'],
+                'version': deployment['deployment']['version'],
+                'proxy': deployment['proxy']
+            }
+        )
+    )
+
     if deployment['deployment']['mode'] == DEPLOYMENT_MODE_BLUEGREEN:
         tasks.append(
             _fleet_undeploy.si(
@@ -405,6 +493,10 @@ def _promote_deployment(deployment):
         )
     tasks.append(
         update_deployment_state.si(deployment['id'], DEPLOYMENT_STATE_PROMOTED)
+    )
+
+    tasks.append(
+        add_search_event.si(EVENT_PROMOTED, search_params=search_params)
     )
 
     tasks.append(

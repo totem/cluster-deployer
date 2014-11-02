@@ -12,13 +12,17 @@ MONGO_URL = os.getenv('MONGO_URL',
 CLUSTER_NAME = os.getenv('CLUSTER_NAME', 'local')
 MONGO_RESULTS_DB = os.getenv('MONGO_RESULTS_DB') or os.path.basename(MONGO_URL)
 
+MESSAGES_TTL = 7200
+
 # Broker and Queue Settings
 BROKER_URL = os.getenv('BROKER_URL', 'amqp://guest:guest@localhost:5672/')
 CELERY_DEFAULT_QUEUE = 'cluster-deployer-%s-default' % CLUSTER_NAME
 CELERY_PREFORK_QUEUE = 'cluster-deployer-%s-prefork' % CLUSTER_NAME
 CELERY_QUEUES = (
-    Queue(CELERY_DEFAULT_QUEUE, routing_key='default'),
-    Queue(CELERY_PREFORK_QUEUE, routing_key='prefork'),
+    Queue(CELERY_DEFAULT_QUEUE, routing_key='default',
+          queue_arguments={'x-message-ttl': MESSAGES_TTL}),
+    Queue(CELERY_PREFORK_QUEUE, routing_key='prefork',
+          queue_arguments={'x-message-ttl': MESSAGES_TTL}),
 )
 CELERY_DEFAULT_EXCHANGE_TYPE = 'direct'
 CELERY_DEFAULT_ROUTING_KEY = 'default'
@@ -66,9 +70,6 @@ CELERY_TASK_RESULT_EXPIRES = timedelta(days=7)
 
 # Remote Management
 CELERYD_POOL_RESTARTS = True
-
-# Messages older than 1 hour will be discarded
-CELERY_EVENT_QUEUE_TTL = 3600
 
 # Queue Settings
 CELERY_QUEUE_HA_POLICY = 'all'

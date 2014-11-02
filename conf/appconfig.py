@@ -23,6 +23,8 @@ DEPLOYMENT_STATE_PROMOTED = 'PROMOTED'
 DEPLOYMENT_STATE_FAILED = 'FAILED'
 DEPLOYMENT_STATE_DECOMMISSIONED = 'DECOMMISSIONED'
 
+BOOLEAN_TRUE_VALUES = {"true", "yes", "y", "1", "on"}
+
 
 DEPLOYMENT_DEFAULTS = {
     DEPLOYMENT_TYPE_GITHUB_QUAY: {
@@ -112,6 +114,8 @@ TOTEM_ETCD_SETTINGS = {
 }
 
 SEARCH_SETTINGS = {
+    'enabled': os.getenv('SEARCH_ENABLED', 'true').strip().lower() in
+    BOOLEAN_TRUE_VALUES,
     'host': os.getenv('ELASTICSEARCH_HOST', '172.17.42.1'),
     'port': os.getenv('ELASTICSEARCH_PORT', '9200'),
     'default-index': 'cluster-deployer-%s' % os.getenv('CLUSTER_NAME', 'local')
