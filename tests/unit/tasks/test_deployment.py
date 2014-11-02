@@ -284,9 +284,11 @@ def mock_callback():
     return True
 
 
+@patch('deployer.tasks.deployment.add_search_event')
 @patch('deployer.tasks.deployment.undeploy')
 @patch('deployer.tasks.deployment.filter_units')
-def test_pre_create_undeploy_for_red_green(mock_filter_units, mock_undeploy):
+def test_pre_create_undeploy_for_red_green(mock_filter_units, mock_undeploy,
+                                           mock_add_search_event):
     """
     Should un-deploy all versions for mode: red-green
     """
@@ -301,17 +303,18 @@ def test_pre_create_undeploy_for_red_green(mock_filter_units, mock_undeploy):
     # When: I un-deploy in pre-create phase
     result = _pre_create_undeploy.s(deployment, mock_callback.si())\
         .apply_async()
-    ret_value = result.get(timeout=1).result
+    result.get(timeout=1).result
 
     # Then: All versions of application are un-deployed.
     mock_undeploy.assert_called_with(ANY, deployment['deployment']['name'],
                                      None, exclude_version=None)
-    eq_(ret_value, True)
 
 
+@patch('deployer.tasks.deployment.add_search_event')
 @patch('deployer.tasks.deployment.undeploy')
 @patch('deployer.tasks.deployment.filter_units')
-def test_pre_create_undeploy_for_blue_green(mock_filter_units, mock_undeploy):
+def test_pre_create_undeploy_for_blue_green(mock_filter_units, mock_undeploy,
+                                            mock_add_search_event):
     """
     Should undeploy all versions for mode: red-green
     """
@@ -326,18 +329,19 @@ def test_pre_create_undeploy_for_blue_green(mock_filter_units, mock_undeploy):
     # When: I undeploy in pre-create phase
     result = _pre_create_undeploy.s(deployment, mock_callback.si())\
         .apply_async()
-    ret_value = result.get(timeout=1).result
+    result.get(timeout=1).result
 
     # Then: All versions of application are un-deployed.
     mock_undeploy.assert_called_with(ANY, deployment['deployment']['name'],
                                      deployment['deployment']['version'],
                                      exclude_version=None)
-    eq_(ret_value, True)
 
 
+@patch('deployer.tasks.deployment.add_search_event')
 @patch('deployer.tasks.deployment.undeploy')
 @patch('deployer.tasks.deployment.filter_units')
-def test_pre_create_undeploy_for_ab(mock_filter_units, mock_undeploy):
+def test_pre_create_undeploy_for_ab(mock_filter_units, mock_undeploy,
+                                    mock_add_search_event):
     """
     Should undeploy all versions for mode: red-green
     """
@@ -352,11 +356,10 @@ def test_pre_create_undeploy_for_ab(mock_filter_units, mock_undeploy):
     # When: I un-deploy in pre-create phase
     result = _pre_create_undeploy.s(deployment, mock_callback.si())\
         .apply_async()
-    ret_value = result.get(timeout=1).result
+    result.get(timeout=1).result
 
     # Then: All versions of application are un-deployed.
     mock_undeploy.assert_not_called()
-    eq_(ret_value, True)
 
 
 @raises(NodeNotUndeployed)
@@ -382,7 +385,7 @@ def test_wait_for_undeploy_for_failure(mock_filter_units):
 @patch('deployer.tasks.deployment.filter_units')
 def test_wait_for_undeploy_for_success(mock_filter_units):
     """
-    Should raise NodeNotUndeployed exception if units do not get undeployed
+    Should wait for undeploy to finish.
     """
 
     # Given: Active units
@@ -392,5 +395,4 @@ def test_wait_for_undeploy_for_success(mock_filter_units):
     result = _wait_for_undeploy.s('mock', None, True).apply_async()
     ret_value = result.get(timeout=1)
 
-    # NodeNotUndeployed is raised
     eq_(ret_value, True)
