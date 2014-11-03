@@ -4,10 +4,12 @@ from flask import request
 import flask
 from flask.ext.negotiate import consumes, produces
 from flask.views import MethodView
+from flask import url_for
 from conf.appconfig import TASK_SETTINGS
 from deployer.tasks.deployment import create, delete
 from deployer.views.hypermedia import ValidateSchema, HyperSchema
 from deployer.views.task import TaskApi
+from deployer.views.util import build_response
 
 
 class ApplicationApi(MethodView):
@@ -32,9 +34,21 @@ class ApplicationApi(MethodView):
             while isinstance(result, AsyncResult):
                 result = result.get(
                     timeout=TASK_SETTINGS['DEFAULT_GET_TIMEOUT'])
-            return flask.jsonify(result), 201
+            return build_response(
+                result,
+                mimetype='application/vnd.app-version-create-v1+json',
+                status=201, headers={
+                    'Location': url_for(
+                        '.versions', name=result['deployment']['name'],
+                        version=result['deployment']['version'])
+                })
         else:
-            return flask.jsonify({'task_id': str(result)}), 202
+            return build_response(
+                {'task_id': str(result)},
+                mimetype='application/vnd.task-v1+json',
+                status=202, headers={
+                    'Location': url_for('.tasks', id=str(result))
+                })
 
     def delete(self, name):
         """

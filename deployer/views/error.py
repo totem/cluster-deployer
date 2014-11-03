@@ -1,6 +1,7 @@
 import traceback
 from flask import request
 import flask
+from deployer.tasks.exceptions import TaskExecutionException
 
 
 def as_flask_error(error, message=None, details=None, traceback=None,
@@ -26,6 +27,16 @@ def register(app):
                        % request.path,
             'code': 'NOT_FOUND',
             'status': 404
+        })
+
+    @app.errorhandler(TaskExecutionException)
+    def task_error(error):
+        return as_flask_error(error, **{
+            'code': error.code,
+            'message': error.message,
+            'details': error.details,
+            'traceback': error.traceback,
+            'status': 500,
         })
 
     @app.errorhandler(500)

@@ -7,12 +7,11 @@ import functools
 import glob
 import json
 import os
-from flask import make_response, request
+from flask import make_response, request, url_for
 import flask
 from jsonschema import validate, ValidationError, SchemaError
 from repoze.lru import lru_cache
 
-DEFAULT_SCHEMA_BASE_URI = '/schemas'
 SCHEMA_PATH = './schemas'
 SCHEMA_CACHE_MAX_SIZE = 50
 
@@ -22,9 +21,8 @@ class HyperSchema:
     Wrapper to generate Link header using schema_name
     """
 
-    def __init__(self, schema_name, schema_base=DEFAULT_SCHEMA_BASE_URI):
+    def __init__(self, schema_name):
         self.schema_name = schema_name
-        self.schema_base = schema_base
 
     def __call__(self, func):
         """
@@ -35,8 +33,8 @@ class HyperSchema:
         @functools.wraps(func)
         def inner(*args, **kwargs):
             resp = make_response(func(*args, **kwargs))
-            resp.headers['Link'] = '<%s/%s#>; rel="describedBy"' % \
-                                   (self.schema_base, self.schema_name)
+            resp.headers['Link'] = '<%s#>; rel="describedBy"' % url_for(
+                '.schemas', schema_id=self.schema_name, _external=True)
             return resp
         return inner
 
