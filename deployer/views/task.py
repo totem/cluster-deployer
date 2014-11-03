@@ -81,7 +81,7 @@ class TaskApi(MethodView):
     @HyperSchema('task-v1')
     def get(self, id=None):
         if not id:
-            flask.abort(404)
+            return flask.abort(404)
         else:
             wait = request.args.get('wait', 'false').strip().lower()
             wait = True if wait in {'true', 'y', 'yes', '1'} else False

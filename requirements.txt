@@ -10,3 +10,6 @@ python-etcd==0.3.2
 elasticsearch==1.2.0
 https://github.com/totem/fleet-py/archive/master.tar.gz
 https://github.com/totem/yoda-py/archive/master.tar.gz
+repoze.lru==0.6
+jsonschema==2.4.0
+Flask-Negotiate==0.1.0

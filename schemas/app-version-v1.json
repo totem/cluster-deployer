@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-04/hyper-schema#",
+  "type": "object",
+  "title": "Schema for creating deployment",
+  "id": "#app-version-v1",
+  "properties": {
+    "meta-info": {
+      "$ref": "#/definitions/meta-info"
+    },
+    "deployment":{
+      "$ref": "#/definitions/deployment"
+    },
+    "proxy":{
+      "$ref": "#/definitions/proxy"
+    }
+  },
+  "required": ["meta-info"],
+  "additionalProperties": false,
+  "definitions":{
+    "meta-info": {
+      "properties": {
+        "github": {
+          "$ref": "#/definitions/github"
+        }
+      },
+      "additionalProperties": false
+    },
+    "github": {
+      "properties": {
+        "owner": {
+          "type": "string"
+        },
+        "repo": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "commit": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "deployment": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "proxy":{
+      "properties": {
+        "hosts": {
+          "type": "array"
+        }
+      }
+    }
+  },
+  "links": [
+    {
+      "rel": "self",
+      "href": "${base_url}/api/secure/hosts/{id}",
+      "mediaType": "application/vnd.saleztoolz.host-v1+json",
+      "method": "GET"
+    },
+    {
+      "title": "List Hosts",
+      "rel": "parent",
+      "href": "/api/secure/hosts",
+      "mediaType": "application/vnd.saleztoolz.host-list-v1+json",
+      "method": "GET"
+    },
+    {
+      "title": "Updates basic host info",
+      "rel": "patch",
+      "href": "/api/secure/hosts/{id}",
+      "mediaType": "application/vnd.saleztoolz.host-patch-v1+json",
+      "method": "PUT"
+    },
+    {
+      "title": "Deletes the host from the system",
+      "rel": "delete",
+      "href": "/api/secure/hosts/{id}",
+      "method": "DELETE"
+    }
+  ]
+}

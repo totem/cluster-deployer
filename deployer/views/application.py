@@ -1,8 +1,13 @@
 import json
+from celery.result import AsyncResult
 from flask import request
 import flask
+from flask.ext.negotiate import consumes, produces
 from flask.views import MethodView
+from conf.appconfig import TASK_SETTINGS
 from deployer.tasks.deployment import create, delete
+from deployer.views.hypermedia import ValidateSchema, HyperSchema
+from deployer.views.task import TaskApi
 
 
 class ApplicationApi(MethodView):
@@ -10,14 +15,26 @@ class ApplicationApi(MethodView):
     API for create, deleting, fetching applications
     """
 
-    def post(self):
+    @consumes('application/vnd.app-version-create-v1+json', 'application/json')
+    @produces('application/vnd.app-version-v1+json',
+              'application/vnd.task-v1+json', 'application/json', '*/*')
+    @HyperSchema('app-version-v1')
+    @ValidateSchema('app-version-create-v1')
+    def post(self, data=None):
         """
         Allows creation of new application version.
         :return:
         """
         deployment = json.loads(request.data)
         result = create.apply_async([deployment])
-        return flask.jsonify({'task_id': str(result)}), 202
+        if request.accept_mimetypes[0][0] == \
+                'application/vnd.app-version-v1+json':
+            while isinstance(result, AsyncResult):
+                result = result.get(
+                    timeout=TASK_SETTINGS['DEFAULT_GET_TIMEOUT'])
+            return flask.jsonify(result), 201
+        else:
+            return flask.jsonify({'task_id': str(result)}), 202
 
     def delete(self, name):
         """

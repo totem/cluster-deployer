@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-04/json-schema#",
+  "type": "object",
+  "title": "Schema for creating deployment",
+  "id": "#app-version-create-v1",
+  "properties": {
+    "meta-info": {
+      "$ref": "${base_url}/schemas/app-version-v1#/properties/meta-info"
+    },
+    "deployment":{
+      "$ref": "${base_url}/schemas/app-version-v1#/properties/deployment"
+    },
+    "proxy":{
+      "$ref": "${base_url}/schemas/app-version-v1#/properties/proxy"
+    }
+  },
+  "required": ["meta-info"],
+  "additionalProperties": false
+}
