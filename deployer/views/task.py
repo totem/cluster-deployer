@@ -5,7 +5,6 @@ from flask.views import MethodView
 from conf.appconfig import TASK_SETTINGS
 import deployer
 from deployer.tasks.exceptions import TaskExecutionException
-from deployer.views.hypermedia import HyperSchema
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +77,6 @@ class TaskApi(MethodView):
             'output': output
         }
 
-    @HyperSchema('task-v1')
     def get(self, id=None):
         if not id:
             return flask.abort(404)
@@ -91,6 +89,6 @@ class TaskApi(MethodView):
             return flask.jsonify(response)
 
 
-def register(app):
+def register(app, **kwargs):
     app.add_url_rule('/tasks/<string:id>', view_func=TaskApi.as_view('tasks'),
                      methods=['GET'])

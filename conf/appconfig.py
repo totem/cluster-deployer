@@ -122,3 +122,14 @@ SEARCH_SETTINGS = {
     'port': os.getenv('ELASTICSEARCH_PORT', '9200'),
     'default-index': 'cluster-deployer-%s' % os.getenv('CLUSTER_NAME', 'local')
 }
+
+CORS_SETTINGS = {
+    'enabled': os.getenv('CORS_ENABLED', 'true').strip().lower() in
+    BOOLEAN_TRUE_VALUES,
+    'origins': os.getenv('CORS_ORIGINS', '*')
+}
+
+MIME_JSON = 'application/json'
+MIME_TASK_V1 = 'application/vnd.task-v1+json'
+
+SCHEMA_TASK_V1 = 'task-v1'

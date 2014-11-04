@@ -1,7 +1,6 @@
 import flask
 from flask.views import MethodView
 import deployer
-from deployer.views.hypermedia import HyperSchema
 
 
 class RootApi(MethodView):
@@ -9,7 +8,6 @@ class RootApi(MethodView):
     Root API
     """
 
-    @HyperSchema('root-v1')
     def get(self):
         """
         Gets the version for the Deployer API.
@@ -19,7 +17,7 @@ class RootApi(MethodView):
         return flask.jsonify({'version': deployer.__version__})
 
 
-def register(app):
+def register(app, **kwargs):
     """
     Registers RootApi ('/')
     Only GET operation is available.

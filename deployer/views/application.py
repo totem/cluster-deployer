@@ -1,15 +1,21 @@
-import json
-from celery.result import AsyncResult
-from flask import request
 import flask
-from flask.ext.negotiate import consumes, produces
 from flask.views import MethodView
 from flask import url_for
-from conf.appconfig import TASK_SETTINGS
+
+from conf.appconfig import MIME_JSON, MIME_TASK_V1, \
+    SCHEMA_TASK_V1
 from deployer.tasks.deployment import create, delete
-from deployer.views.hypermedia import ValidateSchema, HyperSchema
-from deployer.views.task import TaskApi
-from deployer.views.util import build_response
+from deployer.views import hypermedia, task_client
+from deployer.views.util import created_task, created, deleted
+
+
+MIME_APP_VERSION_V1 = 'application/vnd.app-version-v1+json'
+MIME_APP_VERSION_CREATE_V1 = 'application/vnd.app-version-create-v1+json'
+MIME_APP_VERSION_DELETE_V1 = 'application/vnd.app-version-delete-v1+json'
+MIME_APP_DELETE_V1 = 'application/vnd.app-delete-v1+json'
+
+SCHEMA_APP_VERSION_CREATE_V1 = 'app-version-create-v1'
+SCHEMA_APP_VERSION_V1 = 'app-version-v1'
 
 
 class ApplicationApi(MethodView):
@@ -17,40 +23,41 @@ class ApplicationApi(MethodView):
     API for create, deleting, fetching applications
     """
 
-    @consumes('application/vnd.app-version-create-v1+json', 'application/json')
-    @produces('application/vnd.app-version-v1+json',
-              'application/vnd.task-v1+json', 'application/json', '*/*')
-    @HyperSchema('app-version-v1')
-    @ValidateSchema('app-version-create-v1')
-    def post(self, data=None):
+    @hypermedia.consumes({
+        MIME_APP_VERSION_CREATE_V1: SCHEMA_APP_VERSION_CREATE_V1,
+        MIME_JSON: SCHEMA_APP_VERSION_CREATE_V1
+    })
+    @hypermedia.produces({
+        MIME_TASK_V1: SCHEMA_TASK_V1,
+        MIME_JSON: SCHEMA_TASK_V1,
+        MIME_APP_VERSION_V1: SCHEMA_APP_VERSION_V1
+    }, default=MIME_TASK_V1)
+    def post(self, request_data=None, accept_mimetype=None, **kwargs):
         """
         Allows creation of new application version.
         :return:
         """
-        deployment = json.loads(request.data)
-        result = create.apply_async([deployment])
-        if request.accept_mimetypes[0][0] == \
-                'application/vnd.app-version-v1+json':
-            while isinstance(result, AsyncResult):
-                result = result.get(
-                    timeout=TASK_SETTINGS['DEFAULT_GET_TIMEOUT'])
-            return build_response(
-                result,
-                mimetype='application/vnd.app-version-create-v1+json',
-                status=201, headers={
-                    'Location': url_for(
-                        '.versions', name=result['deployment']['name'],
-                        version=result['deployment']['version'])
-                })
+        deployment = request_data
+        result = create.delay(deployment)
+        if accept_mimetype == MIME_APP_VERSION_V1:
+            result = task_client.ready(
+                result.id, wait=True, raise_error=True)
+            deployment = result['output']
+            location = url_for(
+                '.versions', name=deployment['deployment']['name'],
+                version=deployment['deployment']['version'])
+            return created(deployment, location=location,
+                           mimetype=accept_mimetype)
         else:
-            return build_response(
-                {'task_id': str(result)},
-                mimetype='application/vnd.task-v1+json',
-                status=202, headers={
-                    'Location': url_for('.tasks', id=str(result))
-                })
+            return created_task(result)
 
-    def delete(self, name):
+
+    @hypermedia.produces({
+        MIME_TASK_V1: SCHEMA_TASK_V1,
+        MIME_JSON: SCHEMA_TASK_V1,
+        MIME_APP_DELETE_V1: None
+    }, default=MIME_TASK_V1)
+    def delete(self, name, accept_mimetype=None, **kwargs):
         """
         Deletes all applications with given name
 
@@ -59,7 +66,13 @@ class ApplicationApi(MethodView):
         :return: Flask response code for 202.
         """
         result = delete.delay(name)
-        return flask.jsonify({'task_id': str(result)}), 202
+
+        if accept_mimetype == MIME_APP_DELETE_V1:
+            task_client.ready(result.id, wait=True, raise_error=True)
+            return deleted(mimetype=accept_mimetype)
+
+        else:
+            return created_task(result)
 
 
 class VersionApi(MethodView):
@@ -80,7 +93,7 @@ class VersionApi(MethodView):
         return flask.jsonify({'task_id': str(result)}), 202
 
 
-def register(app):
+def register(app, **kwargs):
     apps_func = ApplicationApi.as_view('apps')
     versions_func = VersionApi.as_view('versions')
     app.add_url_rule('/apps', view_func=apps_func, methods=['POST'])

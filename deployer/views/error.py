@@ -18,7 +18,7 @@ def as_flask_error(error, message=None, details=None, traceback=None,
     }), status
 
 
-def register(app):
+def register(app, **kwargs):
 
     @app.errorhandler(404)
     def page_not_found(error):
@@ -41,6 +41,7 @@ def register(app):
 
     @app.errorhandler(500)
     def internal(error):
+        trace = traceback.format_exc()
         try:
             details = error.to_dict()
         except AttributeError:
@@ -48,7 +49,7 @@ def register(app):
         return as_flask_error(error, **{
             'code': 'INTERNAL',
             'details': details,
-            'traceback': traceback.format_exc(),
+            'traceback': trace,
             'status': 500,
         })
 

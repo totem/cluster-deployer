@@ -1,4 +1,5 @@
 Flask==0.10.1
+Flask-Cors==1.9.0
 # Celery[mongodb]==3.1.16
 https://github.com/totem/celery/archive/patch_task-deserialize-url-fix.tar.gz
 flower==0.7.2
@@ -12,4 +13,4 @@ https://github.com/totem/fleet-py/archive/master.tar.gz
 https://github.com/totem/yoda-py/archive/master.tar.gz
 repoze.lru==0.6
 jsonschema==2.4.0
-Flask-Negotiate==0.1.0
+ordered-set==1.3

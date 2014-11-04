@@ -105,8 +105,14 @@ def delete(name, version=None):
         versions are undeployed.
     :return:
     """
+    search_params = {
+        'deployment': {
+            'name': name,
+            'version': version
+        }
+    }
     return _using_lock.si(
-        name,
+        name, search_params,
         do_task=(
             _fleet_undeploy.si(name, version) |
             _wait_for_undeploy.si(name, version, ret_value='done')
