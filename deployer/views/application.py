@@ -3,19 +3,12 @@ from flask.views import MethodView
 from flask import url_for
 
 from conf.appconfig import MIME_JSON, MIME_TASK_V1, \
-    SCHEMA_TASK_V1
+    SCHEMA_TASK_V1, MIME_APP_VERSION_CREATE_V1, SCHEMA_APP_VERSION_CREATE_V1, \
+    SCHEMA_APP_VERSION_V1, MIME_APP_VERSION_V1, MIME_APP_DELETE_V1
+
 from deployer.tasks.deployment import create, delete
 from deployer.views import hypermedia, task_client
 from deployer.views.util import created_task, created, deleted
-
-
-MIME_APP_VERSION_V1 = 'application/vnd.app-version-v1+json'
-MIME_APP_VERSION_CREATE_V1 = 'application/vnd.app-version-create-v1+json'
-MIME_APP_VERSION_DELETE_V1 = 'application/vnd.app-version-delete-v1+json'
-MIME_APP_DELETE_V1 = 'application/vnd.app-delete-v1+json'
-
-SCHEMA_APP_VERSION_CREATE_V1 = 'app-version-create-v1'
-SCHEMA_APP_VERSION_V1 = 'app-version-v1'
 
 
 class ApplicationApi(MethodView):
@@ -82,6 +75,7 @@ class VersionApi(MethodView):
     def delete(self, name, version):
         """
         Deletes applications with given name and version
+
         :param name:  Name of the application
         :type name: str
         :param version: Version of the application

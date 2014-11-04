@@ -1,4 +1,7 @@
+import json
 from nose.tools import eq_
+from conf.appconfig import MIME_ROOT_V1
+import deployer
 from deployer.server import app
 
 
@@ -10,7 +13,7 @@ class TestHyperSchema:
     def setup(self):
         self.client = app.test_client()
 
-    def test_root_hyperschema(self):
+    def test_root(self):
         """
         Should set the Link header for root endpoint.
         """
@@ -19,4 +22,7 @@ class TestHyperSchema:
         resp = self.client.get('/')
 
         # The Link header is set for the root endpoint
-        eq_(resp.headers['Link'], '</schemas/root-v1#>; rel="describedBy"')
+        eq_(resp.status_code, 200)
+        eq_(resp.headers['Content-Type'], MIME_ROOT_V1)
+        data = json.loads(resp.data.decode())
+        eq_(data['version'], deployer.__version__)

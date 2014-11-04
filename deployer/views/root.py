@@ -1,6 +1,8 @@
 import flask
 from flask.views import MethodView
+from conf.appconfig import MIME_ROOT_V1, SCHEMA_ROOT_V1, MIME_JSON
 import deployer
+from deployer.views import hypermedia
 
 
 class RootApi(MethodView):
@@ -8,7 +10,11 @@ class RootApi(MethodView):
     Root API
     """
 
-    def get(self):
+    @hypermedia.produces({
+        MIME_ROOT_V1: SCHEMA_ROOT_V1,
+        MIME_JSON: SCHEMA_ROOT_V1
+    }, default=MIME_ROOT_V1)
+    def get(self, **kwargs):
         """
         Gets the version for the Deployer API.
 

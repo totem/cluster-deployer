@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-04/hyper-schema#",
+  "type": "object",
+  "title": "HyperSchema for root API",
+  "id": "#root-v1",
+  "properties": {
+    "version": {
+      "type": "string"
+    }
+  },
+  "links": [
+    {
+      "rel": "self",
+      "href": "${base_url}",
+      "mediaType": "application/vnd.deployer.root-v1+json",
+      "method": "GET"
+    },
+    {
+      "rel": "app-version-create",
+      "title": "Deploy new application version",
+      "href": "/apps",
+      "mediaType": "application/vnd.deployer.task.v1+json, application/vnd.deployer.app.version.v1+json",
+      "method": "POST"
+    },
+    {
+      "rel": "app-list",
+      "title": "Lists deployed applications",
+      "href": "/apps",
+      "mediaType": "application/vnd.deployer.app.version-list.v1+json",
+      "method": "POST"
+    }
+  ]
+}

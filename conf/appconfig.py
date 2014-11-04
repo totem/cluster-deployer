@@ -130,6 +130,16 @@ CORS_SETTINGS = {
 }
 
 MIME_JSON = 'application/json'
-MIME_TASK_V1 = 'application/vnd.task-v1+json'
+MIME_ROOT_V1 = 'application/vnd.deployer.root.v1+json'
+MIME_TASK_V1 = 'application/vnd.deployer.task.v1+json'
+MIME_APP_VERSION_V1 = 'application/vnd.deployer.app.version.v1+json'
+MIME_APP_VERSION_CREATE_V1 = \
+    'application/vnd.deployer.app.version.create.v1+json'
+MIME_APP_VERSION_DELETE_V1 = \
+    'application/vnd.deployer.app.version.delete.v1+json'
+MIME_APP_DELETE_V1 = 'application/vnd.deployer.app.delete.v1+json'
 
 SCHEMA_TASK_V1 = 'task-v1'
+SCHEMA_ROOT_V1 = 'root-v1'
+SCHEMA_APP_VERSION_CREATE_V1 = 'app-version-create-v1'
+SCHEMA_APP_VERSION_V1 = 'app-version-v1'
