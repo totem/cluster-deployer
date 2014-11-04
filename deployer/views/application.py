@@ -51,7 +51,6 @@ class ApplicationApi(MethodView):
         else:
             return created_task(result)
 
-
     @hypermedia.produces({
         MIME_TASK_V1: SCHEMA_TASK_V1,
         MIME_JSON: SCHEMA_TASK_V1,

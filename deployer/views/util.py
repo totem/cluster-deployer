@@ -67,4 +67,3 @@ def deleted(status=204, mimetype=MIME_JSON, headers={}):
     headers = copy.deepcopy(headers or {})
     return build_response('', status=status, mimetype=mimetype,
                           headers=headers)
-
