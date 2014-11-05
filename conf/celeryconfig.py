@@ -1,16 +1,11 @@
 from datetime import timedelta
 import os
-import re
 from ast import literal_eval
 
 from celery.schedules import crontab
 from kombu import Queue
 
-
-MONGO_URL = os.getenv('MONGO_URL',
-                      'mongodb://localhost:27017/cluster-deployer')
 CLUSTER_NAME = os.getenv('CLUSTER_NAME', 'local')
-MONGO_RESULTS_DB = os.getenv('MONGO_RESULTS_DB') or os.path.basename(MONGO_URL)
 
 MESSAGES_TTL = 7200
 
@@ -44,16 +39,10 @@ CELERY_ROUTES = {
     }
 }
 
-# Results / Backend
-CELERY_RESULT_BACKEND = MONGO_URL
+CELERY_RESULT_BACKEND = 'amqp'
 CELERY_IMPORTS = ('deployer.tasks', 'deployer.tasks.deployment',
                   'deployer.tasks.common', 'deployer.tasks.proxy',
                   'celery.task')
-CELERY_MONGODB_BACKEND_SETTINGS = {
-    'database': MONGO_RESULTS_DB,
-    'taskmeta_collection': os.getenv('MONGO_RESULTS_COLLECTION') or
-    'celery_taskmeta_%s' % re.sub('[^A-Za-z_0-9]', '_', CLUSTER_NAME)
-}
 CELERY_ACCEPT_CONTENT = ['json', 'pickle']
 CELERY_TASK_SERIALIZER = 'pickle'
 CELERY_RESULT_SERIALIZER = 'pickle'
@@ -66,7 +55,8 @@ CELERY_IGNORE_RESULT = False
 CELERYD_TASK_SOFT_TIME_LIMIT = 300
 CELERYD_TASK_TIME_LIMIT = 330
 CELERY_SEND_TASK_SENT_EVENT = True
-CELERY_TASK_RESULT_EXPIRES = timedelta(days=7)
+CELERY_TASK_RESULT_EXPIRES = timedelta(hours=6)
+CELERY_RESULT_PERSISTENT = True
 
 # Remote Management
 CELERYD_POOL_RESTARTS = True
@@ -84,7 +74,7 @@ CELERY_ACKS_LATE = True
 CELERYBEAT_SCHEDULE = {
     'celery.task.backend_cleanup': {
         'task': 'deployer.tasks.backend_cleanup',
-        'schedule': crontab(hour="*/6", minute="0"),
+        'schedule': crontab(hour="*/2"),
         'args': (),
     }
 }

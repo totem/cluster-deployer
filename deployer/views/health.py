@@ -1,11 +1,12 @@
 from functools import wraps
+import sys
+
 import flask
 from flask.views import MethodView
-from pymongo import MongoClient
-import sys
-from conf.celeryconfig import MONGO_URL
+
 from deployer.elasticsearch import get_search_client
 from deployer.tasks.common import ping
+
 
 HEALTH_OK = 'ok'
 HEALTH_FAILED = 'failed'
@@ -25,10 +26,6 @@ class HealthApi(MethodView):
             500: If health check fails for any of the component.
             E.g. output:
             {
-                "mongo": {
-                    "status": "ok",
-                    "details": "Successfully retrieved database names"
-                },
                 "celery": {
                     "status": "ok",
                     "details": "Celery ping:pong",
@@ -41,7 +38,6 @@ class HealthApi(MethodView):
 
         """
         health = {
-            'mongo': _check_mongo(),
             'celery': _check_celery(),
             'elasticsearch': _check_elasticsearch()
         }
@@ -94,18 +90,6 @@ def _check(func):
                 'details': str(sys.exc_info()[1])
             }
     return inner
-
-
-@_check
-def _check_mongo():
-    """
-    Checks mongo connectivity
-    """
-    client = MongoClient(MONGO_URL, max_pool_size=1, _connect=False)
-    try:
-        return client.server_info()
-    finally:
-        client.close() if client else None
 
 
 @_check

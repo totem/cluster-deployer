@@ -28,7 +28,6 @@ The documentation will be generated in docs/build folder.
 
 The project has following dependencies  
 - python 2.7.x (Fabric library is not compatible with Python 3.x)  
-- Mongo 2.6+  
 - Virtualenv (Recommended)
 - Python pip
 - etcd 0.4.6 (Required if using docker based deployment)
@@ -70,9 +69,6 @@ To run the server locally (w/o celery worker) , run command:
 python local.py
 ```
 
-It assumes that mongo server (2.6+) is already running locally on port 27017 
-and with no credentials. 
-
 Once server is up you can access the root api using:  
 [http://localhost:9000](http://localhost:9000)
 
@@ -82,14 +78,12 @@ In order to run fully integrated server using docker using latest docker , run
 command: 
 
 ```
-sudo docker run -it --rm -h cluster-deployer-${USER} --name cluster-deployer  -e MONGO_URL=mongodb://172.17.42.1:27017/totem_deployer -e MONGO_RESULTS_DB=totem_deployer -P totem/cluster-deployer
+sudo docker run -it --rm -h cluster-deployer-${USER} --name cluster-deployer -P totem/cluster-deployer
 ```
 
 ### Run Configuration (Environment Variables)  
 | Env Variable | Description |  Default Value (Local) | Default Value (Docker)|
 | ------------ | ----------- | ---------------------- | --------------------- |
-| MONGO_URL | Mongo server url | mongodb://172.17.42.1:27017/totem_deployer | mongodb://localhost:27017/totem_deployer|
-| MONGO_RESULTS_DB | Database to store task results | totem_deployer | totem_deployer | 
 | QUAY_ORGANIZATION | Organization in quay to pull images from | totem | totem|
 | ETCD_HOST | Etcd server host. | 127.0.0.1 | 172.17.42.1 |
 | ETCD_PORT | Etcd server port. | 4001 | 4001 |

@@ -1,9 +1,7 @@
 Flask==0.10.1
 Flask-Cors==1.9.0
-# Celery[mongodb]==3.1.16
-https://github.com/totem/celery/archive/patch_task-deserialize-url-fix.tar.gz
+Celery==3.1.16
 flower==0.7.2
-pymongo==2.7.2
 gevent==1.0.1
 uWSGI==2.0.7
 supervisor==3.1.2
