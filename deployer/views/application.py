@@ -1,6 +1,6 @@
 import flask
 from flask.views import MethodView
-from flask import url_for, redirect
+from flask import url_for, redirect, request
 
 from conf.appconfig import MIME_JSON, MIME_TASK_V1, \
     SCHEMA_TASK_V1, MIME_APP_VERSION_CREATE_V1, SCHEMA_APP_VERSION_CREATE_V1, \
@@ -11,8 +11,8 @@ from deployer.tasks import search
 
 from deployer.tasks.deployment import create, delete
 from deployer.views import hypermedia, task_client
-from deployer.views.util import created_task, created, deleted, build_response, \
-    use_paging
+from deployer.views.util import created_task, created, deleted, \
+    build_response, use_paging
 
 
 class ApplicationApi(MethodView):
@@ -49,7 +49,8 @@ class ApplicationApi(MethodView):
 
     def get(self, name=None):
         if name:
-            return redirect(url_for('.versions', name=name))
+            return redirect('%s?%s' % (
+                url_for('.versions', name=name), request.query_string))
         else:
             return self.list()
 
@@ -97,7 +98,7 @@ class VersionApi(MethodView):
 
     def get(self, name, version=None):
         if version:
-            return flask.jsonify({})
+            return self.find_one(name, version)
         else:
             return self.list(name)
 
@@ -116,6 +117,23 @@ class VersionApi(MethodView):
 
         deployments = search.find_deployments(name, page=page, size=size) or []
         return build_response(deployments)
+
+    @hypermedia.produces({
+        MIME_JSON: SCHEMA_APP_VERSION_V1,
+        MIME_APP_VERSION_V1: SCHEMA_APP_VERSION_V1
+    }, default=MIME_APP_VERSION_V1)
+    def find_one(self, name, version, **kwargs):
+        """
+        Lists all applications. Require search to be enabled.
+
+        :param kwargs:
+        :return:
+        """
+
+        deployments = search.find_deployments(name, version=version) or []
+        if not deployments:
+            flask.abort(404)
+        return build_response(deployments[0])
 
     def delete(self, name, version):
         """
