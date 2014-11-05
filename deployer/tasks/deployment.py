@@ -12,7 +12,8 @@ from deployer.tasks.search import index_deployment, update_deployment_state, \
     EVENT_ACQUIRED_LOCK, \
     EVENT_UNDEPLOYED_EXISTING, EVENT_UNITS_DEPLOYED, \
     EVENT_PROMOTED, EVENT_DEPLOYMENT_FAILED, create_search_parameters, \
-    add_search_event, EVENT_WIRED, EVENT_UNITS_ADDED
+    add_search_event, EVENT_WIRED, EVENT_UNITS_ADDED, \
+    get_promoted_deployments, mark_decommissioned
 
 __author__ = 'sukrit'
 __all__ = ['create', 'delete']
@@ -66,8 +67,8 @@ def create(deployment):
         add_search_event.si(EVENT_NEW_DEPLOYMENT, details=deployment,
                             search_params=search_params) |
         _using_lock.si(
-            deployment['deployment']['name'],
             search_params,
+            deployment['deployment']['name'],
             do_task=_pre_create_undeploy.si(
                 deployment,
                 search_params,
@@ -108,21 +109,37 @@ def delete(name, version=None):
     search_params = {
         'deployment': {
             'name': name,
-            'version': version
+            'version': version or 'all',
+            'id': '%s-%s' % (name, version) if version else 'all'
         }
     }
     return _using_lock.si(
-        name, search_params,
+        search_params, name,
         do_task=(
             _fleet_undeploy.si(name, version) |
+            get_promoted_deployments.si(name, version) |
+            mark_decommissioned.s() |
             _wait_for_undeploy.si(name, version, ret_value='done')
         )
     )()
 
 
+@app.task
+def list_deployments(name, version):
+    """
+    Lists application with given name and version
+
+    :param name:
+    :param version:
+    :return:
+    """
+
+    pass
+
+
 @app.task(bind=True, default_retry_delay=TASK_SETTINGS['LOCK_RETRY_DELAY'],
           max_retries=TASK_SETTINGS['LOCK_RETRIES'])
-def _using_lock(self, name, search_params, do_task, cleanup_tasks=None,
+def _using_lock(self, search_params, name, do_task, cleanup_tasks=None,
                 error_tasks=None):
     """
     Applies lock for the deployment
@@ -478,36 +495,33 @@ def _promote_deployment(deployment, search_params):
     :type deployment: dict
     """
     tasks = []
-
+    name = deployment['deployment']['name']
+    version = deployment['deployment']['version']
     # Add Proxy Wired to the chain
     tasks.append(
         add_search_event.si(
             EVENT_WIRED, search_params=search_params,
             details={
-                'name': deployment['deployment']['name'],
-                'version': deployment['deployment']['version'],
+                'name': name,
+                'version': version,
                 'proxy': deployment['proxy']
             }
         )
     )
 
     if deployment['deployment']['mode'] == DEPLOYMENT_MODE_BLUEGREEN:
-        tasks.append(
-            _fleet_undeploy.si(
-                deployment['deployment']['name'],
-                exclude_version=deployment['deployment']['version'])
-        )
-    tasks.append(
-        update_deployment_state.si(deployment['id'], DEPLOYMENT_STATE_PROMOTED)
-    )
+        tasks += [
+            _fleet_undeploy.si(name, exclude_version=version),
+            get_promoted_deployments.si(name),
+            mark_decommissioned.s()
+        ]
 
-    tasks.append(
-        add_search_event.si(EVENT_PROMOTED, search_params=search_params)
-    )
-
-    tasks.append(
+    tasks += [
+        update_deployment_state.si(deployment['id'],
+                                   DEPLOYMENT_STATE_PROMOTED),
+        add_search_event.si(EVENT_PROMOTED, search_params=search_params),
         _processed_deployment.si(deployment)
-    )
+    ]
 
     return wire_proxy.si(
         deployment['deployment']['name'],

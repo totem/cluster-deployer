@@ -5,7 +5,9 @@ from flask import url_for, redirect
 from conf.appconfig import MIME_JSON, MIME_TASK_V1, \
     SCHEMA_TASK_V1, MIME_APP_VERSION_CREATE_V1, SCHEMA_APP_VERSION_CREATE_V1, \
     SCHEMA_APP_VERSION_V1, MIME_APP_VERSION_V1, MIME_APP_DELETE_V1, \
-    SCHEMA_APP_LIST_V1, MIME_APP_LIST_V1
+    SCHEMA_APP_LIST_V1, MIME_APP_LIST_V1, SCHEMA_APP_VERSION_LIST_V1, \
+    MIME_APP_VERSION_LIST_V1
+from deployer.tasks import search
 
 from deployer.tasks.deployment import create, delete
 from deployer.views import hypermedia, task_client
@@ -55,7 +57,14 @@ class ApplicationApi(MethodView):
         MIME_APP_LIST_V1: SCHEMA_APP_LIST_V1
     }, default=MIME_APP_LIST_V1)
     def list(self, **kwargs):
-        return build_response(['app1', 'app2'])
+        """
+        Lists all applications. Require search to be enabled.
+
+        :param kwargs:
+        :return:
+        """
+        apps = search.find_apps() or []
+        return build_response(apps)
 
     @hypermedia.produces({
         MIME_TASK_V1: SCHEMA_TASK_V1,
@@ -86,7 +95,26 @@ class VersionApi(MethodView):
     """
 
     def get(self, name, version=None):
-        return flask.jsonify({'Ping': 'Pong'}), 200
+        if version:
+            return flask.jsonify({})
+        else:
+            return self.list(name)
+
+    @hypermedia.produces({
+        MIME_JSON: SCHEMA_APP_VERSION_LIST_V1,
+        MIME_APP_VERSION_LIST_V1: SCHEMA_APP_VERSION_LIST_V1
+    }, default=MIME_APP_VERSION_LIST_V1)
+    def list(self, name, **kwargs):
+        """
+        Lists all applications. Require search to be enabled.
+
+        :param kwargs:
+        :return:
+        """
+        versions = search.find_app_versions(name) or []
+        if not versions:
+            flask.abort(404)
+        return build_response(versions)
 
     def delete(self, name, version):
         """

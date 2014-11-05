@@ -26,9 +26,9 @@ def deployment_search(fun):
             kwargs.setdefault('idx', SEARCH_SETTINGS['default-index'])
             return fun(*args, **kwargs)
         else:
-            return {
-                'skip_search': True
-            }
+            logger.info('Elasticsearch is disabled. Skipping %s call',
+                        fun.__name__)
+            return None
     return outer
 
 
