@@ -65,8 +65,3 @@ def create_index_mapping(es, idx):
                         'IndexAlreadyExistsException' in error.error.decode():
                     logger.info(
                         'Index: %s already exists. Skip create..' % idx)
-
-
-# Creates the index mapping for elastic search on startup.
-# If mappings already exists, this will be ignored
-create_index_mapping()
