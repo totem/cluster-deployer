@@ -114,10 +114,8 @@ class VersionApi(MethodView):
         :return:
         """
 
-        versions = search.find_deployments(name, page=page, size=size) or []
-        if not versions:
-            flask.abort(404)
-        return build_response(versions)
+        deployments = search.find_deployments(name, page=page, size=size) or []
+        return build_response(deployments)
 
     def delete(self, name, version):
         """
