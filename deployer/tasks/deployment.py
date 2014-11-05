@@ -125,16 +125,20 @@ def delete(name, version=None):
 
 
 @app.task
-def list_deployments(name, version):
+def list_units(name, version):
     """
-    Lists application with given name and version
+    Lists fleet units for a given application and version
 
     :param name:
     :param version:
-    :return:
+    :return: list of units where each unit is represented as dict
+            comprising of
+                - unit : Name of fleet unit,
+                - machine : Machine for the unit
+                - active : Activation status ('activating', 'active')
+                - sub : Current state of the unit
     """
-
-    pass
+    return filter_units(get_fleet_provider(), name, version)
 
 
 @app.task(bind=True, default_retry_delay=TASK_SETTINGS['LOCK_RETRY_DELAY'],

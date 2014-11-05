@@ -135,6 +135,8 @@ MIME_TASK_V1 = 'application/vnd.deployer.task.v1+json'
 MIME_APP_LIST_V1 = 'application/vnd.deployer.app-list.v1+json'
 MIME_APP_VERSION_LIST_V1 = 'application/vnd.deployer.app.version-list.v1+json'
 MIME_APP_VERSION_V1 = 'application/vnd.deployer.app.version.v1+json'
+MIME_APP_VERSION_UNIT_LIST_V1 = \
+    'application/vnd.deployer.app.version.unit-list.v1+json'
 MIME_APP_VERSION_CREATE_V1 = \
     'application/vnd.deployer.app.version.create.v1+json'
 MIME_APP_VERSION_DELETE_V1 = \
@@ -147,6 +149,7 @@ SCHEMA_APP_LIST_V1 = 'app-list-v1'
 SCHEMA_APP_VERSION_CREATE_V1 = 'app-version-create-v1'
 SCHEMA_APP_VERSION_V1 = 'app-version-v1'
 SCHEMA_APP_VERSION_LIST_V1 = 'app-version-list-v1'
+SCHEMA_APP_VERSION_UNIT_LIST_V1 = 'app-version-unit-list-v1'
 
 API_MAX_PAGE_SIZE = 1000
 API_DEFAULT_PAGE_SIZE = 10

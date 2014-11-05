@@ -58,3 +58,4 @@ docs/build/
 celerybeat-schedule
 message-one.json
 worker.log
+*.pid

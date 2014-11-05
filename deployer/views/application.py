@@ -6,10 +6,11 @@ from conf.appconfig import MIME_JSON, MIME_TASK_V1, \
     SCHEMA_TASK_V1, MIME_APP_VERSION_CREATE_V1, SCHEMA_APP_VERSION_CREATE_V1, \
     SCHEMA_APP_VERSION_V1, MIME_APP_VERSION_V1, MIME_APP_DELETE_V1, \
     SCHEMA_APP_LIST_V1, MIME_APP_LIST_V1, SCHEMA_APP_VERSION_LIST_V1, \
-    MIME_APP_VERSION_LIST_V1
+    MIME_APP_VERSION_LIST_V1, MIME_APP_VERSION_DELETE_V1, \
+    SCHEMA_APP_VERSION_UNIT_LIST_V1, MIME_APP_VERSION_UNIT_LIST_V1
 from deployer.tasks import search
 
-from deployer.tasks.deployment import create, delete
+from deployer.tasks.deployment import create, delete, list_units
 from deployer.views import hypermedia, task_client
 from deployer.views.util import created_task, created, deleted, \
     build_response, use_paging
@@ -112,7 +113,7 @@ class VersionApi(MethodView):
         Lists all applications. Require search to be enabled.
 
         :param kwargs:
-        :return:
+        :return: Flask Response wrapping deployment list.
         """
 
         deployments = search.find_deployments(name, page=page, size=size) or []
@@ -124,10 +125,10 @@ class VersionApi(MethodView):
     }, default=MIME_APP_VERSION_V1)
     def find_one(self, name, version, **kwargs):
         """
-        Lists all applications. Require search to be enabled.
+        Finds single deployment. Require search to be enabled.
 
         :param kwargs:
-        :return:
+        :return: Flask Response wrapping deployment.
         """
 
         deployments = search.find_deployments(name, version=version) or []
@@ -135,7 +136,12 @@ class VersionApi(MethodView):
             flask.abort(404)
         return build_response(deployments[0])
 
-    def delete(self, name, version):
+    @hypermedia.produces({
+        MIME_TASK_V1: SCHEMA_TASK_V1,
+        MIME_JSON: SCHEMA_TASK_V1,
+        MIME_APP_VERSION_DELETE_V1: None
+    }, default=MIME_TASK_V1)
+    def delete(self, name, version, accept_mimetype=None, **kwargs):
         """
         Deletes applications with given name and version
 
@@ -146,12 +152,46 @@ class VersionApi(MethodView):
         :return: Flask response code for 202.
         """
         result = delete.delay(name, version=version)
-        return flask.jsonify({'task_id': str(result)}), 202
+
+        if accept_mimetype == MIME_APP_VERSION_DELETE_V1:
+            task_client.ready(result.id, wait=True, raise_error=True)
+            return deleted(mimetype=accept_mimetype)
+
+        else:
+            return created_task(result)
+
+
+class UnitApi(MethodView):
+    """
+    API for units of a deployed application version
+    """
+
+    @hypermedia.produces({
+        MIME_TASK_V1: SCHEMA_TASK_V1,
+        MIME_JSON: SCHEMA_TASK_V1,
+        MIME_APP_VERSION_UNIT_LIST_V1: SCHEMA_APP_VERSION_UNIT_LIST_V1
+    }, default=MIME_TASK_V1)
+    def get(self, name, version, accept_mimetype=None, **kwargs):
+        """
+        Gets all deployed units for a given application version.
+
+        :param name:
+        :param version:
+        :return: Flask Response wrapping units list
+        """
+
+        result = list_units.delay(name, version)
+        if accept_mimetype == MIME_APP_VERSION_UNIT_LIST_V1:
+            result = task_client.ready(result.id, wait=True, raise_error=True)
+            return build_response(result['output'] or [])
+        else:
+            return created_task(result)
 
 
 def register(app, **kwargs):
     apps_func = ApplicationApi.as_view('apps')
     versions_func = VersionApi.as_view('versions')
+    units_func = UnitApi.as_view('units')
 
     for uri in ['/apps', '/apps/']:
         app.add_url_rule(uri,  view_func=apps_func, methods=['GET', 'POST'])
@@ -162,6 +202,10 @@ def register(app, **kwargs):
     for uri in ['/apps/<name>/versions', '/apps/<name>/versions/']:
         app.add_url_rule(uri, view_func=versions_func, methods=['GET'])
 
-    app.add_url_rule('/apps/<name>/versions/<version>',
+    version_uri = '/apps/<name>/versions/<version>'
+    app.add_url_rule(version_uri,
                      view_func=versions_func,
                      methods=['DELETE', 'GET'])
+
+    for uri in ['%s/units' % (version_uri), '%s/units/' % (version_uri)]:
+        app.add_url_rule(uri, view_func=units_func, methods=['GET'])
