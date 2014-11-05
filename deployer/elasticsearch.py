@@ -1,7 +1,12 @@
 from __future__ import absolute_import
 from functools import wraps
-from elasticsearch import Elasticsearch
+import json
+import logging
+from elasticsearch import Elasticsearch, RequestError
 from conf.appconfig import SEARCH_SETTINGS
+
+MAPPING_LOCATION = './conf/index-mapping.json'
+logger = logging.getLogger(__name__)
 
 
 def deployment_search(fun):
@@ -36,3 +41,32 @@ def get_search_client():
     """
     return Elasticsearch(hosts=SEARCH_SETTINGS['host'],
                          port=SEARCH_SETTINGS['port'])
+
+
+@deployment_search
+def create_index_mapping(es, idx):
+    """
+    Creates the elastic search index mapping (for the first time) when index
+    does not exists.
+
+    :param es:
+    :param idx:
+    :return:
+    """
+    if not es.indices.exists(idx):
+        # Try to create index with default mappings
+
+        with open(MAPPING_LOCATION, 'r') as file:
+            body = json.load(file)
+            try:
+                es.indices.create(idx, body=body)
+            except RequestError as error:
+                if error.status_code == 400 and \
+                        'IndexAlreadyExistsException' in error.error.decode():
+                    logger.info(
+                        'Index: %s already exists. Skip create..' % idx)
+
+
+# Creates the index mapping for elastic search on startup.
+# If mappings already exists, this will be ignored
+create_index_mapping()

@@ -1,14 +1,15 @@
 import flask
 from flask.views import MethodView
-from flask import url_for
+from flask import url_for, redirect
 
 from conf.appconfig import MIME_JSON, MIME_TASK_V1, \
     SCHEMA_TASK_V1, MIME_APP_VERSION_CREATE_V1, SCHEMA_APP_VERSION_CREATE_V1, \
-    SCHEMA_APP_VERSION_V1, MIME_APP_VERSION_V1, MIME_APP_DELETE_V1
+    SCHEMA_APP_VERSION_V1, MIME_APP_VERSION_V1, MIME_APP_DELETE_V1, \
+    SCHEMA_APP_LIST_V1, MIME_APP_LIST_V1
 
 from deployer.tasks.deployment import create, delete
 from deployer.views import hypermedia, task_client
-from deployer.views.util import created_task, created, deleted
+from deployer.views.util import created_task, created, deleted, build_response
 
 
 class ApplicationApi(MethodView):
@@ -39,10 +40,22 @@ class ApplicationApi(MethodView):
             location = url_for(
                 '.versions', name=deployment['deployment']['name'],
                 version=deployment['deployment']['version'])
-            return created(deployment, location=location,
-                           mimetype=accept_mimetype)
+            return created(deployment, location=location)
         else:
             return created_task(result)
+
+    def get(self, name=None):
+        if name:
+            return redirect(url_for('.versions', name=name))
+        else:
+            return self.list()
+
+    @hypermedia.produces({
+        MIME_JSON: SCHEMA_APP_LIST_V1,
+        MIME_APP_LIST_V1: SCHEMA_APP_LIST_V1
+    }, default=MIME_APP_LIST_V1)
+    def list(self, **kwargs):
+        return build_response(['app1', 'app2'])
 
     @hypermedia.produces({
         MIME_TASK_V1: SCHEMA_TASK_V1,
@@ -72,6 +85,9 @@ class VersionApi(MethodView):
     API for deleting and fetching versions for application.
     """
 
+    def get(self, name, version=None):
+        return flask.jsonify({'Ping': 'Pong'}), 200
+
     def delete(self, name, version):
         """
         Deletes applications with given name and version
@@ -89,9 +105,16 @@ class VersionApi(MethodView):
 def register(app, **kwargs):
     apps_func = ApplicationApi.as_view('apps')
     versions_func = VersionApi.as_view('versions')
-    app.add_url_rule('/apps', view_func=apps_func, methods=['POST'])
+
+    for uri in ['/apps', '/apps/']:
+        app.add_url_rule(uri,  view_func=apps_func, methods=['GET', 'POST'])
+
     app.add_url_rule('/apps/<name>', view_func=apps_func,
-                     methods=['DELETE'])
+                     methods=['DELETE', 'GET'])
+
+    for uri in ['/apps/<name>/versions', '/apps/<name>/versions/']:
+        app.add_url_rule(uri, view_func=versions_func, methods=['GET'])
+
     app.add_url_rule('/apps/<name>/versions/<version>',
                      view_func=versions_func,
-                     methods=['DELETE'])
+                     methods=['DELETE', 'GET'])

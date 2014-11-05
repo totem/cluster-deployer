@@ -1,6 +1,7 @@
 import copy
+import json
 
-from flask import jsonify, url_for
+from flask import jsonify, url_for, Response
 
 from conf.appconfig import MIME_JSON
 
@@ -20,7 +21,10 @@ def build_response(output, status=200, mimetype=MIME_JSON,
     :type headers: dict
     :return: Tuple consisting of Flask Response, Status Code and Http Headers
     """
-    resp = jsonify(output)
+    if isinstance(output, list):
+        resp = Response(json.dumps(output))
+    else:
+        resp = jsonify(output)
     resp.mimetype = mimetype
     return resp, status, headers
 
