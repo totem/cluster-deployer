@@ -11,7 +11,8 @@ from deployer.tasks import search
 
 from deployer.tasks.deployment import create, delete
 from deployer.views import hypermedia, task_client
-from deployer.views.util import created_task, created, deleted, build_response
+from deployer.views.util import created_task, created, deleted, build_response, \
+    use_paging
 
 
 class ApplicationApi(MethodView):
@@ -104,14 +105,16 @@ class VersionApi(MethodView):
         MIME_JSON: SCHEMA_APP_VERSION_LIST_V1,
         MIME_APP_VERSION_LIST_V1: SCHEMA_APP_VERSION_LIST_V1
     }, default=MIME_APP_VERSION_LIST_V1)
-    def list(self, name, **kwargs):
+    @use_paging
+    def list(self, name, page=0, size=10, **kwargs):
         """
         Lists all applications. Require search to be enabled.
 
         :param kwargs:
         :return:
         """
-        versions = search.find_app_versions(name) or []
+
+        versions = search.find_deployments(name, page=page, size=size) or []
         if not versions:
             flask.abort(404)
         return build_response(versions)

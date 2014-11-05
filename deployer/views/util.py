@@ -1,9 +1,10 @@
 import copy
+import functools
 import json
 
-from flask import jsonify, url_for, Response
+from flask import jsonify, url_for, Response, request
 
-from conf.appconfig import MIME_JSON
+from conf.appconfig import MIME_JSON, API_DEFAULT_PAGE_SIZE
 
 
 def build_response(output, status=200, mimetype=MIME_JSON,
@@ -71,3 +72,24 @@ def deleted(status=204, mimetype=MIME_JSON, headers={}):
     headers = copy.deepcopy(headers or {})
     return build_response('', status=status, mimetype=mimetype,
                           headers=headers)
+
+
+def use_paging(func):
+    @functools.wraps(func)
+    def inner(*args, **kwargs):
+        try:
+            size = int(request.args.get('size', API_DEFAULT_PAGE_SIZE))
+            size = max(0, min(API_DEFAULT_PAGE_SIZE, size))
+        except ValueError:
+            size = API_DEFAULT_PAGE_SIZE
+
+        try:
+            page = int(request.args.get('page', 0))
+            page = max(0, page)
+        except ValueError:
+            page = 0
+
+        kwargs.setdefault('page', page)
+        kwargs.setdefault('size', size)
+        return func(*args,  **kwargs)
+    return inner

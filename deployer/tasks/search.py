@@ -105,35 +105,12 @@ def find_apps(es=None, idx=None):
             results['aggregations']['apps']['buckets']]
 
 
-@deployment_search
-def find_app_versions(name, es=None, idx=None):
-    results = es.search(idx, doc_type=TYPE_DEPLOYMENTS, body={
-        'size': 0,
-        'aggs': {
-            'app_versions': {
-                'filter': {
-                    'term': {
-                        'deployment.name': name,
-                        }
-                },
-                'aggs': {
-                    'versions': {
-                        'terms': {
-                            'field': 'deployment.version'
-                        }
-                    }
-                }
-            }
-        }
-    })
-    return [bucket['key'] for bucket in
-            results['aggregations']['app_versions']['versions']['buckets']]
-
-
 @app.task
 @deployment_search
 def get_promoted_deployments(name, version=None, es=None, idx=None):
     query = {
+        # Not expecting more than 1000 promoted deployments for a given app
+        'size': 1000,
         "fields": [],
         "filter": {
             "and": [
@@ -160,3 +137,19 @@ def mark_decommissioned(ids, es=None, idx=None):
                 {'doc': {'state': DEPLOYMENT_STATE_DECOMMISSIONED}}
             ]
         return es.bulk(body, index=idx, doc_type=TYPE_DEPLOYMENTS)
+
+
+@deployment_search
+def find_deployments(name, version=None, page=0, size=10, es=None, idx=None):
+    query = {
+        "size": size,
+        "from": page,
+        "filter": {
+            "and": [
+                {"term": {"deployment.name": name}},
+                {"term": {"deployment.version": version}} if version else {}
+            ]
+        }
+    }
+    results = es.search(idx, TYPE_DEPLOYMENTS, body=query)
+    return [hit['_source'] for hit in results['hits']['hits']]
