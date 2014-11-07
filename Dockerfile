@@ -8,7 +8,7 @@ RUN apt-get install -y openssh-server openssh-client libffi-dev gettext nano
 ##SSH Server (To troubleshoot issues with discover)
 RUN mkdir /var/run/sshd
 RUN mkdir /root/.ssh
-RUN chmod  chmod  500 /root/.ssh & chown -R root:root /root/.ssh
+RUN chmod  500 /root/.ssh & chown -R root:root /root/.ssh
 
 #Syslog
 RUN echo '$PreserveFQDN on' | cat - /etc/rsyslog.conf > /tmp/rsyslog.conf && sudo mv /tmp/rsyslog.conf /etc/rsyslog.conf
@@ -27,6 +27,8 @@ RUN cd /tmp && gzip -dc etcd-$ETCDCTL_VERSION-linux-amd64.tar.gz | tar -xof -
 RUN cp -f /tmp/etcd-$ETCDCTL_VERSION-linux-amd64/etcdctl /usr/local/bin
 RUN rm -rf /tmp/etcd-$ETCDCTL_VERSION-linux-amd64.tar.gz
 
+# Supervisor and App dependencies
+RUN pip install supervisor==3.1.2
 ADD requirements.txt /opt/requirements.txt
 RUN pip install -r /opt/requirements.txt
 
