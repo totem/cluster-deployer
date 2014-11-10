@@ -1,9 +1,11 @@
 from datetime import datetime
+import logging
 import traceback
 from flask import request
 import flask
 from deployer.tasks.exceptions import TaskExecutionException
 
+logger = logging.getLogger(__name__)
 
 def as_flask_error(error=None, message=None, details=None, traceback=None,
                    status=500, code='INTERNAL', timestamp=None):
@@ -45,6 +47,7 @@ def register(app, **kwargs):
     @app.errorhandler(500)
     def internal(error):
         trace = traceback.format_exc()
+        logger.exception('Unknown error happened while serving request.')
         try:
             details = error.to_dict()
         except AttributeError:
