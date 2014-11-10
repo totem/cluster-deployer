@@ -28,16 +28,20 @@
     "github": {
       "properties": {
         "owner": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100
         },
         "repo": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100
         },
         "branch": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100
         },
         "commit": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100
         }
       },
       "additionalProperties": false
@@ -45,13 +49,15 @@
     "deployment": {
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 512
         },
         "version": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100
         },
         "type": {
-          "type": "string"
+          "enum": [ "blue-green", "red-green", "a/b", "custom"]
         }
       },
       "additionalProperties": false
@@ -60,6 +66,31 @@
       "properties": {
         "hosts": {
           "type": "array"
+        }
+      },
+      "additionalProperties": false
+    },
+    "templates": {
+      "properties": {
+        "app": {
+          "$ref": "#/definitions/template"
+        }
+      },
+      "additionalProperties": true
+    },
+    "template": {
+      "properties": {
+        "args": {
+          "$ref": "#/definitions/template-args"
+        }
+      },
+      "additionalProperties": true
+    },
+    "template-args": {
+      "properties": {
+        "image": {
+          "type": "string",
+          "maxLength": 1024
         }
       }
     }
