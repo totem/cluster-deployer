@@ -7,6 +7,7 @@ from deployer.tasks.exceptions import TaskExecutionException
 
 logger = logging.getLogger(__name__)
 
+
 def as_flask_error(error=None, message=None, details=None, traceback=None,
                    status=500, code='INTERNAL', timestamp=None):
     return flask.jsonify({
