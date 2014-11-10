@@ -1,11 +1,12 @@
+from datetime import datetime
 import traceback
 from flask import request
 import flask
 from deployer.tasks.exceptions import TaskExecutionException
 
 
-def as_flask_error(error, message=None, details=None, traceback=None,
-                   status=500, code='INTERNAL'):
+def as_flask_error(error=None, message=None, details=None, traceback=None,
+                   status=500, code='INTERNAL', timestamp=None):
     return flask.jsonify({
         'path': request.path,
         'url': request.url,
@@ -14,7 +15,8 @@ def as_flask_error(error, message=None, details=None, traceback=None,
         'details': details,
         'traceback': traceback,
         'status': status,
-        'code': code
+        'code': code,
+        'timestamp': timestamp or datetime.utcnow()
     }), status
 
 
