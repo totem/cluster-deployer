@@ -39,6 +39,7 @@ def register(app, **kwargs):
             'status': 500,
         })
 
+    @app.errorhandler(Exception)
     @app.errorhandler(500)
     def internal(error):
         trace = traceback.format_exc()

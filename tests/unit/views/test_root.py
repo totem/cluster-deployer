@@ -5,9 +5,9 @@ import deployer
 from deployer.server import app
 
 
-class TestHyperSchema:
+class TestRootView:
     """
-    Tests hperschema
+    Tests root api
     """
 
     def setup(self):

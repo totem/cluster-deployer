@@ -39,13 +39,13 @@ The project has following dependencies
 To install dependencies for the project, run command:  
 
 ```
-pip install requirements.txt
+pip3 install -r requirements.txt
 ```
 
 In addition if you are developing on the project, run command: 
 
 ```
-pip install dev-requirements.txt
+pip3 install -r dev-requirements.txt
 ```
 
 ## Testing
@@ -66,7 +66,7 @@ nosetests -w tests/unit
 To run the server locally (w/o celery worker) , run command:
 
 ```
-python local.py
+python local-server.py
 ```
 
 Once server is up you can access the root api using:  

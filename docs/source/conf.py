@@ -1,5 +1,5 @@
-# flake8: noqa
 # -*- coding: utf-8 -*-
+# flake8: noqa
 #
 # Totem Cluster Deployer documentation build configuration file, created by
 # sphinx-quickstart on Mon Oct  6 13:51:32 2014.
