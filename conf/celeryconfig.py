@@ -69,6 +69,11 @@ CELERY_TIMEZONE = 'UTC'
 
 # Task releated settings
 CELERY_ACKS_LATE = True
+CELERY_TASK_PUBLISH_RETRY_POLICY = {
+    'max_retries': 0,
+    'interval_step': 1,
+    'interval_max': 10
+}
 
 # Celery Beat settings
 CELERYBEAT_SCHEDULE = {
