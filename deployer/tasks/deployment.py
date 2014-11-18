@@ -27,7 +27,7 @@ from deployer.fleet import get_fleet_provider, jinja_env
 from fleet.deploy.deployer import Deployment, status, undeploy, filter_units
 
 from deployer.celery import app
-from conf.appconfig import DEPLOYMENT_DEFAULTS, DEPLOYMENT_TYPE_GITHUB_QUAY, \
+from conf.appconfig import DEPLOYMENT_DEFAULTS, DEPLOYMENT_TYPE_GIT_QUAY, \
     TEMPLATE_DEFAULTS, TASK_SETTINGS, DEPLOYMENT_MODE_BLUEGREEN, \
     DEPLOYMENT_MODE_REDGREEN, DEPLOYMENT_STATE_STARTED, \
     DEPLOYMENT_STATE_FAILED, DEPLOYMENT_STATE_PROMOTED
@@ -244,9 +244,9 @@ def _deploy_all(deployment, search_params):
     )()
 
 
-def _github_quay_defaults(deployment):
+def _git_quay_defaults(deployment):
     """
-    Applies defaults for github-quay deployment
+    Applies defaults for git-quay deployment
 
     :param deployment: Deployment that needs to be updated
     :type deployment: dict
@@ -254,7 +254,7 @@ def _github_quay_defaults(deployment):
     :rtype: dict
     """
     deploy_args = deployment['templates']['app']['args']
-    git_meta = deployment['meta-info']['github']
+    git_meta = deployment['meta-info']['git']
     deploy_args['image'] = deploy_args['image'] \
         .format(GIT_OWNER=git_meta['owner'],
                 GIT_REPO=git_meta['repo'],
@@ -280,7 +280,7 @@ def _deployment_defaults(deployment):
     # Set the default deployment type.
     deployment_upd = dict_merge(deployment, {
         'deployment': {
-            'type': DEPLOYMENT_TYPE_GITHUB_QUAY
+            'type': DEPLOYMENT_TYPE_GIT_QUAY
         }
     })
     deployment_type = deployment_upd['deployment']['type']
@@ -292,8 +292,8 @@ def _deployment_defaults(deployment):
     deployment_upd = dict_merge(deployment_upd,
                                 DEPLOYMENT_DEFAULTS['default'])
 
-    if deployment_type == DEPLOYMENT_TYPE_GITHUB_QUAY:
-        deployment_upd = _github_quay_defaults(deployment_upd)
+    if deployment_type == DEPLOYMENT_TYPE_GIT_QUAY:
+        deployment_upd = _git_quay_defaults(deployment_upd)
 
     for template_name, template in deployment_upd['templates'].iteritems():
         deployment_upd['templates'][template_name] = \

@@ -19,6 +19,7 @@ CELERY_QUEUES = (
     Queue(CELERY_PREFORK_QUEUE, routing_key='prefork',
           queue_arguments={'x-message-ttl': MESSAGES_TTL}),
 )
+CELERY_DEFAULT_EXCHANGE = 'cluster-deployer-%s' % (CLUSTER_NAME)
 CELERY_DEFAULT_EXCHANGE_TYPE = 'direct'
 CELERY_DEFAULT_ROUTING_KEY = 'default'
 CELERY_ROUTES = {
@@ -40,6 +41,7 @@ CELERY_ROUTES = {
 }
 
 CELERY_RESULT_BACKEND = 'amqp'
+CELERY_RESULT_EXCHANGE = 'cluster-deployer-%s-results' % CLUSTER_NAME
 CELERY_IMPORTS = ('deployer.tasks', 'deployer.tasks.deployment',
                   'deployer.tasks.common', 'deployer.tasks.proxy',
                   'celery.task')

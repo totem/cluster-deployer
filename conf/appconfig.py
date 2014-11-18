@@ -6,11 +6,11 @@ LOG_DATE = '%Y-%m-%d %I:%M:%S %p'
 LOG_ROOT_LEVEL = os.getenv('LOG_ROOT_LEVEL', 'INFO').upper()
 
 
-DEFAULT_DEPLOYMENT_TYPE = 'github-quay'
+DEFAULT_DEPLOYMENT_TYPE = 'git-quay'
 QUAY_PATH_PREFIX = 'quay.io/%s/%s' % (os.getenv('QUAY_ORGANIZATION', 'totem'),
                                       os.getenv('QUAY_PREFIX', 'totem-'))
 
-DEPLOYMENT_TYPE_GITHUB_QUAY = 'github-quay'
+DEPLOYMENT_TYPE_GIT_QUAY = 'git-quay'
 DEPLOYMENT_TYPE_DEFAULT = 'default'
 
 DEPLOYMENT_MODE_BLUEGREEN = 'blue-green'
@@ -29,10 +29,10 @@ API_PORT = int(os.getenv('API_PORT', '9000'))
 
 
 DEPLOYMENT_DEFAULTS = {
-    DEPLOYMENT_TYPE_GITHUB_QUAY: {
+    DEPLOYMENT_TYPE_GIT_QUAY: {
         'deployment': {
             'name': '{GIT_OWNER}-{GIT_REPO}-{GIT_BRANCH}',
-            'type': 'github-quay'
+            'type': 'git-quay'
         },
         'templates': {
             'app': {
@@ -54,7 +54,7 @@ DEPLOYMENT_DEFAULTS = {
     DEPLOYMENT_TYPE_DEFAULT: {
         'meta-info': {
             'job-id': 'not_set',
-            'github': {
+            'git': {
                 'owner': 'not_set',
                 'repo': 'not_set',
                 'branch': 'master',
