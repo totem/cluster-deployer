@@ -12,6 +12,9 @@
     },
     "proxy":{
       "$ref": "#/definitions/proxy"
+    },
+    "templates": {
+      "$ref": "#/definitions/templates"
     }
   },
   "required": ["meta-info"],
@@ -19,13 +22,17 @@
   "definitions":{
     "meta-info": {
       "properties": {
-        "github": {
-          "$ref": "#/definitions/github"
+        "git": {
+          "$ref": "#/definitions/git"
+        },
+        "job-id": {
+          "type": "string",
+          "maxLength": 100
         }
       },
       "additionalProperties": false
     },
-    "github": {
+    "git": {
       "properties": {
         "owner": {
           "type": "string",
@@ -35,7 +42,7 @@
           "type": "string",
           "maxLength": 100
         },
-        "branch": {
+        "ref": {
           "type": "string",
           "maxLength": 100
         },

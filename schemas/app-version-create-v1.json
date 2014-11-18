@@ -12,6 +12,9 @@
     },
     "proxy":{
       "$ref": "${base_url}/schemas/app-version-v1#/properties/proxy"
+    },
+    "templates":{
+      "$ref": "${base_url}/schemas/app-version-v1#/properties/templates"
     }
   },
   "required": ["meta-info"],

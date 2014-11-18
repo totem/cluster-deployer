@@ -31,7 +31,7 @@ API_PORT = int(os.getenv('API_PORT', '9000'))
 DEPLOYMENT_DEFAULTS = {
     DEPLOYMENT_TYPE_GIT_QUAY: {
         'deployment': {
-            'name': '{GIT_OWNER}-{GIT_REPO}-{GIT_BRANCH}',
+            'name': '{GIT_OWNER}-{GIT_REPO}-{GIT_REF}',
             'type': 'git-quay'
         },
         'templates': {
@@ -57,7 +57,7 @@ DEPLOYMENT_DEFAULTS = {
             'git': {
                 'owner': 'not_set',
                 'repo': 'not_set',
-                'branch': 'master',
+                'ref': 'master',
                 'commit': 'not_set'
             }
         },

@@ -33,7 +33,7 @@ def _create_test_deployment():
             'github': {
                 'owner': 'testowner',
                 'repo': 'testrepo',
-                'branch': 'testbranch',
+                'ref': 'testref',
                 'commit': 'testcommit'
 
             }
@@ -51,13 +51,13 @@ def _create_test_deployment_with_defaults_applied():
             'github': {
                 'owner': 'testowner',
                 'repo': 'testrepo',
-                'branch': 'testbranch',
+                'ref': 'testref',
                 'commit': 'testcommit'
 
             }
         },
         'deployment': {
-            'name': 'testowner-testrepo-testbranch',
+            'name': 'testowner-testrepo-testref',
             'version': 1000,
             'type': 'github-quay',
             'mode': DEPLOYMENT_MODE_BLUEGREEN
@@ -86,13 +86,13 @@ def test_deployment_defaults_for_type_github_quay(mock_time):
             'github': {
                 'owner': 'testowner',
                 'repo': 'testrepo',
-                'branch': 'testbranch',
+                'ref': 'testref',
                 'commit': 'testcommit'
 
             }
         },
         'deployment': {
-            'name': 'testowner-testrepo-testbranch',
+            'name': 'testowner-testrepo-testref',
             'type': 'github-quay',
             'version': '101',
             'nodes': 2,
@@ -119,7 +119,7 @@ def test_deployment_defaults_for_type_github_quay(mock_time):
                 'name': 'default-logger'
             }
         },
-        'id': 'testowner-testrepo-testbranch-101',
+        'id': 'testowner-testrepo-testref-101',
         'proxy': {
             'hosts': [],
             'listeners': []
@@ -156,13 +156,13 @@ def test_deployment_defaults_for_type_github_quay_with_overrides(mock_time):
             'github': {
                 'owner': 'testowner',
                 'repo': 'testrepo',
-                'branch': 'testbranch',
+                'ref': 'testref',
                 'commit': 'testcommit'
 
             }
         },
         'deployment': {
-            'name': 'testowner-testrepo-testbranch',
+            'name': 'testowner-testrepo-testref',
             'type': 'github-quay',
             'version': '1000',
             'nodes': 2,
@@ -189,7 +189,7 @@ def test_deployment_defaults_for_type_github_quay_with_overrides(mock_time):
                 'name': 'default-logger'
             }
         },
-        'id': 'testowner-testrepo-testbranch-1000',
+        'id': 'testowner-testrepo-testref-1000',
         'proxy': {
             'hosts': [],
             'listeners': []
@@ -241,7 +241,7 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
             'github': {
                 'owner': 'testowner',
                 'repo': 'testrepo',
-                'branch': 'testbranch',
+                'ref': 'testref',
                 'commit': 'testcommit'
 
             }

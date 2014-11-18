@@ -263,7 +263,7 @@ def _git_quay_defaults(deployment):
         deployment['deployment']['name'] \
         .format(GIT_OWNER=git_meta['owner'],
                 GIT_REPO=git_meta['repo'],
-                GIT_BRANCH=git_meta['branch'])
+                GIT_REF=git_meta['ref'])
     return deployment
 
 
