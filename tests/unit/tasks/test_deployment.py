@@ -30,7 +30,7 @@ def _create_test_deployment():
     return {
         'meta-info': {
             'job-id': 'test-job',
-            'github': {
+            'git': {
                 'owner': 'testowner',
                 'repo': 'testrepo',
                 'ref': 'testref',
@@ -39,7 +39,7 @@ def _create_test_deployment():
             }
         },
         'deployment': {
-            'type': 'github-quay'
+            'type': 'git-quay'
         }
     }
 
@@ -48,7 +48,7 @@ def _create_test_deployment_with_defaults_applied():
     return {
         'meta-info': {
             'job-id': 'test-job',
-            'github': {
+            'git': {
                 'owner': 'testowner',
                 'repo': 'testrepo',
                 'ref': 'testref',
@@ -59,7 +59,7 @@ def _create_test_deployment_with_defaults_applied():
         'deployment': {
             'name': 'testowner-testrepo-testref',
             'version': 1000,
-            'type': 'github-quay',
+            'type': 'git-quay',
             'mode': DEPLOYMENT_MODE_BLUEGREEN
         }
     }
@@ -67,8 +67,8 @@ def _create_test_deployment_with_defaults_applied():
 
 @freeze_time(NOW)
 @patch('time.time')
-def test_deployment_defaults_for_type_github_quay(mock_time):
-    """Should get defaults for deployment of type github-quay"""
+def test_deployment_defaults_for_type_git_quay(mock_time):
+    """Should get defaults for deployment of type git-quay"""
 
     # Given: Deployment dictionary
     deployment = _create_test_deployment()
@@ -83,7 +83,7 @@ def test_deployment_defaults_for_type_github_quay(mock_time):
     dict_compare(depl_with_defaults, {
         'meta-info': {
             'job-id': 'test-job',
-            'github': {
+            'git': {
                 'owner': 'testowner',
                 'repo': 'testrepo',
                 'ref': 'testref',
@@ -93,7 +93,7 @@ def test_deployment_defaults_for_type_github_quay(mock_time):
         },
         'deployment': {
             'name': 'testowner-testrepo-testref',
-            'type': 'github-quay',
+            'type': 'git-quay',
             'version': '101',
             'nodes': 2,
             'mode': DEPLOYMENT_MODE_BLUEGREEN
@@ -131,8 +131,8 @@ def test_deployment_defaults_for_type_github_quay(mock_time):
 
 @freeze_time(NOW)
 @patch('time.time')
-def test_deployment_defaults_for_type_github_quay_with_overrides(mock_time):
-    """Should get defaults for deployment of type github-quay"""
+def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
+    """Should get defaults for deployment of type git-quay"""
 
     # Given: Deployment dictionary
     deployment = _create_test_deployment()
@@ -153,7 +153,7 @@ def test_deployment_defaults_for_type_github_quay_with_overrides(mock_time):
     dict_compare(depl_with_defaults, {
         'meta-info': {
             'job-id': 'test-job',
-            'github': {
+            'git': {
                 'owner': 'testowner',
                 'repo': 'testrepo',
                 'ref': 'testref',
@@ -163,7 +163,7 @@ def test_deployment_defaults_for_type_github_quay_with_overrides(mock_time):
         },
         'deployment': {
             'name': 'testowner-testrepo-testref',
-            'type': 'github-quay',
+            'type': 'git-quay',
             'version': '1000',
             'nodes': 2,
             'mode': DEPLOYMENT_MODE_BLUEGREEN
@@ -202,7 +202,7 @@ def test_deployment_defaults_for_type_github_quay_with_overrides(mock_time):
 @freeze_time(NOW)
 @patch('time.time')
 def test_deployment_defaults_for_custom_deployment(mock_time):
-    """Should get defaults for deployment of type github-quay"""
+    """Should get defaults for deployment of type git-quay"""
 
     # Given: Deployment dictionary
     deployment = _create_test_deployment()
@@ -238,7 +238,7 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
     dict_compare(depl_with_defaults, {
         'meta-info': {
             'job-id': 'test-job',
-            'github': {
+            'git': {
                 'owner': 'testowner',
                 'repo': 'testrepo',
                 'ref': 'testref',
