@@ -130,6 +130,7 @@ CORS_SETTINGS = {
 }
 
 MIME_JSON = 'application/json'
+MIME_HTML = 'text/html'
 MIME_ROOT_V1 = 'application/vnd.deployer.root.v1+json'
 MIME_TASK_V1 = 'application/vnd.deployer.task.v1+json'
 MIME_APP_LIST_V1 = 'application/vnd.deployer.app-list.v1+json'

@@ -6,10 +6,12 @@ from flask.views import MethodView
 
 from deployer.elasticsearch import get_search_client
 from deployer.tasks.common import ping
+from deployer.util import timeout
 
 
 HEALTH_OK = 'ok'
 HEALTH_FAILED = 'failed'
+HEALTH_TIMEOUT_SECONDS = 10
 
 
 class HealthApi(MethodView):
@@ -92,6 +94,7 @@ def _check(func):
     return inner
 
 
+@timeout(HEALTH_TIMEOUT_SECONDS)
 @_check
 def _check_celery():
     """
@@ -101,6 +104,7 @@ def _check_celery():
     return 'Celery ping:%s' % output
 
 
+@timeout(HEALTH_TIMEOUT_SECONDS)
 @_check
 def _check_elasticsearch():
     """

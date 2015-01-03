@@ -2,6 +2,10 @@
 General utility methods
 """
 import copy
+from functools import wraps
+import os
+import signal
+import errno
 
 
 def dict_merge(*dictionaries):
@@ -32,3 +36,45 @@ def dict_merge(*dictionaries):
         merged_dict = merge(merged_dict, copy.deepcopy(merge_with))
 
     return merged_dict
+
+
+class TimeoutError(Exception):
+    """
+    Error corresponding to timeout of a function use with @timeout annotation.
+    """
+    pass
+
+
+def timeout(seconds=10, error_message=os.strerror(errno.ETIME)):
+    """
+    Decorator that applies timeout for a dunction
+
+    :param seconds: Timeout in seconds. Defaults to 10s.
+    :param error_message: Error message corresponding to timeout.
+    :return: decorated function
+    """
+    def decorator(func):
+        def _handle_timeout(signum, frame):
+            raise TimeoutError(error_message)
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                signal.signal(signal.SIGALRM, _handle_timeout)
+                signal_disabled = False
+            except ValueError:
+                # Possibly running in debug mode. Timeouts will be ignored
+                signal_disabled = True
+                pass
+
+            if not signal_disabled:
+                signal.alarm(seconds)
+            try:
+                result = func(*args, **kwargs)
+            finally:
+                if not signal_disabled:
+                    signal.alarm(0)
+            return result
+
+        return wrapper
+    return decorator
