@@ -13,7 +13,7 @@ from deployer.tasks.search import index_deployment, update_deployment_state, \
     EVENT_UNDEPLOYED_EXISTING, EVENT_UNITS_DEPLOYED, \
     EVENT_PROMOTED, EVENT_DEPLOYMENT_FAILED, create_search_parameters, \
     add_search_event, EVENT_WIRED, EVENT_UNITS_ADDED, \
-    get_promoted_deployments, mark_decommissioned
+    get_promoted_deployments, mark_decommissioned, EVENT_UNITS_STARTED
 
 __author__ = 'sukrit'
 __all__ = ['create', 'delete']
@@ -207,18 +207,14 @@ def _deploy_all(deployment, search_params):
     :return:
     """
 
-    templates = deployment['templates']
-    app_template = copy.deepcopy(templates['app'])
+    templates = copy.deepcopy(deployment['templates'])
+    app_template = templates['app']
     if not app_template['enabled']:
         return []
 
-    sidekicks = {service_type for service_type, template in
+    sidekicks = [service_type for service_type, template in
                  deployment['templates'].iteritems()
-                 if template['enabled'] and service_type != 'app'}
-
-    service_types = {service_type for service_type, template in
-                     deployment['templates'].iteritems()
-                     if template['enabled']}
+                 if template['enabled'] and service_type != 'app']
 
     app_template['args']['sidekicks'] = sidekicks
     name, version, nodes = deployment['deployment']['name'], \
@@ -237,10 +233,10 @@ def _deploy_all(deployment, search_params):
                     'service_type': service_type,
                     'template': template
                 })
-            for service_type, template in deployment['templates'].iteritems()
+            for service_type, template in templates.iteritems()
             if template['enabled']
         ),
-        _fleet_check_deploy.si(name, version, nodes, service_types)
+        _fleet_start_and_wait.si(deployment, search_params)
     )()
 
 
@@ -321,6 +317,7 @@ def _deployment_defaults(deployment):
 def _fleet_deploy(name, version, nodes, service_type, template):
     """
     Deploys the unit with given service type to multiple nodes using fleet.
+    The unit won't be launched after install.
 
     :param name: Name of the application
     :param version: Version of the application
@@ -335,7 +332,66 @@ def _fleet_deploy(name, version, nodes, service_type, template):
         fleet_provider=get_fleet_provider(), jinja_env=jinja_env, name=name,
         version=version, template=template['name'] + '.service', nodes=nodes,
         template_args=template['args'], service_type=service_type)
-    fleet_deployment.deploy()
+    fleet_deployment.deploy(start=False)
+
+
+@app.task
+def _fleet_start(name, version, nodes, service_type, template):
+    """
+    Starts the fleet units
+
+    :param name: Name of the application
+    :param version: Version of the application
+    :param nodes: No. of nodes/units to be created
+    :param service_type: Type of unit ('app', 'logger' etc)
+    :param template: Fleet Template settings.
+    :return:
+    """
+    logger.info('Starting %s:%s:%s nodes:%d %r', name, version, service_type,
+                nodes, template)
+    fleet_deployment = Deployment(
+        fleet_provider=get_fleet_provider(), jinja_env=jinja_env, name=name,
+        version=version, template=template['name'] + '.service', nodes=nodes,
+        template_args=template['args'], service_type=service_type)
+    fleet_deployment.start_units()
+
+
+@app.task
+def _fleet_start_and_wait(deployment, search_params):
+    """
+    Starts the units for the deployment and performs an asynchronous wait for
+    all unit states to reach running state.
+
+    :param deployment: Deployment parameters.
+    :type deployment: dict
+    :param search_params: Search parameters
+    :type search_params: dict
+    :return:
+    """
+    name, version, nodes = deployment['deployment']['name'], \
+        deployment['deployment']['version'], \
+        deployment['deployment']['nodes']
+    service_types = {service_type for service_type, template in
+                     deployment['templates'].iteritems()
+                     if template['enabled']}
+    return chord(
+        group(
+            _fleet_start.si(name, version, nodes, service_type, template) |
+            add_search_event.si(
+                EVENT_UNITS_STARTED,
+                search_params=search_params,
+                details={
+                    'name': name,
+                    'version': version,
+                    'nodes': nodes,
+                    'service_type': service_type,
+                    'template': template
+                })
+            for service_type, template in deployment['templates'].iteritems()
+            if template['enabled']
+        ),
+        _fleet_check_deploy.si(name, version, nodes, service_types)
+    )()
 
 
 @app.task
