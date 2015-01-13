@@ -20,7 +20,7 @@ export FLEET_HOST='${FLEET_HOST:-172.17.42.1}'
 export CLUSTER_NAME='${CLUSTER_NAME:-totem-local}'
 export QUAY_ORGANIZATION='${QUAY_ORGANIZATION:-totem}'
 export QUAY_PREFIX='${QUAY_PREFIX:-totem-}'
-export SEARCH_ENABLED=true
+export SEARCH_ENABLED=${SEARCH_ENABLED:-false}
 export C_FORCE_ROOT=true
 export BROKER_URL='${BROKER_URL:-amqp://guest:guest@172.17.42.1:5672/}'
 END
