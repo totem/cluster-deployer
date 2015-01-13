@@ -1,59 +1,48 @@
-from functools import wraps
-import sys
+from __future__ import (absolute_import, division,
+                        print_function)
+from future.builtins import (  # noqa
+    bytes, dict, int, list, object, range, str,
+    ascii, chr, hex, input, next, oct, open,
+    pow, round, super,
+    filter, map, zip)
 
-import flask
 from flask.views import MethodView
-
-from deployer.elasticsearch import get_search_client
-from deployer.tasks.common import ping
-from deployer.util import timeout
-
-
-HEALTH_OK = 'ok'
-HEALTH_FAILED = 'failed'
-HEALTH_TIMEOUT_SECONDS = 10
+from conf.appconfig import MIME_HEALTH_V1, SCHEMA_HEALTH_V1, MIME_JSON, \
+    HEALTH_OK
+from deployer.services.health import get_health
+from deployer.views import hypermedia
+from deployer.views.util import build_response
 
 
 class HealthApi(MethodView):
     """
-    API for monitoring system health.
+    Health API
     """
 
-    def get(self):
+    @hypermedia.produces(
+        {
+            MIME_HEALTH_V1: SCHEMA_HEALTH_V1,
+            MIME_JSON: SCHEMA_HEALTH_V1
+        }, default=MIME_HEALTH_V1)
+    def get(self, **kwargs):
         """
-        Gets system health.
+        Health endpoint for Orchestrator
 
-        :return: Flask JSON response with status of
-            200: If overall health is OK
-            500: If health check fails for any of the component.
-            E.g. output:
-            {
-                "celery": {
-                    "status": "ok",
-                    "details": "Celery ping:pong",
-                },
-                "elasticsearch": {
-                    "status": "failed",
-                    "details": "Failed to connect to elasticsearch instance"
-                }
-            }
-
+        :return: Flask Json Response containing version.
         """
-        health = {
-            'celery': _check_celery(),
-            'elasticsearch': _check_elasticsearch()
-        }
+
+        health = get_health()
         failed_checks = [
-            health_status['status'] for health_status in health.itervalues()
+            health_status['status'] for health_status in health.values()
             if health_status['status'] != HEALTH_OK
         ]
         http_status = 200 if not failed_checks else 500
-        return flask.jsonify(health), http_status
+        return build_response(health, status=http_status)
 
 
 def register(app, **kwargs):
     """
-    Registers the Health API (/health) with flask application.
+    Registers HealthApi ('/health')
     Only GET operation is available.
 
     :param app: Flask application
@@ -61,53 +50,3 @@ def register(app, **kwargs):
     """
     app.add_url_rule('/health', view_func=HealthApi.as_view('health'),
                      methods=['GET'])
-
-
-def _check(func):
-    """
-    Wrapper that creates a dictionary response  containing 'status' and
-    'details'.
-    where status can be
-        'ok': If wrapped function returns successfully.
-        'failed': If wrapped function throws error.
-    details is:
-        returned value from the wrapped function if no exception is thrown
-        else string representation of exception when exception is thrown
-
-    :param func: Function to be wrapped
-    :return: dictionary output containing keys 'status' and 'details'
-    :rtype: dict
-    """
-
-    @wraps(func)
-    def inner(*args, **kwargs):
-        try:
-            return {
-                'status': HEALTH_OK,
-                'details': func(*args, **kwargs)
-            }
-        except:
-            return {
-                'status': HEALTH_FAILED,
-                'details': str(sys.exc_info()[1])
-            }
-    return inner
-
-
-@timeout(HEALTH_TIMEOUT_SECONDS)
-@_check
-def _check_celery():
-    """
-    Checks health for celery integration using ping-pong task output.
-    """
-    output = ping.delay().get(timeout=10)
-    return 'Celery ping:%s' % output
-
-
-@timeout(HEALTH_TIMEOUT_SECONDS)
-@_check
-def _check_elasticsearch():
-    """
-    Checks elasticsearch health by querying info.
-    """
-    return get_search_client().info()

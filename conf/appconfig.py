@@ -145,6 +145,7 @@ MIME_APP_VERSION_CREATE_V1 = \
 MIME_APP_VERSION_DELETE_V1 = \
     'application/vnd.deployer.app.version.delete.v1+json'
 MIME_APP_DELETE_V1 = 'application/vnd.deployer.app.delete.v1+json'
+MIME_HEALTH_V1 = 'application/vnd.deployer.health.v1+json'
 
 SCHEMA_TASK_V1 = 'task-v1'
 SCHEMA_ROOT_V1 = 'root-v1'
@@ -153,6 +154,10 @@ SCHEMA_APP_VERSION_CREATE_V1 = 'app-version-create-v1'
 SCHEMA_APP_VERSION_V1 = 'app-version-v1'
 SCHEMA_APP_VERSION_LIST_V1 = 'app-version-list-v1'
 SCHEMA_APP_VERSION_UNIT_LIST_V1 = 'app-version-unit-list-v1'
+SCHEMA_HEALTH_V1 = 'health-v1'
 
 API_MAX_PAGE_SIZE = 1000
 API_DEFAULT_PAGE_SIZE = 10
+
+HEALTH_OK = 'ok'
+HEALTH_FAILED = 'failed'
