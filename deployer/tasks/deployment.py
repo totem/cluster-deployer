@@ -3,6 +3,7 @@ Defines celery tasks for deployment (e.g.: create, undeploy, wire, unwire)
 """
 import copy
 import datetime
+from paramiko import SSHException
 from deployer.services.distributed_lock import LockService, \
     ResourceLockedException
 from deployer.tasks.exceptions import NodeNotRunningException, \
@@ -304,8 +305,9 @@ def _deployment_defaults(deployment):
     return deployment_upd
 
 
-@app.task
-def _fleet_deploy(search_params, name, version, nodes, service_type, template):
+@app.task(bind=True)
+def _fleet_deploy(self, search_params, name, version, nodes, service_type,
+                  template):
     """
     Deploys the unit with given service type to multiple nodes using fleet.
     The unit won't be launched after install.
@@ -323,7 +325,11 @@ def _fleet_deploy(search_params, name, version, nodes, service_type, template):
         fleet_provider=get_fleet_provider(), jinja_env=jinja_env, name=name,
         version=version, template=template['name'] + '.service', nodes=nodes,
         template_args=template['args'], service_type=service_type)
-    fleet_deployment.deploy(start=False)
+    try:
+        fleet_deployment.deploy(start=False)
+    except SSHException as ssh_exc:
+        raise self.retry(exc=ssh_exc, retries=TASK_SETTINGS['SSH_RETRIES'],
+                         countdown=TASK_SETTINGS['SSH_RETRY_DELAY'])
     return add_search_event.si(
         EVENT_UNITS_ADDED,
         search_params=search_params,
@@ -336,8 +342,9 @@ def _fleet_deploy(search_params, name, version, nodes, service_type, template):
         })()
 
 
-@app.task
-def _fleet_start(search_params, name, version, nodes, service_type, template):
+@app.task(bind=True)
+def _fleet_start(self, search_params, name, version, nodes, service_type,
+                 template):
     """
     Starts the fleet units
 
@@ -354,7 +361,12 @@ def _fleet_start(search_params, name, version, nodes, service_type, template):
         fleet_provider=get_fleet_provider(), jinja_env=jinja_env, name=name,
         version=version, template=template['name'] + '.service', nodes=nodes,
         template_args=template['args'], service_type=service_type)
-    fleet_deployment.start_units()
+    try:
+        fleet_deployment.start_units()
+    except SSHException as ssh_exc:
+        raise self.retry(exc=ssh_exc, retries=TASK_SETTINGS['SSH_RETRIES'],
+                         countdown=TASK_SETTINGS['SSH_RETRY_DELAY'])
+
     return add_search_event.si(
         EVENT_UNITS_STARTED,
         search_params=search_params,
@@ -434,9 +446,9 @@ def _pre_create_undeploy(deployment, search_params, next_task=None):
     return chain(undeploy_chain)()
 
 
-@app.task
-def _fleet_undeploy(name, version=None, exclude_version=None, ret_value=None,
-                    ignore_error=False):
+@app.task(bind=True)
+def _fleet_undeploy(self, name, version=None, exclude_version=None,
+                    ret_value=None, ignore_error=False):
     """
     Un-deploys fleet units with matching name and version
 
@@ -450,6 +462,9 @@ def _fleet_undeploy(name, version=None, exclude_version=None, ret_value=None,
         undeploy(get_fleet_provider(), name, version,
                  exclude_version=exclude_version)
         return ret_value
+    except SSHException as ssh_exc:
+        raise self.retry(exc=ssh_exc, retries=TASK_SETTINGS['SSH_RETRIES'],
+                         countdown=TASK_SETTINGS['SSH_RETRY_DELAY'])
     except:
         if ignore_error:
             return ret_value
@@ -468,9 +483,13 @@ def _wait_for_undeploy(self, name, version, ret_value=None):
     :keyword ret_value: Value to be returned on successful call.
     :return: ret_value
     """
-    deployed_units = filter_units(get_fleet_provider(), name, version)
+    try:
+        deployed_units = filter_units(get_fleet_provider(), name, version)
+    except SSHException as ssh_exc:
+        raise self.retry(exc=ssh_exc, retries=TASK_SETTINGS['SSH_RETRIES'],
+                         countdown=TASK_SETTINGS['SSH_RETRY_DELAY'])
     if deployed_units:
-        self.retry(exc=NodeNotUndeployed(name, version, deployed_units))
+        raise self.retry(exc=NodeNotUndeployed(name, version, deployed_units))
     return ret_value
 
 
@@ -479,15 +498,20 @@ def _wait_for_undeploy(self, name, version, ret_value=None):
           max_retries=TASK_SETTINGS['CHECK_RUNNING_RETRIES'])
 def _fleet_check_running(self, name, version, node_num,
                          service_type):
-    unit_status = status(get_fleet_provider(), name, version, node_num,
-                         service_type)
+    try:
+        unit_status = status(get_fleet_provider(), name, version, node_num,
+                             service_type)
+    except SSHException as ssh_exc:
+        raise self.retry(exc=ssh_exc, retries=TASK_SETTINGS['SSH_RETRIES'],
+                         countdown=TASK_SETTINGS['SSH_RETRY_DELAY'])
     logger.info('Status for %s:%s:%d:%s is <%s>', name, version, node_num,
                 service_type, unit_status)
     if unit_status == 'running':
         return
     else:
-        self.retry(exc=NodeNotRunningException(name, version, node_num,
-                                               service_type, unit_status))
+        raise self.retry(
+            exc=NodeNotRunningException(name, version, node_num,
+                                        service_type, unit_status))
 
 
 @app.task
