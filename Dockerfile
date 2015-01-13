@@ -54,7 +54,7 @@ RUN pip install -r /opt/cluster-deployer/requirements.txt
 
 EXPOSE 9000 5555 22
 
-ENV DISCOVER_PORTS 9000 5555
+ENV DISCOVER_PORTS 9000,5555
 
 WORKDIR /opt/cluster-deployer
 
