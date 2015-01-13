@@ -222,17 +222,8 @@ def _deploy_all(deployment, search_params):
         deployment['deployment']['nodes']
     return chord(
         group(
-            _fleet_deploy.si(name, version, nodes, service_type, template) |
-            add_search_event.si(
-                EVENT_UNITS_ADDED,
-                search_params=search_params,
-                details={
-                    'name': name,
-                    'version': version,
-                    'nodes': nodes,
-                    'service_type': service_type,
-                    'template': template
-                })
+            _fleet_deploy.si(search_params, name, version, nodes, service_type,
+                             template)
             for service_type, template in templates.iteritems()
             if template['enabled']
         ),
@@ -314,7 +305,7 @@ def _deployment_defaults(deployment):
 
 
 @app.task
-def _fleet_deploy(name, version, nodes, service_type, template):
+def _fleet_deploy(search_params, name, version, nodes, service_type, template):
     """
     Deploys the unit with given service type to multiple nodes using fleet.
     The unit won't be launched after install.
@@ -333,10 +324,20 @@ def _fleet_deploy(name, version, nodes, service_type, template):
         version=version, template=template['name'] + '.service', nodes=nodes,
         template_args=template['args'], service_type=service_type)
     fleet_deployment.deploy(start=False)
+    return add_search_event.si(
+        EVENT_UNITS_ADDED,
+        search_params=search_params,
+        details={
+            'name': name,
+            'version': version,
+            'nodes': nodes,
+            'service_type': service_type,
+            'template': template
+        })()
 
 
 @app.task
-def _fleet_start(name, version, nodes, service_type, template):
+def _fleet_start(search_params, name, version, nodes, service_type, template):
     """
     Starts the fleet units
 
@@ -354,6 +355,16 @@ def _fleet_start(name, version, nodes, service_type, template):
         version=version, template=template['name'] + '.service', nodes=nodes,
         template_args=template['args'], service_type=service_type)
     fleet_deployment.start_units()
+    return add_search_event.si(
+        EVENT_UNITS_STARTED,
+        search_params=search_params,
+        details={
+            'name': name,
+            'version': version,
+            'nodes': nodes,
+            'service_type': service_type,
+            'template': template
+        })()
 
 
 @app.task
@@ -376,17 +387,8 @@ def _fleet_start_and_wait(deployment, search_params):
                      if template['enabled']}
     return chord(
         group(
-            _fleet_start.si(name, version, nodes, service_type, template) |
-            add_search_event.si(
-                EVENT_UNITS_STARTED,
-                search_params=search_params,
-                details={
-                    'name': name,
-                    'version': version,
-                    'nodes': nodes,
-                    'service_type': service_type,
-                    'template': template
-                })
+            _fleet_start.si(search_params, name, version, nodes, service_type,
+                            template)
             for service_type, template in deployment['templates'].iteritems()
             if template['enabled']
         ),
