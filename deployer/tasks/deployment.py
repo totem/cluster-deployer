@@ -3,6 +3,7 @@ Defines celery tasks for deployment (e.g.: create, undeploy, wire, unwire)
 """
 import copy
 import datetime
+from fabric.exceptions import NetworkError
 from paramiko import SSHException
 from deployer.services.distributed_lock import LockService, \
     ResourceLockedException
@@ -40,7 +41,7 @@ from deployer.util import dict_merge
 
 logger = logging.getLogger(__name__)
 
-RETRYABLE_FLEET_EXCEPTIONS = (SSHException, EOFError,)
+RETRYABLE_FLEET_EXCEPTIONS = (SSHException, EOFError, NetworkError)
 
 
 @app.task
