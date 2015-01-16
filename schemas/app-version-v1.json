@@ -66,6 +66,11 @@
         "type": {
           "enum": [ "blue-green", "red-green", "a/b", "custom"]
         },
+        "nodes": {
+          "type": "number",
+          "maximum": 12,
+          "minimum": 1
+        },
         "check": {
           "type": "object"
         }
