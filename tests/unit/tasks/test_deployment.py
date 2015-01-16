@@ -96,7 +96,10 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
             'type': 'git-quay',
             'version': '101',
             'nodes': 2,
-            'mode': DEPLOYMENT_MODE_BLUEGREEN
+            'mode': DEPLOYMENT_MODE_BLUEGREEN,
+            'check': {
+                'min-nodes': 1
+            }
         },
         'templates': {
             'app': {
@@ -121,8 +124,8 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
         },
         'id': 'testowner-testrepo-testref-101',
         'proxy': {
-            'hosts': [],
-            'listeners': []
+            'hosts': {},
+            'listeners': {}
         },
         'state': DEPLOYMENT_STATE_STARTED,
         'started-at': NOW
@@ -166,7 +169,10 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
             'type': 'git-quay',
             'version': '1000',
             'nodes': 2,
-            'mode': DEPLOYMENT_MODE_BLUEGREEN
+            'mode': DEPLOYMENT_MODE_BLUEGREEN,
+            'check': {
+                'min-nodes': 1
+            }
         },
         'templates': {
             'app': {
@@ -191,8 +197,8 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
         },
         'id': 'testowner-testrepo-testref-1000',
         'proxy': {
-            'hosts': [],
-            'listeners': []
+            'hosts': {},
+            'listeners': {}
         },
         'state': DEPLOYMENT_STATE_STARTED,
         'started-at': NOW
@@ -251,7 +257,10 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
             'type': 'custom',
             'version': '1000',
             'nodes': 3,
-            'mode': DEPLOYMENT_MODE_BLUEGREEN
+            'mode': DEPLOYMENT_MODE_BLUEGREEN,
+            'check': {
+                'min-nodes': 1
+            }
         },
         'templates': {
             'app': {
@@ -271,8 +280,8 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
         },
         'id': 'testdeployment-1000',
         'proxy': {
-            'hosts': [],
-            'listeners': []
+            'hosts': {},
+            'listeners': {}
         },
         'state': DEPLOYMENT_STATE_STARTED,
         'started-at': NOW
