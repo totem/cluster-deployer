@@ -40,6 +40,8 @@ from deployer.util import dict_merge
 
 logger = logging.getLogger(__name__)
 
+RETRYABLE_FLEET_EXCEPTIONS = (SSHException, EOFError,)
+
 
 @app.task
 def create(deployment):
@@ -327,8 +329,8 @@ def _fleet_deploy(self, search_params, name, version, nodes, service_type,
         template_args=template['args'], service_type=service_type)
     try:
         fleet_deployment.deploy(start=False)
-    except SSHException as ssh_exc:
-        raise self.retry(exc=ssh_exc, max_retries=TASK_SETTINGS['SSH_RETRIES'],
+    except RETRYABLE_FLEET_EXCEPTIONS as exc:
+        raise self.retry(exc=exc, max_retries=TASK_SETTINGS['SSH_RETRIES'],
                          countdown=TASK_SETTINGS['SSH_RETRY_DELAY'])
     return add_search_event.si(
         EVENT_UNITS_ADDED,
@@ -363,8 +365,8 @@ def _fleet_start(self, search_params, name, version, nodes, service_type,
         template_args=template['args'], service_type=service_type)
     try:
         fleet_deployment.start_units()
-    except SSHException as ssh_exc:
-        raise self.retry(exc=ssh_exc, max_retries=TASK_SETTINGS['SSH_RETRIES'],
+    except RETRYABLE_FLEET_EXCEPTIONS as exc:
+        raise self.retry(exc=exc, max_retries=TASK_SETTINGS['SSH_RETRIES'],
                          countdown=TASK_SETTINGS['SSH_RETRY_DELAY'])
 
     return add_search_event.si(
@@ -462,8 +464,8 @@ def _fleet_undeploy(self, name, version=None, exclude_version=None,
         undeploy(get_fleet_provider(), name, version,
                  exclude_version=exclude_version)
         return ret_value
-    except SSHException as ssh_exc:
-        raise self.retry(exc=ssh_exc, max_retries=TASK_SETTINGS['SSH_RETRIES'],
+    except RETRYABLE_FLEET_EXCEPTIONS as exc:
+        raise self.retry(exc=exc, max_retries=TASK_SETTINGS['SSH_RETRIES'],
                          countdown=TASK_SETTINGS['SSH_RETRY_DELAY'])
     except:
         if ignore_error:
@@ -485,8 +487,8 @@ def _wait_for_undeploy(self, name, version, ret_value=None):
     """
     try:
         deployed_units = filter_units(get_fleet_provider(), name, version)
-    except SSHException as ssh_exc:
-        raise self.retry(exc=ssh_exc, max_retries=TASK_SETTINGS['SSH_RETRIES'],
+    except RETRYABLE_FLEET_EXCEPTIONS as exc:
+        raise self.retry(exc=exc, max_retries=TASK_SETTINGS['SSH_RETRIES'],
                          countdown=TASK_SETTINGS['SSH_RETRY_DELAY'])
     if deployed_units:
         raise self.retry(exc=NodeNotUndeployed(name, version, deployed_units))
@@ -501,8 +503,8 @@ def _fleet_check_running(self, name, version, node_num,
     try:
         unit_status = status(get_fleet_provider(), name, version, node_num,
                              service_type)
-    except SSHException as ssh_exc:
-        raise self.retry(exc=ssh_exc, max_retries=TASK_SETTINGS['SSH_RETRIES'],
+    except RETRYABLE_FLEET_EXCEPTIONS as exc:
+        raise self.retry(exc=exc, max_retries=TASK_SETTINGS['SSH_RETRIES'],
                          countdown=TASK_SETTINGS['SSH_RETRY_DELAY'])
     logger.info('Status for %s:%s:%d:%s is <%s>', name, version, node_num,
                 service_type, unit_status)
