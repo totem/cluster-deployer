@@ -65,13 +65,16 @@ DEPLOYMENT_DEFAULTS = {
             'type': 'default',
             'version': None,
             'mode': DEPLOYMENT_MODE_BLUEGREEN,
-            'nodes': 2
+            'nodes': 2,
+            'check': {
+                'min-nodes': 1
+            }
         },
         'templates': {
         },
         'proxy': {
-            'hosts': [],
-            'listeners': []
+            'hosts': {},
+            'listeners': {}
         }
     }
 }

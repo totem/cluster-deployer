@@ -30,12 +30,14 @@ def wire_proxy(app_name, app_version, proxy,
 
     proxy_host_tasks = [
         _wire_host.si(host, app_name, use_version)
-        for host in proxy.get('hosts', [])
+        for host in proxy.get('hosts', {}).values()
+        if proxy.get('enabled', True)
     ]
 
     proxy_listener_tasks = [
         _wire_listener.si(listener, app_name, use_version)
-        for listener in proxy.get('listeners', [])
+        for listener in proxy.get('listeners', {}).values()
+        if listener.get('enabled', True)
     ]
 
     return chord(
@@ -53,14 +55,14 @@ def _wire_host(host, app_name, use_version):
     :param host: Dictionary containing host parameters. e.g.:
         {
             'hostname': 'myapp.example.com',
-            'locations': [
-                {
+            'locations': {
+                'home': {
                     'port': 8080,
                     'path': '/',
                     'allowed-acls': ['public'],
                     'denied-acls': ['global-black-list']
                 }
-            ]
+            }
         }
     :type host: dict
     :param app_name: Application Name. e.g.: totem-spec-python-develop
@@ -78,7 +80,8 @@ def _wire_host(host, app_name, use_version):
             path=location['path'],
             allowed_acls=location.get('allowed-acls', []),
             denied_acls=location.get('denied-acls', []),
-        ) for location in host['locations']]
+            location_name=location_key
+        ) for location_key, location in host['locations'].iteritems()]
     yoda_host = Host(host['hostname'], yoda_locations)
     yoda_cl.wire_proxy(yoda_host)
 
