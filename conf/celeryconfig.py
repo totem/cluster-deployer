@@ -12,7 +12,10 @@ MESSAGES_TTL = 7200
 # Broker and Queue Settings
 BROKER_URL = os.getenv('BROKER_URL',
                        'amqp://guest:guest@localhost:5672')
+BROKER_CONNECTION_TIMEOUT = int(os.getenv('BROKER_CONNECTION_TIMEOUT', '20'))
 BROKER_HEARTBEAT = int(os.getenv('BROKER_HEARTBEAT', '20'))
+BROKER_CONNECTION_RETRY = True
+BROKER_CONNECTION_MAX_RETRIES = 100
 CELERY_DEFAULT_QUEUE = 'cluster-deployer-%s-default' % CLUSTER_NAME
 CELERY_PREFORK_QUEUE = 'cluster-deployer-%s-prefork' % CLUSTER_NAME
 CELERY_QUEUES = (
