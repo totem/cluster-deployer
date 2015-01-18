@@ -32,7 +32,7 @@ The project has following dependencies
 - Python pip
 - etcd 0.4.6 (Required if using docker based deployment)
 - docker 1.2 (Required if using docker based deployment)
-- Elasticsearch 1.3+
+- Elasticsearch 1.3+ (Recommended)
 
 ### Dependencies
 
