@@ -1,11 +1,21 @@
 """
 General utility methods
 """
-import copy
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+import errno
 from functools import wraps
 import os
+from future.builtins import (  # noqa
+    bytes, dict, int, list, object, range, str,
+    ascii, chr, hex, input, next, oct, open,
+    pow, round, super,
+    filter, map, zip)
+
+import copy
 import signal
-import errno
+import time
+import math
 
 
 def dict_merge(*dictionaries):
@@ -23,7 +33,7 @@ def dict_merge(*dictionaries):
     def merge(source, defaults):
         # Nested merge requires both source and defaults to be dictionary
         if isinstance(source, dict) and isinstance(defaults, dict):
-            for key, value in defaults.iteritems():
+            for key, value in defaults.items():
                 if key not in source:
                     # Key not found in source : Use the defaults
                     source[key] = value
@@ -33,7 +43,7 @@ def dict_merge(*dictionaries):
         return source
 
     for merge_with in dictionaries:
-        merged_dict = merge(merged_dict, copy.deepcopy(merge_with))
+        merged_dict = merge(merged_dict, copy.deepcopy(merge_with or {}))
 
     return merged_dict
 
@@ -78,3 +88,38 @@ def timeout(seconds=10, error_message=os.strerror(errno.ETIME)):
 
         return wrapper
     return decorator
+
+
+def function_retry(tries, delay, backoff, except_on, fn, *args, **kwargs):
+    mtries, mdelay = tries, delay  # make mutable
+
+    while True:
+        try:
+            return fn(*args, **kwargs)
+        except except_on:
+            pass
+
+        mtries -= 1         # consume an attempt
+        if mtries > 0:
+            time.sleep(mdelay)  # wait...
+            mdelay *= backoff   # make future wait longer
+
+    # Re-raise last exception
+    raise
+
+
+# Retry decorator with backoff
+def retry(tries, delay=3, backoff=2, except_on=(Exception, )):
+    """Retries a function or method until it returns True.
+    delay sets the initial delay in seconds, and backoff sets the factor by
+    which the delay should lengthen after each failure.
+    tries must be at least 0, and delay greater than 0."""
+
+    tries = math.floor(tries)
+
+    def decorator(f):
+        def f_retry(*args, **kwargs):
+            return function_retry(
+                tries, delay, backoff, except_on, f, *args, **kwargs)
+        return f_retry  # true decorator -> decorated function
+    return decorator    # @retry(arg[, ...]) -> true decorator
