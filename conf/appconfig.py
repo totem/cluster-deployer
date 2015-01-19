@@ -7,8 +7,7 @@ LOG_ROOT_LEVEL = os.getenv('LOG_ROOT_LEVEL', 'INFO').upper()
 
 
 DEFAULT_DEPLOYMENT_TYPE = 'git-quay'
-QUAY_PATH_PREFIX = 'quay.io/%s/%s' % (os.getenv('QUAY_ORGANIZATION', 'totem'),
-                                      os.getenv('QUAY_PREFIX', 'totem-'))
+QUAY_PATH_PREFIX = 'quay.io/%s' % os.getenv('QUAY_ORGANIZATION', 'totem')
 
 DEPLOYMENT_TYPE_GIT_QUAY = 'git-quay'
 DEPLOYMENT_TYPE_DEFAULT = 'default'
@@ -37,7 +36,8 @@ DEPLOYMENT_DEFAULTS = {
         'templates': {
             'app': {
                 'args': {
-                    'image': QUAY_PATH_PREFIX + '{GIT_REPO}:{GIT_COMMIT}',
+                    'image': QUAY_PATH_PREFIX +
+                    '/{GIT_OWNER}-{GIT_REPO}:{GIT_COMMIT}',
                     'environment': {},
                     'docker-args': ''
                 },
