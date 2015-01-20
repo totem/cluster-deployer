@@ -15,6 +15,9 @@
     },
     "templates": {
       "$ref": "#/definitions/templates"
+    },
+    "security": {
+      "$ref": "#/definitions/security"
     }
   },
   "required": ["meta-info"],
@@ -90,8 +93,8 @@
     },
     "templates": {
       "properties": {
-        "app": {
-          "$ref": "#/definitions/template"
+        ".*": {
+          "ref": "#/definitions/template"
         }
       },
       "additionalProperties": true
@@ -109,8 +112,74 @@
         "image": {
           "type": "string",
           "maxLength": 1024
+        },
+        "environment": {
+          "$ref": "#/definitions/environment"
+        },
+        "docker-args": {
+          "oneOf": [
+            {
+              "type": "string",
+              "maxLength": 1024
+            },
+            {
+              "$ref": "#/definitions/encrypted-type"
+            }
+          ]
+        },
+        "command": {
+          "oneOf": [
+            {
+              "type": "string",
+              "maxLength": 4096
+            },
+            {
+              "$ref": "#/definitions/encrypted-type"
+            }
+          ]
         }
-      }
+      },
+      "additionalProperties": true
+    },
+    "environment": {
+      "patternProperties": {
+        ".*": {
+          "oneOf": [
+            {
+              "type": "string",
+              "maxLength": 4096
+            },
+            {
+              "$ref": "#/definitions/encrypted-type"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "encrypted-type": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string",
+          "maxLength": 8192
+        },
+        "encrypted": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["value"]
+    },
+    "security" : {
+      "properties": {
+        "profile": {
+          "type": "string",
+          "maxLength": 100,
+          "default": "default"
+        }
+      },
+      "additionalProperties": false
     }
   },
   "links": [

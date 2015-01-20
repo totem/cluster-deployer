@@ -15,6 +15,9 @@
     },
     "templates":{
       "$ref": "${base_url}/schemas/app-version-v1#/properties/templates"
+    },
+    "security":{
+      "$ref": "${base_url}/schemas/app-version-v1#/properties/security"
     }
   },
   "required": ["meta-info"],

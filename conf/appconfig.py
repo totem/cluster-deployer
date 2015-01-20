@@ -75,6 +75,9 @@ DEPLOYMENT_DEFAULTS = {
         'proxy': {
             'hosts': {},
             'listeners': {}
+        },
+        'security': {
+            'profile': 'default'
         }
     }
 }
@@ -132,6 +135,15 @@ CORS_SETTINGS = {
     'enabled': os.getenv('CORS_ENABLED', 'true').strip().lower() in
     BOOLEAN_TRUE_VALUES,
     'origins': os.getenv('CORS_ORIGINS', '*')
+}
+
+ENCRYPTION = {
+    'store': os.getenv('ENCRYPTION_STORE', None),
+    's3': {
+        'bucket': os.getenv('ENCRYPTION_S3_BUCKET', 'not-set'),
+        'base': os.getenv('ENCRYPTION_S3_BASE', 'totem/keys'),
+    },
+    'passphrase': os.getenv('ENCRYPTION_PASSPHRASE', None),
 }
 
 MIME_JSON = 'application/json'

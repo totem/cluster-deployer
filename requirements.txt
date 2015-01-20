@@ -11,3 +11,5 @@ future==0.14.1
 https://github.com/totem/fleet-py/archive/master.tar.gz
 https://github.com/totem/yoda-py/archive/master.tar.gz
 https://github.com/totem/flask-hyperschema/archive/master.tar.gz
+https://github.com/totem/totem-encrypt/archive/master.tar.gz
+https://github.com/dlitz/pycrypto/archive/v2.7a1.tar.gz

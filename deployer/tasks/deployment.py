@@ -8,6 +8,7 @@ from fabric.exceptions import NetworkError
 from paramiko import SSHException
 from deployer.services.distributed_lock import LockService, \
     ResourceLockedException
+from deployer.services.security import decrypt_template
 from deployer.tasks.exceptions import NodeNotRunningException, \
     NodeNotUndeployed
 from deployer.tasks.search import index_deployment, update_deployment_state, \
@@ -213,6 +214,8 @@ def _deploy_all(deployment, search_params):
     :return:
     """
 
+    security_profile = deployment.get('security', {})\
+        .get('profile', 'default')
     templates = copy.deepcopy(deployment['templates'])
     app_template = templates['app']
     if not app_template['enabled']:
@@ -229,7 +232,7 @@ def _deploy_all(deployment, search_params):
     return chord(
         group(
             _fleet_deploy.si(search_params, name, version, nodes, service_type,
-                             template)
+                             template, security_profile)
             for service_type, template in templates.iteritems()
             if template['enabled']
         ),
@@ -312,7 +315,7 @@ def _deployment_defaults(deployment):
 
 @app.task(bind=True)
 def _fleet_deploy(self, search_params, name, version, nodes, service_type,
-                  template):
+                  template, security_profile):
     """
     Deploys the unit with given service type to multiple nodes using fleet.
     The unit won't be launched after install.
@@ -326,10 +329,12 @@ def _fleet_deploy(self, search_params, name, version, nodes, service_type,
     """
     logger.info('Deploying %s:%s:%s nodes:%d %r', name, version, service_type,
                 nodes, template)
+    template_args = decrypt_template(template.get('args', {}),
+                                     profile=security_profile)
     fleet_deployment = Deployment(
         fleet_provider=get_fleet_provider(), jinja_env=jinja_env, name=name,
         version=version, template=template['name'] + '.service', nodes=nodes,
-        template_args=template['args'], service_type=service_type)
+        template_args=template_args, service_type=service_type)
     try:
         fleet_deployment.deploy(start=False)
     except RETRYABLE_FLEET_EXCEPTIONS as exc:
