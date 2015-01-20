@@ -128,7 +128,10 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
             'listeners': {}
         },
         'state': DEPLOYMENT_STATE_STARTED,
-        'started-at': NOW
+        'started-at': NOW,
+        'security': {
+            'profile': 'default'
+        }
     })
 
 
@@ -201,7 +204,10 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
             'listeners': {}
         },
         'state': DEPLOYMENT_STATE_STARTED,
-        'started-at': NOW
+        'started-at': NOW,
+        'security': {
+            'profile': 'default'
+        }
     })
 
 
@@ -284,7 +290,10 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
             'listeners': {}
         },
         'state': DEPLOYMENT_STATE_STARTED,
-        'started-at': NOW
+        'started-at': NOW,
+        'security': {
+            'profile': 'default'
+        }
     })
 
 
