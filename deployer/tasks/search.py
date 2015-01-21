@@ -25,6 +25,35 @@ EVENT_PROMOTED = 'PROMOTED'
 EVENT_DEPLOYMENT_FAILED = 'DEPLOYMENT_FAILED'
 
 
+def massage_config(config):
+    """
+    massages config for indexing.
+    1. Removes encrypted parameters from indexing.
+    2. Extracts raw parameter for value types.
+
+    :param config: dictionary that needs to be massaged
+    :type config: dict
+    :return: massaged config
+    :rtype: dict
+    """
+
+    if hasattr(config, 'items'):
+        if 'value' in config:
+
+            if config.get('encrypted', False):
+                return ''
+            else:
+                return str(config.get('value'))
+        else:
+            return {
+                k: massage_config(v) for k, v in config.items()
+            }
+    elif isinstance(config, (list, set, tuple)):
+        return [massage_config(v) for v in config]
+    else:
+        return config
+
+
 @app.task
 @deployment_search
 def index_deployment(deployment, es=None, idx=None):
@@ -32,7 +61,8 @@ def index_deployment(deployment, es=None, idx=None):
     Creates a new deployment
     :param deployment: Dictionary containing deployment parameters
     """
-    return es.index(idx, TYPE_DEPLOYMENTS, deployment, id=deployment['id'])
+    return es.index(idx, TYPE_DEPLOYMENTS, massage_config(deployment),
+                    id=deployment['id'])
 
 
 @app.task
