@@ -48,6 +48,22 @@ def wire_proxy(app_name, app_version, proxy,
 
 
 @app.task
+def register_upstreams(app_name, app_version, upstreams,
+                       deployment_mode=DEPLOYMENT_MODE_BLUEGREEN,
+                       next_task=None):
+    yoda_cl = _get_yoda_cl()
+    use_version = app_version \
+        if deployment_mode == DEPLOYMENT_MODE_BLUEGREEN else None
+    for port, upstream in upstreams.iteritems():
+        upstream_name = as_upstream(app_name, port, app_version=use_version)
+        health = upstream.get('health', {})
+        yoda_cl.register_upstream(
+            upstream_name, mode=upstream.get('mode', 'http'),
+            health_uri=health.get('uri'), health_timeout=health.get('timeout'))
+    return next_task() if next_task else None
+
+
+@app.task
 def _wire_host(host, app_name, use_version):
     """
     Task for wiring up yoda proxy for a single host

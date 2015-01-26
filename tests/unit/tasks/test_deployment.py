@@ -8,13 +8,14 @@ from conf.appconfig import DEPLOYMENT_MODE_BLUEGREEN, DEPLOYMENT_MODE_REDGREEN, 
 from deployer.celery import app
 
 from deployer.tasks.exceptions import NodeNotUndeployed
+from deployer.util import dict_merge
 from tests.helper import dict_compare
 
 
 __author__ = 'sukrit'
 
 from deployer.tasks.deployment import _deployment_defaults, \
-    _pre_create_undeploy, _wait_for_undeploy
+    _pre_create_undeploy, _wait_for_undeploy, _get_exposed_ports
 
 NOW = datetime.datetime(2014, 01, 01)
 
@@ -104,7 +105,11 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
         'templates': {
             'app': {
                 'args': {
-                    'environment': {},
+                    'environment': {
+                        'DISCOVER_PORTS': '',
+                        'DISCOVER_MODE': DEPLOYMENT_MODE_BLUEGREEN,
+                        'DISCOVER_HEALTH': '{}'
+                    },
                     'docker-args': '',
                     'image': 'quay.io/totem/testowner-testrepo:testcommit'
                 },
@@ -125,6 +130,133 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
         'id': 'testowner-testrepo-testref-101',
         'proxy': {
             'hosts': {},
+            'listeners': {},
+            'upstreams': {}
+        },
+        'state': DEPLOYMENT_STATE_STARTED,
+        'started-at': NOW,
+        'security': {
+            'profile': 'default'
+        }
+    })
+
+
+@freeze_time(NOW)
+@patch('time.time')
+def test_deployment_defaults_with_proxy(mock_time):
+    """Should get defaults for deployment with proxy"""
+
+    # Given: Deployment dictionary
+    deployment = _create_test_deployment()
+    deployment = dict_merge(deployment, {
+        'proxy': {
+            'hosts': {
+                'host1': {
+                    'locations': {
+                        'loc1': {
+                            'port': 8080,
+                            'path': '/loc1'
+                            },
+                        'loc2': {
+                            'port': 8081,
+                            'path': '/loc2'
+                        }
+                    }
+                }
+            },
+            'upstreams': {
+                '8080': {},
+                '8081': {
+                    'mode': 'tcp'
+                }
+            }
+        }
+    })
+
+    # Mock Time call for creating version
+    mock_time.return_value = 0.1006
+
+    # When: I apply defaults for deployment
+    depl_with_defaults = _deployment_defaults(deployment)
+
+    # Then: Defaults for deployment are applied
+    dict_compare(depl_with_defaults, {
+        'meta-info': {
+            'job-id': 'test-job',
+            'git': {
+                'owner': 'testowner',
+                'repo': 'testrepo',
+                'ref': 'testref',
+                'commit': 'testcommit'
+
+            }
+        },
+        'deployment': {
+            'name': 'testowner-testrepo-testref',
+            'type': 'git-quay',
+            'version': '101',
+            'nodes': 2,
+            'mode': DEPLOYMENT_MODE_BLUEGREEN,
+            'check': {
+                'min-nodes': 1
+            }
+        },
+        'templates': {
+            'app': {
+                'args': {
+                    'environment': {
+                        'DISCOVER_PORTS': '8080,8081',
+                        'DISCOVER_MODE': DEPLOYMENT_MODE_BLUEGREEN,
+                        'DISCOVER_HEALTH': '{"8080": {"timeout": "2s"},'
+                                           ' "8081": {"timeout": "2s"}}'
+                    },
+                    'docker-args': '',
+                    'image': 'quay.io/totem/testowner-testrepo:testcommit'
+                },
+                'enabled': True,
+                'name': 'default-app'
+            },
+            'yoda-register': {
+                'args': {},
+                'enabled': True,
+                'name': 'yoda-ec2-register'
+            },
+            'logger': {
+                'args': {},
+                'enabled': True,
+                'name': 'default-logger'
+            }
+        },
+        'id': 'testowner-testrepo-testref-101',
+        'proxy': {
+            'hosts': {
+                'host1': {
+                    'locations': {
+                        'loc1': {
+                            'port': 8080,
+                            'path': '/loc1'
+                        },
+                        'loc2': {
+                            'port': 8081,
+                            'path': '/loc2'
+                        }
+                    }
+                }
+            },
+            'upstreams': {
+                '8080': {
+                    'mode': 'http',
+                    'health': {
+                        'timeout': '2s'
+                    }
+                },
+                '8081': {
+                    'mode': 'tcp',
+                    'health': {
+                        'timeout': '2s'
+                    }
+                }
+            },
             'listeners': {}
         },
         'state': DEPLOYMENT_STATE_STARTED,
@@ -180,7 +312,11 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
         'templates': {
             'app': {
                 'args': {
-                    'environment': {},
+                    'environment': {
+                        'DISCOVER_PORTS': '',
+                        'DISCOVER_MODE': DEPLOYMENT_MODE_BLUEGREEN,
+                        'DISCOVER_HEALTH': '{}'
+                    },
                     'docker-args': '',
                     'image': 'quay.io/totem/testowner-testrepo:testcommit'
                 },
@@ -201,7 +337,8 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
         'id': 'testowner-testrepo-testref-1000',
         'proxy': {
             'hosts': {},
-            'listeners': {}
+            'listeners': {},
+            'upstreams': {}
         },
         'state': DEPLOYMENT_STATE_STARTED,
         'started-at': NOW,
@@ -271,7 +408,12 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
         'templates': {
             'app': {
                 'args': {
-                    'arg1': 'value1'
+                    'arg1': 'value1',
+                    'environment': {
+                        'DISCOVER_PORTS': '',
+                        'DISCOVER_MODE': DEPLOYMENT_MODE_BLUEGREEN,
+                        'DISCOVER_HEALTH': '{}'
+                    }
                 },
                 'enabled': True,
                 'name': 'custom-app'
@@ -287,7 +429,8 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
         'id': 'testdeployment-1000',
         'proxy': {
             'hosts': {},
-            'listeners': {}
+            'listeners': {},
+            'upstreams': {}
         },
         'state': DEPLOYMENT_STATE_STARTED,
         'started-at': NOW,
@@ -295,6 +438,62 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
             'profile': 'default'
         }
     })
+
+
+def test_get_exposed_ports_with_no_proxy():
+
+    # Given: Deployment parameters (w/o proxy)
+    deployment = _create_test_deployment()
+
+    # When: I get exposed ports for deployment
+    ports = _get_exposed_ports(deployment)
+
+    # Then: Empty set is returned
+    eq_(ports, [])
+
+
+def test_get_exposed_ports_with_hosts_and_listenres():
+
+    # Given: Deployment parameters
+    deployment = _create_test_deployment()
+    deployment = dict_merge(deployment, {
+        'proxy': {
+            'hosts': {
+                'host1': {
+                    'locations': {
+                        'loc1': {
+                            'port': 8080,
+                        },
+                        'loc2': {
+                            'port': 8081
+                        }
+                    }
+                },
+                'host2': {
+                    'locations': {
+                        'loc3': {
+                            'port': 8080
+                        },
+                        'loc4': {
+                            'port': 8082
+                        }
+                    }
+                }
+            },
+            'listeners': {
+                'ssh': {
+                    'upstream-port': 22
+                }
+            }
+        }
+
+    })
+
+    # When: I get exposed ports for deployment
+    ports = _get_exposed_ports(deployment)
+
+    # Then: Empty set is returned
+    eq_(ports, [22, 8080, 8081, 8082])
 
 
 @app.task

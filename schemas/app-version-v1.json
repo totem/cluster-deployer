@@ -87,6 +87,9 @@
         },
         "listeners": {
           "type": "object"
+        },
+        "upstreams": {
+          "type": "object"
         }
       },
       "additionalProperties": false

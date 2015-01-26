@@ -65,20 +65,33 @@ DEPLOYMENT_DEFAULTS = {
             'type': 'default',
             'version': None,
             'mode': DEPLOYMENT_MODE_BLUEGREEN,
-            'nodes': 2,
+            'nodes': 1,
             'check': {
                 'min-nodes': 1
             }
         },
         'templates': {
+            'app': {
+                'args': {
+                    'environment': {},
+                }
+            }
         },
         'proxy': {
             'hosts': {},
-            'listeners': {}
+            'listeners': {},
+            'upstreams': {}
         },
         'security': {
             'profile': 'default'
         }
+    }
+}
+
+UPSTREAM_DEFAULTS = {
+    'mode': 'http',
+    'health': {
+        'timeout': '2s'
     }
 }
 

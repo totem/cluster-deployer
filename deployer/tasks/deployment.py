@@ -3,6 +3,7 @@ Defines celery tasks for deployment (e.g.: create, undeploy, wire, unwire)
 """
 import copy
 import datetime
+import json
 import socket
 from fabric.exceptions import NetworkError
 from paramiko import SSHException
@@ -34,10 +35,10 @@ from deployer.celery import app
 from conf.appconfig import DEPLOYMENT_DEFAULTS, DEPLOYMENT_TYPE_GIT_QUAY, \
     TEMPLATE_DEFAULTS, TASK_SETTINGS, DEPLOYMENT_MODE_BLUEGREEN, \
     DEPLOYMENT_MODE_REDGREEN, DEPLOYMENT_STATE_STARTED, \
-    DEPLOYMENT_STATE_FAILED, DEPLOYMENT_STATE_PROMOTED
+    DEPLOYMENT_STATE_FAILED, DEPLOYMENT_STATE_PROMOTED, UPSTREAM_DEFAULTS
 
 from deployer.tasks.common import async_wait
-from deployer.tasks.proxy import wire_proxy
+from deployer.tasks.proxy import wire_proxy, register_upstreams
 
 from deployer.util import dict_merge
 
@@ -79,7 +80,12 @@ def create(deployment):
             do_task=_pre_create_undeploy.si(
                 deployment,
                 search_params,
-                next_task=_deploy_all.si(deployment, search_params) |
+                next_task=register_upstreams.si(
+                    deployment['deployment']['name'],
+                    deployment['deployment']['version'],
+                    upstreams=deployment['proxy']['upstreams'],
+                    deployment_mode=deployment['deployment']['mode']) |
+                _deploy_all.si(deployment, search_params) |
                 async_wait.s(
                     default_retry_delay=TASK_SETTINGS[
                         'DEPLOYMENT_WAIT_RETRY_DELAY'],
@@ -263,6 +269,39 @@ def _git_quay_defaults(deployment):
     return deployment
 
 
+def _get_exposed_ports(deployment):
+    """
+    Gets the exposed ports for the given deployment
+
+    :param deployment: Dictionary representing deployment
+    :type deployment: dict
+    :return: Sorteed list of unique exposed ports
+    :rtype: list
+    """
+    return sorted(
+        {location.get('port')
+         for host in deployment.get('proxy', {}).get('hosts', {}).values()
+         for location in host.get('locations', {}).values()} |
+        {listener.get('upstream-port')
+         for listener in deployment.get('proxy', {}).get('listeners', {})
+            .values()
+         }
+    )
+
+
+def _create_discover_check(deployment):
+    """
+    Creates the dictionary to be used by discover for health check
+
+    :param deployment:
+    :return:
+    """
+    return {
+        port: upstream.get('health', {}) for port, upstream in
+        deployment.get('proxy', {}).get('upstreams', {}).iteritems()
+    }
+
+
 def _deployment_defaults(deployment):
     """
     Applies the defaults for the deployment
@@ -310,6 +349,24 @@ def _deployment_defaults(deployment):
                                       deployment_upd['deployment']['version'])
     deployment_upd['state'] = DEPLOYMENT_STATE_STARTED
     deployment_upd['started-at'] = datetime.datetime.utcnow()
+
+    # Apply proxy defaults
+    for upstream_name, upstream in deployment_upd['proxy']['upstreams']\
+            .iteritems():
+        upd_upstream = dict_merge(upstream, UPSTREAM_DEFAULTS)
+        if upd_upstream.get('mode') != 'http' and \
+                upd_upstream['health'].get('uri'):
+            del(upd_upstream['health']['uri'])
+        deployment_upd['proxy']['upstreams'][upstream_name] = upd_upstream
+
+    app_template = deployment_upd.get('templates').get('app')
+    if app_template:
+        env = app_template['args']['environment']
+        env['DISCOVER_PORTS'] = ','.join(
+            [str(port) for port in _get_exposed_ports(deployment_upd)])
+        env['DISCOVER_MODE'] = deployment_upd['deployment']['mode']
+        env['DISCOVER_HEALTH'] = json.dumps(
+            _create_discover_check(deployment_upd))
     return deployment_upd
 
 

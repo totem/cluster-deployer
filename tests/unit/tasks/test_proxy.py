@@ -4,7 +4,7 @@ Tests for tasks defined in deployer.tasks.yoda
 from mock import patch, call
 from nose.tools import eq_
 from yoda import Host, Location
-from deployer.tasks.proxy import wire_proxy
+from deployer.tasks.proxy import wire_proxy, register_upstreams
 
 MOCK_APP = 'mock-app'
 MOCK_VERSION = 'mock-version'
@@ -72,7 +72,7 @@ def test_wire_for_bluegreen(mock_yoda_cl):
             path='/path2',
             location_name='loc2'
         )
-    ])
+        ])
 
     eq_(hosts[1].locations, [
         Location(
@@ -82,7 +82,7 @@ def test_wire_for_bluegreen(mock_yoda_cl):
             allowed_acls=['allowed-acl1', 'allowed-acl2'],
             denied_acls=['denied-acl1']
         )
-    ])
+        ])
 
 
 @patch('yoda.client.Client')
@@ -121,4 +121,70 @@ def test_wire_for_ab(mock_yoda_cl):
                 )
             ]
         ))
+    ])
+
+
+@patch('yoda.client.Client')
+def test_register_upstreams_for_blue_green(mock_yoda_cl):
+
+    # Given: Upstreams that needs to be registered
+    upstreams = {
+        '8080': {
+            'mode': 'http',
+            'health': {
+                'uri': '/health',
+                'timeout': '5s'
+            }
+        },
+        '22': {
+            'mode': 'tcp'
+        }
+    }
+
+    # When: I wire the proxy in a/b mode
+    result = register_upstreams.delay(
+        MOCK_APP, MOCK_VERSION, upstreams, deployment_mode='blue-green')
+    output = result.get(timeout=1)
+
+    # Then: Upstreams get registered
+    eq_(output, None)
+    eq_(mock_yoda_cl().register_upstream.call_count, 2)
+    eq_(mock_yoda_cl().register_upstream.call_args_list, [
+        call('mock-app-mock-version-8080', health_uri='/health',
+             health_timeout='5s', mode='http'),
+        call('mock-app-mock-version-22', health_uri=None,
+             health_timeout=None, mode='tcp')
+        ])
+
+
+@patch('yoda.client.Client')
+def test_register_upstreams_for_ab_deploy(mock_yoda_cl):
+
+    # Given: Upstreams that needs to be registered
+    upstreams = {
+        '8080': {
+            'mode': 'http',
+            'health': {
+                'uri': '/health',
+                'timeout': '5s'
+            }
+        },
+        '22': {
+            'mode': 'tcp'
+        }
+    }
+
+    # When: I wire the proxy in a/b mode
+    result = register_upstreams.delay(
+        MOCK_APP, MOCK_VERSION, upstreams, deployment_mode='a/b')
+    output = result.get(timeout=1)
+
+    # Then: Upstreams get registered
+    eq_(output, None)
+    eq_(mock_yoda_cl().register_upstream.call_count, 2)
+    eq_(mock_yoda_cl().register_upstream.call_args_list, [
+        call('mock-app-8080', health_uri='/health',
+             health_timeout='5s', mode='http'),
+        call('mock-app-22', health_uri=None,
+             health_timeout=None, mode='tcp')
     ])
