@@ -51,6 +51,18 @@ def wire_proxy(app_name, app_version, proxy,
 def register_upstreams(app_name, app_version, upstreams,
                        deployment_mode=DEPLOYMENT_MODE_BLUEGREEN,
                        next_task=None):
+    """
+    Register upstream with yoda
+
+    :param app_name: Application name
+    :param app_version: Application version. (Can be None for non blue-green
+        deploys.
+    :param upstreams: Dictionary comprising of all upstreams that needs to
+        registered.
+    :param deployment_mode: Mode of deploy( 'red-green', 'bluee-green', 'a/b')
+    :param next_task: Next task to be executed if Not None
+    :return: Result of next task if passed else None.
+    """
     yoda_cl = _get_yoda_cl()
     use_version = app_version \
         if deployment_mode == DEPLOYMENT_MODE_BLUEGREEN else None
@@ -59,7 +71,9 @@ def register_upstreams(app_name, app_version, upstreams,
         health = upstream.get('health', {})
         yoda_cl.register_upstream(
             upstream_name, mode=upstream.get('mode', 'http'),
-            health_uri=health.get('uri'), health_timeout=health.get('timeout'))
+            health_uri=health.get('uri'), health_timeout=health.get('timeout'),
+            health_interval=health.get('interval')
+        )
     return next_task() if next_task else None
 
 

@@ -133,7 +133,8 @@ def test_register_upstreams_for_blue_green(mock_yoda_cl):
             'mode': 'http',
             'health': {
                 'uri': '/health',
-                'timeout': '5s'
+                'timeout': '5s',
+                'interval': '5m'
             }
         },
         '22': {
@@ -151,9 +152,9 @@ def test_register_upstreams_for_blue_green(mock_yoda_cl):
     eq_(mock_yoda_cl().register_upstream.call_count, 2)
     eq_(mock_yoda_cl().register_upstream.call_args_list, [
         call('mock-app-mock-version-8080', health_uri='/health',
-             health_timeout='5s', mode='http'),
+             health_timeout='5s', mode='http', health_interval='5m'),
         call('mock-app-mock-version-22', health_uri=None,
-             health_timeout=None, mode='tcp')
+             health_timeout=None, mode='tcp', health_interval=None)
         ])
 
 
@@ -184,7 +185,7 @@ def test_register_upstreams_for_ab_deploy(mock_yoda_cl):
     eq_(mock_yoda_cl().register_upstream.call_count, 2)
     eq_(mock_yoda_cl().register_upstream.call_args_list, [
         call('mock-app-8080', health_uri='/health',
-             health_timeout='5s', mode='http'),
+             health_timeout='5s', mode='http', health_interval=None),
         call('mock-app-22', health_uri=None,
-             health_timeout=None, mode='tcp')
+             health_timeout=None, mode='tcp', health_interval=None)
     ])
