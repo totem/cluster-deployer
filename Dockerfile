@@ -52,9 +52,7 @@ ADD etc /etc
 ADD . /opt/cluster-deployer
 RUN pip install -r /opt/cluster-deployer/requirements.txt
 
-EXPOSE 9000 5555 22
-
-ENV DISCOVER_PORTS 9000,5555
+EXPOSE 9000 22
 
 WORKDIR /opt/cluster-deployer
 
