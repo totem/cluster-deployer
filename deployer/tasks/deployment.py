@@ -6,6 +6,7 @@ import datetime
 import json
 import socket
 from fabric.exceptions import NetworkError
+from fleet.client.fleet_fabric import FleetExecutionException
 from paramiko import SSHException
 from deployer.services.distributed_lock import LockService, \
     ResourceLockedException
@@ -48,7 +49,7 @@ from deployer.util import dict_merge
 logger = logging.getLogger(__name__)
 
 RETRYABLE_FLEET_EXCEPTIONS = (SSHException, EOFError, NetworkError,
-                              socket.error)
+                              socket.error, FleetExecutionException)
 
 
 @app.task
