@@ -75,7 +75,22 @@
           "minimum": 1
         },
         "check": {
-          "type": "object"
+          "$ref": "#/definitions/deployment-check"
+        }
+      },
+      "additionalProperties": false
+    },
+    "deployment-check": {
+      "properties": {
+        "min-nodes": {
+          "type": "number",
+          "description": "Minimum number of nodes for deployment. (Used for deployment check)",
+          "minimum": 1
+        },
+        "port": {
+          "type": "number",
+          "description": "Application internal Port to be used for discover check",
+          "minimum": 1
         }
       },
       "additionalProperties": false

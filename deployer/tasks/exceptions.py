@@ -1,7 +1,7 @@
 
 class MinNodesNotRunning(Exception):
     """
-    Exception corresponding to node not in running state.
+    Exception corresponding to nodes not in running state.
     """
     def __init__(self, name, version, min_units, units):
         """
@@ -26,15 +26,54 @@ class MinNodesNotRunning(Exception):
 
     def to_dict(self):
         return {
-            'message': 'Minimum of %d nodes for application:%s version: %s '
+            'message': 'Minimum of %d units for application:%s version:%s '
                        'were not found in running state.' %
                        (self.min_units, self.name, self.version),
             'code': 'MIN_NODES_NOT_RUNNING',
             'details': {
                 'name': self.name,
                 'version': self.version,
-                'min_units': self.min_units,
+                'min-units': self.min_units,
                 'units': self.units
+                }
+        }
+
+
+class MinNodesNotDiscovered(Exception):
+    """
+    Exception corresponding to minimum nodes not being discovered.
+    """
+    def __init__(self, name, version, min_nodes, discovered_nodes):
+        """
+        Constructor.
+
+        :param name: Name of the application
+        :type name: str
+        :param version: Application version
+        :type version: str
+        :param min_nodes: Minimum nodes required for application
+        :type min_nodes: int
+        :param discovered_nodes: Discovered nodes so far.
+        :type discovered_nodes: dict
+        """
+        self.name = name
+        self.version = version
+        self.min_nodes = min_nodes
+        self.discovered_nodes = discovered_nodes
+        super(MinNodesNotDiscovered, self).__init__(
+            name, version, min_nodes, discovered_nodes)
+
+    def to_dict(self):
+        return {
+            'message': 'Minimum of %d nodes for application:%s version:%s '
+                       'were not registered to yoda proxy.' %
+                       (self.min_nodes, self.name, self.version),
+            'code': 'MIN_NODES_NOT_DISCOVERED',
+            'details': {
+                'name': self.name,
+                'version': self.version,
+                'min-nodes': self.min_nodes,
+                'discovered-nodes': self.discovered_nodes
                 }
         }
 

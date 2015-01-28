@@ -67,7 +67,8 @@ DEPLOYMENT_DEFAULTS = {
             'mode': DEPLOYMENT_MODE_BLUEGREEN,
             'nodes': 1,
             'check': {
-                'min-nodes': 1
+                'min-nodes': 1,
+                'port': None
             }
         },
         'templates': {
@@ -122,6 +123,8 @@ TASK_SETTINGS = {
     'SSH_RETRIES': 10,
     'CHECK_RUNNING_RETRIES': 60,
     'CHECK_RUNNING_RETRY_DELAY': 10,
+    'CHECK_DISCOVERY_RETRIES': 60,
+    'CHECK_DISCOVERY_RETRY_DELAY': 10,
     'LOCK_RETRIES': 10,
     'LOCK_RETRY_DELAY': 60,
     'DEPLOYMENT_WAIT_RETRIES': 30,

@@ -20,6 +20,7 @@ EVENT_UNDEPLOYED_EXISTING = 'UNDEPLOYED_EXISTING'
 EVENT_UNITS_ADDED = 'UNITS_ADDED'
 EVENT_UNITS_STARTED = 'UNITS_STARTED'
 EVENT_UNITS_DEPLOYED = 'UNITS_DEPLOYED'
+EVENT_NODES_DISCOVERED = 'NODES_DISCOVERED'
 EVENT_WIRED = 'WIRED'
 EVENT_UPSTREAMS_REGISTERED = 'UPSTREAMS_REGISTERED'
 EVENT_PROMOTED = 'PROMOTED'
@@ -119,6 +120,20 @@ def add_search_event(event_type, details=None, search_params={}, es=None,
         'date': datetime.datetime.utcnow(),
     })
     return es.create(idx, TYPE_EVENTS, event_upd)
+
+
+@app.task
+def add_search_event_details(details, event_type, search_params):
+    """
+    Adds search event with return value.
+
+    :param details:
+    :param event_type:
+    :param search_params:
+    :return:
+    """
+    return add_search_event.si(
+        event_type, search_params=search_params, details=details)()
 
 
 @deployment_search

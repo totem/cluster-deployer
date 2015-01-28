@@ -19,7 +19,8 @@ from deployer.tasks.search import index_deployment, update_deployment_state, \
     EVENT_PROMOTED, EVENT_DEPLOYMENT_FAILED, create_search_parameters, \
     add_search_event, EVENT_WIRED, EVENT_UNITS_ADDED, \
     get_promoted_deployments, mark_decommissioned, EVENT_UNITS_STARTED, \
-    EVENT_UPSTREAMS_REGISTERED
+    EVENT_UPSTREAMS_REGISTERED, EVENT_NODES_DISCOVERED, \
+    add_search_event_details
 
 __author__ = 'sukrit'
 __all__ = ['create', 'delete']
@@ -39,7 +40,8 @@ from conf.appconfig import DEPLOYMENT_DEFAULTS, DEPLOYMENT_TYPE_GIT_QUAY, \
     DEPLOYMENT_STATE_FAILED, DEPLOYMENT_STATE_PROMOTED, UPSTREAM_DEFAULTS
 
 from deployer.tasks.common import async_wait
-from deployer.tasks.proxy import wire_proxy, register_upstreams
+from deployer.tasks.proxy import wire_proxy, register_upstreams, \
+    _check_discover
 
 from deployer.util import dict_merge
 
@@ -71,21 +73,28 @@ def create(deployment):
     # yield expected results.
 
     search_params = create_search_parameters(deployment)
+    app_name = deployment['deployment']['name']
+    app_version = deployment['deployment']['version']
+    nodes = deployment['deployment']['nodes']
+    min_nodes = deployment['deployment'].get('check', {}).get(
+        'min-nodes', nodes)
+    check_port = deployment['deployment'].get('check', {}).get('port')
+    deployment_mode = deployment['deployment']['mode']
     return (
         index_deployment.si(deployment) |
         add_search_event.si(EVENT_NEW_DEPLOYMENT, details=deployment,
                             search_params=search_params) |
         _using_lock.si(
             search_params,
-            deployment['deployment']['name'],
+            app_name,
             do_task=_pre_create_undeploy.si(
                 deployment,
                 search_params,
                 next_task=register_upstreams.si(
-                    deployment['deployment']['name'],
-                    deployment['deployment']['version'],
+                    app_name,
+                    app_version,
                     upstreams=deployment['proxy']['upstreams'],
-                    deployment_mode=deployment['deployment']['mode']) |
+                    deployment_mode=deployment_mode) |
                 add_search_event.si(
                     EVENT_UPSTREAMS_REGISTERED, search_params=search_params) |
                 _deploy_all.si(deployment, search_params) |
@@ -94,8 +103,12 @@ def create(deployment):
                         'DEPLOYMENT_WAIT_RETRY_DELAY'],
                     max_retries=TASK_SETTINGS['DEPLOYMENT_WAIT_RETRIES']
                 ) |
-                add_search_event.si(
-                    EVENT_UNITS_DEPLOYED, search_params=search_params) |
+                add_search_event_details.s(EVENT_UNITS_DEPLOYED,
+                                           search_params=search_params) |
+                _check_discover.si(app_name, app_version, check_port,
+                                   min_nodes, deployment_mode) |
+                add_search_event_details.s(EVENT_NODES_DISCOVERED,
+                                           search_params=search_params) |
                 _promote_deployment.si(deployment, search_params)
             ),
             error_tasks=[
@@ -103,8 +116,8 @@ def create(deployment):
                 update_deployment_state.si(deployment['id'],
                                            DEPLOYMENT_STATE_FAILED),
                 _fleet_undeploy.si(
-                    deployment['deployment']['name'],
-                    version=deployment['deployment']['version'],
+                    app_name,
+                    version=app_version,
                     ignore_error=True
                 )
             ]

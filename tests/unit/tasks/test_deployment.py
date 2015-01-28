@@ -101,7 +101,8 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
             'nodes': 1,
             'mode': DEPLOYMENT_MODE_BLUEGREEN,
             'check': {
-                'min-nodes': 1
+                'min-nodes': 1,
+                'port': None
             }
         },
         'templates': {
@@ -200,7 +201,8 @@ def test_deployment_defaults_with_proxy(mock_time):
             'nodes': 1,
             'mode': DEPLOYMENT_MODE_BLUEGREEN,
             'check': {
-                'min-nodes': 1
+                'min-nodes': 1,
+                'port': None
             }
         },
         'templates': {
@@ -308,7 +310,8 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
             'nodes': 1,
             'mode': DEPLOYMENT_MODE_BLUEGREEN,
             'check': {
-                'min-nodes': 1
+                'min-nodes': 1,
+                'port': None
             }
         },
         'templates': {
@@ -404,7 +407,8 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
             'nodes': 3,
             'mode': DEPLOYMENT_MODE_BLUEGREEN,
             'check': {
-                'min-nodes': 1
+                'min-nodes': 1,
+                'port': None
             }
         },
         'templates': {

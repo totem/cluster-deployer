@@ -7,9 +7,11 @@ import yoda.client
 
 from celery.canvas import chord, group
 from deployer.celery import app
-from conf.appconfig import TOTEM_ETCD_SETTINGS, DEPLOYMENT_MODE_BLUEGREEN
+from conf.appconfig import TOTEM_ETCD_SETTINGS, DEPLOYMENT_MODE_BLUEGREEN, \
+    TASK_SETTINGS
 from yoda.model import Location, Host, TcpListener
 from yoda.client import as_upstream
+from deployer.tasks.exceptions import MinNodesNotDiscovered
 
 logger = logging.getLogger(__name__)
 
@@ -166,6 +168,42 @@ def _wire_done(app_name, app_version, proxy, deployment_mode, ret_value=None,
         return ret_value
 
 
+@app.task(bind=True,
+          default_retry_delay=TASK_SETTINGS['CHECK_DISCOVERY_RETRY_DELAY'],
+          max_retries=TASK_SETTINGS['CHECK_DISCOVERY_RETRIES'])
+def _check_discover(self, app_name, app_version, check_port, min_nodes,
+                    deployment_mode):
+    """
+    Checks if min. no. of nodes for a given application have been discovered
+    in yoda proxy
+
+    :param app_name: Application name
+    :type app_name: str
+    :param app_version: Application version
+    :type app_version: str
+    :param check_port: Port to be used discover check. If None, discover check
+        is skipped.
+    :param min_nodes: Minimum no. of nodes to be discovered.
+    :param deployment_mode: mode of deploy (blue-green, red-green, a/b etc)
+    :return: discovered nodes
+    :rtype: dict
+    """
+    if check_port is None:
+        logger.debug('Skip discover check as no port was defined for %s:%s',
+                     app_name, app_version)
+        return {}
+    yoda_cl = _get_yoda_cl()
+    use_version = app_version \
+        if deployment_mode == DEPLOYMENT_MODE_BLUEGREEN else None
+    upstream = as_upstream(app_name, check_port, app_version=use_version)
+    discovered_nodes = yoda_cl.get_nodes(upstream)
+    if len(discovered_nodes) < min_nodes:
+        raise self.retry(exc=MinNodesNotDiscovered(
+            app_name, app_version, min_nodes, discovered_nodes))
+    else:
+        return discovered_nodes
+
+
 def _get_yoda_cl():
     """
     Creates yoda client instance.
@@ -176,4 +214,3 @@ def _get_yoda_cl():
         etcd_host=TOTEM_ETCD_SETTINGS['host'],
         etcd_port=TOTEM_ETCD_SETTINGS['port'],
         etcd_base=TOTEM_ETCD_SETTINGS['yoda_base'])
-    pass
