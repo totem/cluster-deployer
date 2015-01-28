@@ -1,13 +1,14 @@
 import datetime
+
 from freezegun import freeze_time
 from mock import patch, ANY
-from nose.tools import raises, eq_
+from nose.tools import raises, eq_, assert_raises
+from paramiko import SSHException
 
 from conf.appconfig import DEPLOYMENT_MODE_BLUEGREEN, DEPLOYMENT_MODE_REDGREEN, \
     DEPLOYMENT_STATE_STARTED
 from deployer.celery import app
-
-from deployer.tasks.exceptions import NodeNotUndeployed
+from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning
 from deployer.util import dict_merge
 from tests.helper import dict_compare
 
@@ -15,7 +16,8 @@ from tests.helper import dict_compare
 __author__ = 'sukrit'
 
 from deployer.tasks.deployment import _deployment_defaults, \
-    _pre_create_undeploy, _wait_for_undeploy, _get_exposed_ports
+    _pre_create_undeploy, _wait_for_undeploy, _get_exposed_ports, \
+    _fleet_check_deploy
 
 NOW = datetime.datetime(2014, 01, 01)
 
@@ -613,3 +615,51 @@ def test_wait_for_undeploy_for_success(mock_filter_units):
     ret_value = result.get(timeout=1)
 
     eq_(ret_value, True)
+
+
+@patch('deployer.tasks.deployment.filter_units')
+def test_fleet_check_deploy_when_units_already_running(mock_filter_units):
+    # given: Running units
+    mock_filter_units.return_value = [
+        {'name': 'unit1-app', 'sub': 'running'},
+        {'name': 'unit1-logger', 'sub': 'running'}
+    ]
+
+    # When I check for fleet deploy
+    result = _fleet_check_deploy.s('mockapp', 'mockversion', 2, 1)\
+        .apply_async()
+    ret_value = result.get(timeout=1)
+
+    # Then: Check returns successfully
+    dict_compare(ret_value, mock_filter_units.return_value)
+
+
+@patch('deployer.tasks.deployment.filter_units')
+def test_fleet_check_deploy_when_units_are_not_running(mock_filter_units):
+    # given: Running units
+    mock_filter_units.return_value = [
+        {'name': 'unit1-app', 'sub': 'dead'}
+    ]
+
+    # When I check for fleet deploy
+    with assert_raises(MinNodesNotRunning) as cm:
+        _fleet_check_deploy('mockapp', 'mockversion', 1, 1)
+
+    # Then: Check Retry exception is thrown
+    error = cm.exception
+    eq_(error.name, 'mockapp')
+    eq_(error.version, 'mockversion')
+    eq_(error.min_units, 1)
+    eq_(error.units, mock_filter_units.return_value)
+
+
+@raises(SSHException)
+@patch('deployer.tasks.deployment.filter_units')
+def test_fleet_check_deploy_when_ssh_error_is_thrown(mock_filter_units):
+    # given: Running units
+    mock_filter_units.side_effect = SSHException()
+
+    # When I check for fleet deploy
+    _fleet_check_deploy('mockapp', 'mockversion', 1, 1)
+
+    # Then: Check SSHException exception is thrown

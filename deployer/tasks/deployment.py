@@ -10,15 +10,16 @@ from paramiko import SSHException
 from deployer.services.distributed_lock import LockService, \
     ResourceLockedException
 from deployer.services.security import decrypt_template
-from deployer.tasks.exceptions import NodeNotRunningException, \
-    NodeNotUndeployed
+from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning
+
 from deployer.tasks.search import index_deployment, update_deployment_state, \
     EVENT_NEW_DEPLOYMENT, \
     EVENT_ACQUIRED_LOCK, \
     EVENT_UNDEPLOYED_EXISTING, EVENT_UNITS_DEPLOYED, \
     EVENT_PROMOTED, EVENT_DEPLOYMENT_FAILED, create_search_parameters, \
     add_search_event, EVENT_WIRED, EVENT_UNITS_ADDED, \
-    get_promoted_deployments, mark_decommissioned, EVENT_UNITS_STARTED
+    get_promoted_deployments, mark_decommissioned, EVENT_UNITS_STARTED, \
+    EVENT_UPSTREAMS_REGISTERED
 
 __author__ = 'sukrit'
 __all__ = ['create', 'delete']
@@ -29,7 +30,7 @@ import time
 from celery.canvas import group, chord, chain
 
 from deployer.fleet import get_fleet_provider, jinja_env
-from fleet.deploy.deployer import Deployment, status, undeploy, filter_units
+from fleet.deploy.deployer import Deployment, undeploy, filter_units
 
 from deployer.celery import app
 from conf.appconfig import DEPLOYMENT_DEFAULTS, DEPLOYMENT_TYPE_GIT_QUAY, \
@@ -85,6 +86,8 @@ def create(deployment):
                     deployment['deployment']['version'],
                     upstreams=deployment['proxy']['upstreams'],
                     deployment_mode=deployment['deployment']['mode']) |
+                add_search_event.si(
+                    EVENT_UPSTREAMS_REGISTERED, search_params=search_params) |
                 _deploy_all.si(deployment, search_params) |
                 async_wait.s(
                     default_retry_delay=TASK_SETTINGS[
@@ -464,6 +467,8 @@ def _fleet_start_and_wait(deployment, search_params):
     service_types = {service_type for service_type, template in
                      deployment['templates'].iteritems()
                      if template['enabled']}
+    min_nodes = deployment['deployment'].get('check', {}).get(
+        'min-nodes', nodes)
     return chord(
         group(
             _fleet_start.si(search_params, name, version, nodes, service_type,
@@ -471,7 +476,7 @@ def _fleet_start_and_wait(deployment, search_params):
             for service_type, template in deployment['templates'].iteritems()
             if template['enabled']
         ),
-        _fleet_check_deploy.si(name, version, nodes, service_types)
+        _fleet_check_deploy.si(name, version, len(service_types), min_nodes)
     )()
 
 
@@ -563,52 +568,21 @@ def _wait_for_undeploy(self, name, version, ret_value=None):
 @app.task(bind=True,
           default_retry_delay=TASK_SETTINGS['CHECK_RUNNING_RETRY_DELAY'],
           max_retries=TASK_SETTINGS['CHECK_RUNNING_RETRIES'])
-def _fleet_check_running(self, name, version, node_num,
-                         service_type):
+def _fleet_check_deploy(self, name, version, service_cnt, min_nodes):
+    expected_cnt = min_nodes * service_cnt
     try:
-        unit_status = status(get_fleet_provider(), name, version, node_num,
-                             service_type)
+        units = filter_units(get_fleet_provider(), name, version=version)
     except RETRYABLE_FLEET_EXCEPTIONS as exc:
         raise self.retry(exc=exc, max_retries=TASK_SETTINGS['SSH_RETRIES'],
                          countdown=TASK_SETTINGS['SSH_RETRY_DELAY'])
-    logger.info('Status for %s:%s:%d:%s is <%s>', name, version, node_num,
-                service_type, unit_status)
-    if unit_status == 'running':
-        return
+
+    running_units = [unit for unit in units
+                     if unit['sub'].lower() == 'running']
+    if len(running_units) < expected_cnt:
+        raise self.retry(exc=MinNodesNotRunning(
+            name, version, expected_cnt, units))
     else:
-        raise self.retry(
-            exc=NodeNotRunningException(name, version, node_num,
-                                        service_type, unit_status))
-
-
-@app.task
-def _fleet_unit_deployed(name, version, node_num, service_type):
-    logger.info('Unit deployed successfully %s:%s:%d:%s ', name,
-                version, node_num, service_type)
-    return {
-        'name': name,
-        'version': version,
-        'node_num': node_num,
-        'service_type': service_type,
-        'status': 'success'
-    }
-
-
-@app.task
-def _fleet_check_unit(name, version, node_num, service_type):
-    return (
-        _fleet_check_running.si(name, version, node_num, service_type) |
-        _fleet_unit_deployed.si(name, version, node_num, service_type)
-    )()
-
-
-@app.task
-def _fleet_check_deploy(name, version, nodes, service_types):
-    return group(
-        _fleet_check_unit.si(name, version, node_num, service_type)
-        for service_type in service_types
-        for node_num in range(1, nodes + 1)
-    )()
+        return running_units
 
 
 @app.task

@@ -1,38 +1,41 @@
 
-
-class NodeNotRunningException(Exception):
+class MinNodesNotRunning(Exception):
     """
     Exception corresponding to node not in running state.
     """
-    def __init__(self, name, version, node_num, service_type, status,
-                 retryable=True, expected_status='running'):
+    def __init__(self, name, version, min_units, units):
+        """
+        Constructor.
+
+        :param name: Name of the application
+        :type name: str
+        :param version: Application version
+        :type version: str
+        :param min_units: Minimum units required for application (in running
+            state)
+        :type min_units: int
+        :param units: Actual deployed units.
+        :type units: dict
+        """
         self.name = name
         self.version = version
-        self.node_num = node_num
-        self.service_type = service_type
-        self.status = status
-        self.retryable = retryable
-        self.expected_status = expected_status
-        super(NodeNotRunningException, self).__init__(
-            name, version, node_num, service_type, status, retryable)
+        self.min_units = min_units
+        self.units = units
+        super(MinNodesNotRunning, self).__init__(
+            name, version, min_units, units)
 
     def to_dict(self):
         return {
-            'message': 'Status for application:%s version:%s node_num:%d '
-                       'service_type:%s is %s instead of %s' %
-                       (self.name, self.version, self.node_num,
-                        self.service_type, self.status,
-                        self.expected_status),
-            'code': 'NODE_NOT_RUNNING',
+            'message': 'Minimum of %d nodes for application:%s version: %s '
+                       'were not found in running state.' %
+                       (self.min_units, self.name, self.version),
+            'code': 'MIN_NODES_NOT_RUNNING',
             'details': {
                 'name': self.name,
                 'version': self.version,
-                'node_num': self.node_num,
-                'service_type': self.service_type,
-                'status': self.status,
-                'expected_status': self.expected_status
-                },
-            'retryable': self.retryable
+                'min_units': self.min_units,
+                'units': self.units
+                }
         }
 
 
