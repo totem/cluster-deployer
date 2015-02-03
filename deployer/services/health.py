@@ -72,7 +72,7 @@ def _check_celery():
     return 'Celery ping:%s' % output
 
 
-def get_health():
+def get_health(check_celery=False):
     """
     Gets the health of the all the external services.
 
@@ -84,8 +84,9 @@ def get_health():
 
     health_status = {
         'etcd': _check_etcd(),
-        'celery': _check_celery()
     }
+    if check_celery:
+        health_status['celery'] = _check_celery()
     if SEARCH_SETTINGS['enabled']:
         health_status['elasticsearch'] = _check_elasticsearch()
     return health_status
