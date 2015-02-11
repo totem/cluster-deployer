@@ -28,6 +28,6 @@ def using_encryption_store(fun):
 
 
 @using_encryption_store
-def decrypt_template(template, profile='default', store=None, passphrase=None):
-    return decrypt_obj(template, profile=profile, store=store,
+def decrypt_config(config, profile='default', store=None, passphrase=None):
+    return decrypt_obj(config, profile=profile, store=store,
                        passphrase=passphrase)

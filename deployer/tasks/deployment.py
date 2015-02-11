@@ -10,7 +10,7 @@ from fleet.client.fleet_fabric import FleetExecutionException
 from paramiko import SSHException
 from deployer.services.distributed_lock import LockService, \
     ResourceLockedException
-from deployer.services.security import decrypt_template
+from deployer.services.security import decrypt_config
 from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning
 
 from deployer.tasks.search import index_deployment, update_deployment_state, \
@@ -403,8 +403,8 @@ def _fleet_deploy(self, search_params, name, version, nodes, service_type,
     """
     logger.info('Deploying %s:%s:%s nodes:%d %r', name, version, service_type,
                 nodes, template)
-    template_args = decrypt_template(template.get('args', {}),
-                                     profile=security_profile)
+    template_args = decrypt_config(template.get('args', {}),
+                                   profile=security_profile)
     fleet_deployment = Deployment(
         fleet_provider=get_fleet_provider(), jinja_env=jinja_env, name=name,
         version=version, template=template['name'] + '.service', nodes=nodes,
