@@ -652,7 +652,8 @@ def _promote_deployment(deployment, search_params):
 
     if deployment['deployment']['mode'] == DEPLOYMENT_MODE_BLUEGREEN:
         tasks += [
-            _fleet_undeploy.si(name, exclude_version=version),
+            _fleet_undeploy.subtask((name,), {'exclude_version': version},
+                                    countdown=120, immutable=True),
             get_promoted_deployments.si(name),
             mark_decommissioned.s()
         ]

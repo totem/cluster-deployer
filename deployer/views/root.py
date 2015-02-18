@@ -1,6 +1,6 @@
 import flask
 from flask.views import MethodView
-from conf.appconfig import MIME_ROOT_V1, SCHEMA_ROOT_V1, MIME_JSON, MIME_HTML
+from conf.appconfig import MIME_ROOT_V1, SCHEMA_ROOT_V1, MIME_JSON
 import deployer
 from deployer.views import hypermedia
 
@@ -13,7 +13,6 @@ class RootApi(MethodView):
     @hypermedia.produces({
         MIME_ROOT_V1: SCHEMA_ROOT_V1,
         MIME_JSON: SCHEMA_ROOT_V1,
-        MIME_HTML: SCHEMA_ROOT_V1,
     }, default=MIME_ROOT_V1)
     def get(self, **kwargs):
         """
