@@ -12,7 +12,8 @@ RUN apt-get update && \
 ##SSH Server (To troubleshoot issues with discover)
 RUN mkdir /var/run/sshd && \
     mkdir /root/.ssh && \
-    chmod  500 /root/.ssh & chown -R root:root /root/.ssh
+    chmod  500 /root/.ssh && \
+    chown -R root:root /root/.ssh
 
 #Syslog
 RUN echo '$PreserveFQDN on' | cat - /etc/rsyslog.conf > /tmp/rsyslog.conf && \
