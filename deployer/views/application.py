@@ -116,7 +116,8 @@ class VersionApi(MethodView):
         :return: Flask Response wrapping deployment list.
         """
 
-        deployments = search.find_deployments(name, page=page, size=size) or []
+        deployments = search.find_running_deployments(
+            name, page=page, size=size) or []
         return build_response(deployments)
 
     @hypermedia.produces({

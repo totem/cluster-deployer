@@ -4,7 +4,7 @@ Module for updating/searching elastic search.
 import copy
 import datetime
 from conf.appconfig import DEPLOYMENT_STATE_PROMOTED, \
-    DEPLOYMENT_STATE_DECOMMISSIONED
+    DEPLOYMENT_STATE_DECOMMISSIONED, DEPLOYMENT_STATE_STARTED
 
 from deployer.celery import app
 from deployer.elasticsearch import deployment_search
@@ -195,6 +195,25 @@ def find_deployments(name, version=None, page=0, size=10, es=None, idx=None):
             "and": [
                 {"term": {"deployment.name": name}},
                 {"term": {"deployment.version": version}} if version else {}
+            ]
+        }
+    }
+    results = es.search(idx, TYPE_DEPLOYMENTS, body=query)
+    return [hit['_source'] for hit in results['hits']['hits']]
+
+
+@deployment_search
+def find_running_deployments(name, version=None, page=0, size=10, es=None,
+                             idx=None):
+    query = {
+        "size": size,
+        "from": page,
+        "filter": {
+            "and": [
+                {"term": {"deployment.name": name}},
+                {"term": {"deployment.version": version}} if version else {},
+                {"terms": {"state": [DEPLOYMENT_STATE_PROMOTED,
+                                     DEPLOYMENT_STATE_STARTED]}}
             ]
         }
     }
