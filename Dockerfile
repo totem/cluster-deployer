@@ -2,7 +2,7 @@ FROM totem/python-base:2.7-trusty
 
 ENV DEBIAN_FRONTEND noninteractive
 
-RUN apt-get update &&
+RUN apt-get update && \
     apt-get install -y \
     openssh-server \
     openssh-client \
