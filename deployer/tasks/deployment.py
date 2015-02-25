@@ -395,6 +395,13 @@ def _deployment_defaults(deployment):
     deployment_upd['state'] = DEPLOYMENT_STATE_STARTED
     deployment_upd['started-at'] = datetime.datetime.utcnow()
 
+    app_template = deployment_upd.get('templates').get('app')
+    exposed_ports = _get_exposed_ports(deployment_upd)
+
+    # Create default upstreams (using exposed ports)
+    for port in exposed_ports:
+        deployment_upd['proxy']['upstreams'].setdefault(str(port), {})
+
     # Apply proxy defaults
     for upstream_name, upstream in deployment_upd['proxy']['upstreams']\
             .iteritems():
@@ -404,11 +411,10 @@ def _deployment_defaults(deployment):
             del(upd_upstream['health']['uri'])
         deployment_upd['proxy']['upstreams'][upstream_name] = upd_upstream
 
-    app_template = deployment_upd.get('templates').get('app')
     if app_template:
         env = app_template['args']['environment']
         env['DISCOVER_PORTS'] = ','.join(
-            [str(port) for port in _get_exposed_ports(deployment_upd)])
+            [str(port) for port in exposed_ports])
         env['DISCOVER_MODE'] = deployment_upd['deployment']['mode']
         env['DISCOVER_HEALTH'] = json.dumps(
             _create_discover_check(deployment_upd))

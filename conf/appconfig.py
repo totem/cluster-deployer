@@ -129,7 +129,7 @@ DEPLOYMENT_DEFAULTS = {
 UPSTREAM_DEFAULTS = {
     'mode': 'http',
     'health': {
-        'timeout': '2s'
+        'timeout': '5s'
     }
 }
 
