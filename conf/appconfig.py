@@ -35,6 +35,7 @@ LEVEL_PENDING = 5
 
 DEFAULT_HIPCHAT_TOKEN = os.getenv('HIPCHAT_TOKEN', '')
 DEFAULT_GITHUB_TOKEN = os.getenv('GITHUB_TOKEN', '')
+BASE_URL = os.getenv('BASE_URL', 'http://localhost:{0}'.format(API_PORT))
 
 NOTIFICATIONS_DEFAULTS = {
     'hipchat': {

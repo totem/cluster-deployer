@@ -41,7 +41,7 @@ from conf.appconfig import DEPLOYMENT_DEFAULTS, DEPLOYMENT_TYPE_GIT_QUAY, \
     TEMPLATE_DEFAULTS, TASK_SETTINGS, DEPLOYMENT_MODE_BLUEGREEN, \
     DEPLOYMENT_MODE_REDGREEN, DEPLOYMENT_STATE_STARTED, \
     DEPLOYMENT_STATE_FAILED, DEPLOYMENT_STATE_PROMOTED, UPSTREAM_DEFAULTS, \
-    LEVEL_STARTED, LEVEL_FAILED, LEVEL_SUCCESS
+    LEVEL_STARTED, LEVEL_FAILED, LEVEL_SUCCESS, BASE_URL
 
 from deployer.tasks.common import async_wait
 from deployer.tasks.proxy import wire_proxy, register_upstreams, \
@@ -65,7 +65,10 @@ def _notify_ctx(deployment, operation=None):
     return {
         'deployment': massage_config(deployment),
         'cluster': CLUSTER_NAME,
-        'operation': operation
+        'operation': operation,
+        'deployer': {
+            'url': BASE_URL
+        }
     }
 
 

@@ -9,7 +9,7 @@ from future.builtins import (  # noqa
 
 import requests
 
-from conf.appconfig import SEARCH_SETTINGS, LEVEL_FAILED, \
+from conf.appconfig import LEVEL_FAILED, \
     LEVEL_FAILED_WARN, LEVEL_STARTED, LEVEL_SUCCESS, LEVEL_PENDING, \
     NOTIFICATIONS_DEFAULTS, DEFAULT_HIPCHAT_TOKEN, DEFAULT_GITHUB_TOKEN
 from deployer import templatefactory
@@ -54,10 +54,9 @@ def _as_dict(obj):
 @app.task
 def notify_hipchat(obj, ctx, level, config, security_profile):
     config = decrypt_config(config, profile=security_profile)
-    ctx.setdefault('search', SEARCH_SETTINGS)
-    base_url = config.get('url') or 'https://api.hipchat.com'
+    api_url = config.get('url') or 'https://api.hipchat.com'
     room_url = '{0}/v2/room/{1}/notification'.format(
-        base_url, config.get('room'))
+        api_url, config.get('room'))
     msg = templatefactory.render_template(
         'hipchat.html', notification=_as_dict(obj), ctx=ctx, level=level)
     headers = {
@@ -78,7 +77,7 @@ def notify_hipchat(obj, ctx, level, config, security_profile):
 @app.task
 def notify_github(obj, ctx, level, config, security_profile):
     config = decrypt_config(config, profile=security_profile)
-    base_url = config.get('url') or 'https://api.github.com'
+    api_url = config.get('url') or 'https://api.github.com'
     git = ctx.get('deployment', {}).get('meta-info', {}).get('git', {})
     owner, repo, commit = git.get('owner'), git.get('repo'), git.get('commit')
     git_type = git.get('type', 'github')
@@ -89,7 +88,7 @@ def notify_github(obj, ctx, level, config, security_profile):
         use_desc = desc[:137] + '...' if len(desc) > 140 else desc
 
         status_url = '{0}/repos/{1}/{2}/statuses/{3}'.format(
-            base_url, owner, repo, commit)
+            api_url, owner, repo, commit)
         headers = {
             'Content-Type': 'application/json',
             'Accept': 'application/vnd.github.v3+json',

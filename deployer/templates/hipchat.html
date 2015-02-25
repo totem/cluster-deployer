@@ -88,9 +88,9 @@
                     <td valign="top"><b>Deployment:</b></td>
 
                     <td valign="bottom">
-                        {% if ctx.search.enabled %}
-                        <a href="http://{{ctx.search.host}}:{{ctx.search.port}}/{{ctx.search['default-index']}}/apps/{{deployment.name}}/versions/{{deployment.version}}">
-                            {{deployment.name}}::{{deployment.version}}
+                        {% if ctx.deployer and ctx.deployer.url %}
+                        <a href="{{ctx.deployer.url}}/apps/{{deployment.name}}/versions/{{deployment.version}}">
+                        {{deployment.name}}::{{deployment.version}}
                         </a>
                         {% else %}
                         {{deployment.name}}::{{deployment.version}}
