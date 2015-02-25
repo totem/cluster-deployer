@@ -58,13 +58,14 @@ def massage_config(config):
 
 @app.task
 @deployment_search
-def index_deployment(deployment, es=None, idx=None):
+def index_deployment(deployment, ret_value=None, es=None, idx=None):
     """
     Creates a new deployment
     :param deployment: Dictionary containing deployment parameters
     """
-    return es.index(idx, TYPE_DEPLOYMENTS, massage_config(deployment),
-                    id=deployment['id'])
+    es.index(idx, TYPE_DEPLOYMENTS, massage_config(deployment),
+             id=deployment['id'])
+    return ret_value or deployment
 
 
 @app.task

@@ -18,6 +18,9 @@
     },
     "security":{
       "$ref": "${base_url}/schemas/app-version-v1#/properties/security"
+    },
+    "notifications": {
+      "$ref": "${base_url}/schemas/app-version-v1#/properties/notifications"
     }
   },
   "required": ["meta-info"],

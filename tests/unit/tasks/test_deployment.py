@@ -6,7 +6,8 @@ from nose.tools import raises, eq_, assert_raises
 from paramiko import SSHException
 
 from conf.appconfig import DEPLOYMENT_MODE_BLUEGREEN, DEPLOYMENT_MODE_REDGREEN, \
-    DEPLOYMENT_STATE_STARTED
+    DEPLOYMENT_STATE_STARTED, NOTIFICATIONS_DEFAULTS, BASE_URL
+from conf.celeryconfig import CLUSTER_NAME
 from deployer.celery import app
 from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning
 from deployer.util import dict_merge
@@ -17,7 +18,7 @@ __author__ = 'sukrit'
 
 from deployer.tasks.deployment import _deployment_defaults, \
     _pre_create_undeploy, _wait_for_undeploy, _get_exposed_ports, \
-    _fleet_check_deploy
+    _fleet_check_deploy, _notify_ctx
 
 NOW = datetime.datetime(2014, 01, 01)
 
@@ -55,7 +56,8 @@ def _create_test_deployment_with_defaults_applied():
                 'owner': 'testowner',
                 'repo': 'testrepo',
                 'ref': 'testref',
-                'commit': 'testcommit'
+                'commit': 'testcommit',
+                'type': 'github'
 
             }
         },
@@ -63,7 +65,7 @@ def _create_test_deployment_with_defaults_applied():
             'name': 'testowner-testrepo-testref',
             'version': 1000,
             'type': 'git-quay',
-            'mode': DEPLOYMENT_MODE_BLUEGREEN
+            'mode': DEPLOYMENT_MODE_BLUEGREEN,
         }
     }
 
@@ -90,8 +92,8 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
                 'owner': 'testowner',
                 'repo': 'testrepo',
                 'ref': 'testref',
-                'commit': 'testcommit'
-
+                'commit': 'testcommit',
+                'type': 'github'
             }
         },
         'deployment': {
@@ -140,7 +142,8 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
         'started-at': NOW,
         'security': {
             'profile': 'default'
-        }
+        },
+        'notifications': NOTIFICATIONS_DEFAULTS
     })
 
 
@@ -190,8 +193,8 @@ def test_deployment_defaults_with_proxy(mock_time):
                 'owner': 'testowner',
                 'repo': 'testrepo',
                 'ref': 'testref',
-                'commit': 'testcommit'
-
+                'commit': 'testcommit',
+                'type': 'github'
             }
         },
         'deployment': {
@@ -267,7 +270,8 @@ def test_deployment_defaults_with_proxy(mock_time):
         'started-at': NOW,
         'security': {
             'profile': 'default'
-        }
+        },
+        'notifications': NOTIFICATIONS_DEFAULTS
     })
 
 
@@ -299,8 +303,8 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
                 'owner': 'testowner',
                 'repo': 'testrepo',
                 'ref': 'testref',
-                'commit': 'testcommit'
-
+                'commit': 'testcommit',
+                'type': 'github'
             }
         },
         'deployment': {
@@ -349,7 +353,8 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
         'started-at': NOW,
         'security': {
             'profile': 'default'
-        }
+        },
+        'notifications': NOTIFICATIONS_DEFAULTS
     })
 
 
@@ -396,8 +401,8 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
                 'owner': 'testowner',
                 'repo': 'testrepo',
                 'ref': 'testref',
-                'commit': 'testcommit'
-
+                'commit': 'testcommit',
+                'type': 'github'
             }
         },
         'deployment': {
@@ -442,7 +447,8 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
         'started-at': NOW,
         'security': {
             'profile': 'default'
-        }
+        },
+        'notifications': NOTIFICATIONS_DEFAULTS
     })
 
 
@@ -667,3 +673,27 @@ def test_fleet_check_deploy_when_ssh_error_is_thrown(mock_filter_units):
     _fleet_check_deploy('mockapp', 'mockversion', 1, 1)
 
     # Then: Check SSHException exception is thrown
+
+
+def test_notify_ctx():
+    """
+    Should return notification context for a given deployment
+    """
+
+    # Given: Existing deployment
+    deployment = {
+        "key": "value"
+    }
+
+    # When: I create notification context for given deployment
+    ctx = _notify_ctx(deployment, operation='mockop')
+
+    # Then: Expected context is returned
+    dict_compare(ctx, {
+        'deployment': deployment,
+        'cluster': CLUSTER_NAME,
+        'operation': 'mockop',
+        'deployer': {
+            'url': BASE_URL
+        }
+    })

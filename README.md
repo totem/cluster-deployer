@@ -82,13 +82,19 @@ sudo docker run -it --rm -h cluster-deployer-${USER} --name cluster-deployer -P 
 ### Run Configuration (Environment Variables)  
 | Env Variable | Description |  Default Value (Local) | Default Value (Docker)|
 | ------------ | ----------- | ---------------------- | --------------------- |
-| QUAY_ORGANIZATION | Organization in quay to pull images from | totem | totem|
+| QUAY_ORGANIZATION | Organization in quay to pull images from. This is only required to construct image url when not explictly specified as part of request. | totem | totem|
 | ETCD_HOST | Etcd server host. | 127.0.0.1 | 172.17.42.1 |
 | ETCD_PORT | Etcd server port. | 4001 | 4001 |
 | ETCD_TOTEM_BASE | Base path for totem configurations | /totem | /totem |
 | ETCD_YODA_BASE | Base path for yoda proxy configurations | /yoda | /yoda |
 | TASK_EXECUTORS | No. of processes to be created for celery task executions | Not Used | 2 |
 | API_EXECUTORS | No. of uwsgi processes to be created for serving API | Not Used | 2 |
+| HIPCHAT_TOKEN | Default hipchat token to be used for notifications | | |
+| GITHUB_TOKEN | Github token for fetching fleet templates and for commit notifications.| | |
+| HIPCHAT_ENABLED | Set it to true to enable hipchat notifications | false | false |
+| HIPCHAT_ROOM | Room to be used for hipchat notifications | not-set | not-set |
+| GITHUB_NOTIFICATION_ENABLED | Set it to true to enable github commit notifications. | false | false |
+| BASE_URL | Base Url for Cluster Deployer (used for forming notification URLs)| http://localhost:9000| http://172.17.42.1:9000 |
 
  
 
