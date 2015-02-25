@@ -218,9 +218,9 @@ def test_deployment_defaults_with_proxy(mock_time):
                     'environment': {
                         'DISCOVER_PORTS': '8080,8081,8082',
                         'DISCOVER_MODE': DEPLOYMENT_MODE_BLUEGREEN,
-                        'DISCOVER_HEALTH': '{"8080": {"timeout": "2s"},'
-                                           ' "8081": {"timeout": "2s"},'
-                                           ' "8082": {"timeout": "2s"}}'
+                        'DISCOVER_HEALTH': '{"8080": {"timeout": "5s"},'
+                                           ' "8081": {"timeout": "5s"},'
+                                           ' "8082": {"timeout": "5s"}}'
                     },
                     'docker-args': '',
                     'image': 'quay.io/totem/testowner-testrepo:testcommit'
@@ -263,19 +263,19 @@ def test_deployment_defaults_with_proxy(mock_time):
                 '8080': {
                     'mode': 'http',
                     'health': {
-                        'timeout': '2s'
+                        'timeout': '5s'
                     }
                 },
                 '8081': {
                     'mode': 'tcp',
                     'health': {
-                        'timeout': '2s'
+                        'timeout': '5s'
                     }
                 },
                 '8082': {
                     'mode': 'http',
                     'health': {
-                        'timeout': '2s'
+                        'timeout': '5s'
                     }
                 }
             },
