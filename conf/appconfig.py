@@ -27,6 +27,40 @@ BOOLEAN_TRUE_VALUES = {"true", "yes", "y", "1", "on"}
 API_PORT = int(os.getenv('API_PORT', '9000'))
 
 
+LEVEL_FAILED = 1
+LEVEL_FAILED_WARN = 2
+LEVEL_SUCCESS = 3
+LEVEL_STARTED = 4
+LEVEL_PENDING = 5
+
+DEFAULT_HIPCHAT_TOKEN = os.getenv('HIPCHAT_TOKEN', '')
+DEFAULT_GITHUB_TOKEN = os.getenv('GITHUB_TOKEN', '')
+
+NOTIFICATIONS_DEFAULTS = {
+    'hipchat': {
+        'enabled': os.getenv('HIPCHAT_ENABLED', 'false').strip()
+        .lower() in BOOLEAN_TRUE_VALUES,
+        'room': os.getenv('HIPCHAT_ROOM', 'not-set'),
+        'token': '',
+        'level': LEVEL_FAILED,
+        'colors': {
+            LEVEL_FAILED: 'red',
+            LEVEL_FAILED_WARN: 'red',
+            LEVEL_SUCCESS: 'green',
+            LEVEL_STARTED: 'yellow',
+            LEVEL_PENDING: 'yellow',
+            },
+        'url': 'https://api.hipchat.com'
+    },
+    'github': {
+        'enabled': os.getenv(
+            'GITHUB_NOTIFICATION_ENABLED', 'false')
+        .strip().lower() in BOOLEAN_TRUE_VALUES,
+        'token': '',
+        'level': LEVEL_PENDING
+    }
+}
+
 DEPLOYMENT_DEFAULTS = {
     DEPLOYMENT_TYPE_GIT_QUAY: {
         'deployment': {
@@ -58,7 +92,8 @@ DEPLOYMENT_DEFAULTS = {
                 'owner': 'not_set',
                 'repo': 'not_set',
                 'ref': 'master',
-                'commit': 'not_set'
+                'commit': 'not_set',
+                'type': 'github'
             }
         },
         'deployment': {
@@ -85,7 +120,8 @@ DEPLOYMENT_DEFAULTS = {
         },
         'security': {
             'profile': 'default'
-        }
+        },
+        'notifications': NOTIFICATIONS_DEFAULTS
     }
 }
 
@@ -140,7 +176,7 @@ TOTEM_ETCD_SETTINGS = {
 }
 
 SEARCH_SETTINGS = {
-    'enabled': os.getenv('SEARCH_ENABLED', 'true').strip().lower() in
+    'enabled': os.getenv('SEARCH_ENABLED', 'false').strip().lower() in
     BOOLEAN_TRUE_VALUES,
     'host': os.getenv('ELASTICSEARCH_HOST', '172.17.42.1'),
     'port': os.getenv('ELASTICSEARCH_PORT', '9200'),

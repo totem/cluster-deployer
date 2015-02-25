@@ -8,9 +8,11 @@ import socket
 from fabric.exceptions import NetworkError
 from fleet.client.fleet_fabric import FleetExecutionException
 from paramiko import SSHException
+from conf.celeryconfig import CLUSTER_NAME
 from deployer.services.distributed_lock import LockService, \
     ResourceLockedException
 from deployer.services.security import decrypt_config
+from deployer.tasks import notification
 from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning
 
 from deployer.tasks.search import index_deployment, update_deployment_state, \
@@ -21,7 +23,7 @@ from deployer.tasks.search import index_deployment, update_deployment_state, \
     add_search_event, EVENT_WIRED, EVENT_UNITS_ADDED, \
     get_promoted_deployments, mark_decommissioned, EVENT_UNITS_STARTED, \
     EVENT_UPSTREAMS_REGISTERED, EVENT_NODES_DISCOVERED, \
-    add_search_event_details
+    add_search_event_details, massage_config
 
 __author__ = 'sukrit'
 __all__ = ['create', 'delete']
@@ -38,7 +40,8 @@ from deployer.celery import app
 from conf.appconfig import DEPLOYMENT_DEFAULTS, DEPLOYMENT_TYPE_GIT_QUAY, \
     TEMPLATE_DEFAULTS, TASK_SETTINGS, DEPLOYMENT_MODE_BLUEGREEN, \
     DEPLOYMENT_MODE_REDGREEN, DEPLOYMENT_STATE_STARTED, \
-    DEPLOYMENT_STATE_FAILED, DEPLOYMENT_STATE_PROMOTED, UPSTREAM_DEFAULTS
+    DEPLOYMENT_STATE_FAILED, DEPLOYMENT_STATE_PROMOTED, UPSTREAM_DEFAULTS, \
+    LEVEL_STARTED, LEVEL_FAILED, LEVEL_SUCCESS
 
 from deployer.tasks.common import async_wait
 from deployer.tasks.proxy import wire_proxy, register_upstreams, \
@@ -50,6 +53,20 @@ logger = logging.getLogger(__name__)
 
 RETRYABLE_FLEET_EXCEPTIONS = (SSHException, EOFError, NetworkError,
                               socket.error, FleetExecutionException)
+
+
+def _notify_ctx(deployment, operation=None):
+    """
+    Creates context to be used for notification (hipchat/github)
+
+    :param meta_info
+    :return: Dictionary representing notification context.
+    """
+    return {
+        'deployment': massage_config(deployment),
+        'cluster': CLUSTER_NAME,
+        'operation': operation
+    }
 
 
 @app.task
@@ -81,8 +98,16 @@ def create(deployment):
         'min-nodes', nodes)
     check_port = deployment['deployment'].get('check', {}).get('port')
     deployment_mode = deployment['deployment']['mode']
+    notify_ctx = _notify_ctx(deployment, 'create')
+    notification.notify.si(
+        {'message': 'Started provisioning'}, ctx=notify_ctx,
+        level=LEVEL_STARTED,
+        notifications=deployment['notifications'],
+        security_profile=deployment['security']['profile']).delay()
+
     return (
         index_deployment.si(deployment) |
+
         add_search_event.si(EVENT_NEW_DEPLOYMENT, details=deployment,
                             search_params=search_params) |
         _using_lock.si(
@@ -113,7 +138,7 @@ def create(deployment):
                 _promote_deployment.si(deployment, search_params)
             ),
             error_tasks=[
-                _deployment_error_event.s(search_params),
+                _deployment_error_event.s(deployment, search_params),
                 update_deployment_state.si(deployment['id'],
                                            DEPLOYMENT_STATE_FAILED),
                 _fleet_undeploy.si(
@@ -607,7 +632,7 @@ def _processed_deployment(deployment):
 
 
 @app.task
-def _deployment_error_event(task_id, search_params):
+def _deployment_error_event(task_id, deployment, search_params):
     """
     Handles deployment creation error
 
@@ -616,6 +641,11 @@ def _deployment_error_event(task_id, search_params):
     """
     app.set_current()
     output = app.AsyncResult(task_id)
+    notify_ctx = _notify_ctx(deployment, 'create')
+    notification.notify.si(
+        output.result, ctx=notify_ctx, level=LEVEL_FAILED,
+        notifications=deployment['notifications'],
+        security_profile=deployment['security']['profile']).delay()
     return add_search_event.si(
         EVENT_DEPLOYMENT_FAILED,
         search_params=search_params,
@@ -638,6 +668,8 @@ def _promote_deployment(deployment, search_params):
     tasks = []
     name = deployment['deployment']['name']
     version = deployment['deployment']['version']
+    notify_ctx = _notify_ctx(deployment, 'create')
+
     # Add Proxy Wired to the chain
     tasks.append(
         add_search_event.si(
@@ -662,6 +694,11 @@ def _promote_deployment(deployment, search_params):
         update_deployment_state.si(deployment['id'],
                                    DEPLOYMENT_STATE_PROMOTED),
         add_search_event.si(EVENT_PROMOTED, search_params=search_params),
+        notification.notify.si(
+            {'message': 'Promoted'}, ctx=notify_ctx,
+            level=LEVEL_SUCCESS,
+            notifications=deployment['notifications'],
+            security_profile=deployment['security']['profile']),
         _processed_deployment.si(deployment)
     ]
 

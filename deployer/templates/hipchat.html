@@ -1,0 +1,120 @@
+{%- set git = ctx.deployment['meta-info'].git or {} %}
+{%- set deployment = ctx.deployment.deployment or {} %}
+<table>
+    <tr>
+        <td colspan="2"><b>Totem ({{ctx.cluster}} :: Deployer :: {{ctx.operation}})</b><br/></td>
+    </tr>
+
+
+    <tr>
+        <td>
+            <table>
+                {% if notification.code %}
+                <tr>
+                    <td valign="top"><b>Code:</b></td>
+                    <td valign="bottom">{{ notification.code }}</td>
+                </tr>
+                {% endif %}
+
+                {% if notification.message %}
+                <tr>
+                    <td valign="top"><b>Message:</b></td>
+                    <td valign="bottom">{{ notification.message }}</td>
+                </tr>
+                {% endif %}
+
+                {% if git.repo %}
+                <tr>
+                    <td valign="top"><b>Repository:</b></td>
+
+                    <td valign="bottom">
+                        {% if git.type == 'github' %}
+                        <a href="https://github.com/{{git.owner}}/{{git.repo}}">{{ git.repo }}</a>
+                        {% else %}
+                        {{ git.repo }}
+                        {% endif %}
+                    </td>
+
+                </tr>
+                {% endif %}
+
+                {% if git.owner %}
+                <tr >
+                    <td valign="top"><b>Owner:</b></td>
+
+                    <td valign="bottom">
+                        {% if git.type == 'github' %}
+                        <a href="https://github.com/{{git.owner}}">{{ git.owner }}</a>
+                        {% else %}
+                        {{ git.owner }}
+                        {% endif %}
+                    </td>
+
+                </tr>
+                {% endif %}
+
+                {% if git.commit %}
+                <tr>
+                    <td valign="top"><b>Commit:</b></td>
+
+                    <td valign="bottom">
+                        {% if git.type == 'github' %}
+                        <a href="https://github.com/{{git.owner}}/{{git.repo}}/commit/{{git.commit}}">{{ git.commit }}</a>
+                        {% else %}
+                        {{ git.commit }}
+                        {% endif %}
+                    </td>
+
+                </tr>
+                {% endif %}
+
+                {% if git.ref %}
+                <tr>
+                    <td valign="top"><b>Ref:</b></td>
+
+                    <td valign="bottom">
+                        {% if git.type == 'github' %}
+                        <a href="https://github.com/{{git.owner}}/{{git.repo}}/tree/{{git.ref}}">{{ git.ref }}</a>
+                        {% else %}
+                        {{ git.ref }}
+                        {% endif %}
+                    </td>
+
+                </tr>
+                {% endif %}
+
+                {% if deployment.name and deployment.version %}
+                <tr>
+                    <td valign="top"><b>Deployment:</b></td>
+
+                    <td valign="bottom">
+                        {% if ctx.search.enabled %}
+                        <a href="http://{{ctx.search.host}}:{{ctx.search.port}}/{{ctx.search['default-index']}}/apps/{{deployment.name}}/versions/{{deployment.version}}">
+                            {{deployment.name}}::{{deployment.version}}
+                        </a>
+                        {% else %}
+                        {{deployment.name}}::{{deployment.version}}
+                        {% endif %}
+                    </td>
+
+                </tr>
+                {% endif %}
+            </table>
+
+        </td>
+        <td valign="top">
+            {% if notification.code == 'INTERNAL' %}
+            <img src='http://cdn.meme.am/instances/500x/56167084.jpg' height='200'/>
+            {% elif level == 1 %}
+            <img src='http://i.imgur.com/txw2K6j.jpg' height='200'/>
+            {% elif level == 2 %}
+            <img src="http://i.imgur.com/zknV7Dr.jpg" height='200'/>
+            {% else %}
+            &nbsp;
+            {% endif %}
+        </td>
+    </tr>
+
+
+
+</table>

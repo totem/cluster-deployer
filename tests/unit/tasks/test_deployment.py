@@ -6,7 +6,7 @@ from nose.tools import raises, eq_, assert_raises
 from paramiko import SSHException
 
 from conf.appconfig import DEPLOYMENT_MODE_BLUEGREEN, DEPLOYMENT_MODE_REDGREEN, \
-    DEPLOYMENT_STATE_STARTED
+    DEPLOYMENT_STATE_STARTED, NOTIFICATIONS_DEFAULTS
 from deployer.celery import app
 from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning
 from deployer.util import dict_merge
@@ -55,7 +55,8 @@ def _create_test_deployment_with_defaults_applied():
                 'owner': 'testowner',
                 'repo': 'testrepo',
                 'ref': 'testref',
-                'commit': 'testcommit'
+                'commit': 'testcommit',
+                'type': 'github'
 
             }
         },
@@ -63,7 +64,7 @@ def _create_test_deployment_with_defaults_applied():
             'name': 'testowner-testrepo-testref',
             'version': 1000,
             'type': 'git-quay',
-            'mode': DEPLOYMENT_MODE_BLUEGREEN
+            'mode': DEPLOYMENT_MODE_BLUEGREEN,
         }
     }
 
@@ -90,8 +91,8 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
                 'owner': 'testowner',
                 'repo': 'testrepo',
                 'ref': 'testref',
-                'commit': 'testcommit'
-
+                'commit': 'testcommit',
+                'type': 'github'
             }
         },
         'deployment': {
@@ -140,7 +141,8 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
         'started-at': NOW,
         'security': {
             'profile': 'default'
-        }
+        },
+        'notifications': NOTIFICATIONS_DEFAULTS
     })
 
 
@@ -190,8 +192,8 @@ def test_deployment_defaults_with_proxy(mock_time):
                 'owner': 'testowner',
                 'repo': 'testrepo',
                 'ref': 'testref',
-                'commit': 'testcommit'
-
+                'commit': 'testcommit',
+                'type': 'github'
             }
         },
         'deployment': {
@@ -267,7 +269,8 @@ def test_deployment_defaults_with_proxy(mock_time):
         'started-at': NOW,
         'security': {
             'profile': 'default'
-        }
+        },
+        'notifications': NOTIFICATIONS_DEFAULTS
     })
 
 
@@ -299,8 +302,8 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
                 'owner': 'testowner',
                 'repo': 'testrepo',
                 'ref': 'testref',
-                'commit': 'testcommit'
-
+                'commit': 'testcommit',
+                'type': 'github'
             }
         },
         'deployment': {
@@ -349,7 +352,8 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
         'started-at': NOW,
         'security': {
             'profile': 'default'
-        }
+        },
+        'notifications': NOTIFICATIONS_DEFAULTS
     })
 
 
@@ -396,8 +400,8 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
                 'owner': 'testowner',
                 'repo': 'testrepo',
                 'ref': 'testref',
-                'commit': 'testcommit'
-
+                'commit': 'testcommit',
+                'type': 'github'
             }
         },
         'deployment': {
@@ -442,7 +446,8 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
         'started-at': NOW,
         'security': {
             'profile': 'default'
-        }
+        },
+        'notifications': NOTIFICATIONS_DEFAULTS
     })
 
 
