@@ -4,7 +4,7 @@ It provides the ability to deploy applications to a fleet cluster. It adds a lay
 and provides a simple RESTFul API for the deployment.  
 
 ## Development Status
-This library is currently under development.
+This deployer component is currently under testing.
 
 ## Documentation
 Project uses Sphinx for code/api documentation
