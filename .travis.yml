@@ -16,3 +16,7 @@ script:
 
 after_success:
   - coveralls
+
+notifications:
+  webhooks:
+    - https://orchestrator.elb.us-west-1.th.melt.sh/external/hooks/travis
