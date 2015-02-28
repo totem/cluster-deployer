@@ -21,6 +21,9 @@ class MinNodesNotRunning(Exception):
         self.version = version
         self.min_units = min_units
         self.units = units
+        self.message = 'Minimum of %d units for application:%s version:%s ' \
+                       'were not found in running state.' % \
+                       (self.min_units, self.name, self.version)
         super(MinNodesNotRunning, self).__init__(
             name, version, min_units, units)
 
@@ -60,22 +63,26 @@ class MinNodesNotDiscovered(Exception):
         self.version = version
         self.min_nodes = min_nodes
         self.discovered_nodes = discovered_nodes
+        self.message = 'Minimum of %d nodes for application:%s version:%s ' \
+                       'were not registered to yoda proxy.' % \
+                       (self.min_nodes, self.name, self.version)
         super(MinNodesNotDiscovered, self).__init__(
             name, version, min_nodes, discovered_nodes)
 
     def to_dict(self):
         return {
-            'message': 'Minimum of %d nodes for application:%s version:%s '
-                       'were not registered to yoda proxy.' %
-                       (self.min_nodes, self.name, self.version),
+            'message': self.message,
             'code': 'MIN_NODES_NOT_DISCOVERED',
             'details': {
                 'name': self.name,
                 'version': self.version,
                 'min-nodes': self.min_nodes,
                 'discovered-nodes': self.discovered_nodes
-                }
+            }
         }
+
+    def __str__(self):
+        return self.message
 
 
 class NodeNotUndeployed(Exception):
@@ -87,19 +94,23 @@ class NodeNotUndeployed(Exception):
         self.name = name
         self.version = version
         self.deployed_units = deployed_units
+        self.message = 'Nodes for application:%s version:%s did not get ' \
+                       'un-deployed' % (self.name, self.version)
         super(NodeNotUndeployed, self).__init__(
             name, version, deployed_units)
 
     def to_dict(self):
         return {
-            'message': 'Nodes for application:%s version:%s did not get '
-                       'un-deployed' % (self.name, self.version),
+            'message': self.message,
             'code': 'NODE_NOT_UNDEPLOYED',
             'details': {
                 'name': self.name,
                 'version': self.version
-                }
+            }
         }
+
+    def __str__(self):
+        return self.message
 
 
 class TaskExecutionException(Exception):
@@ -126,3 +137,6 @@ class TaskExecutionException(Exception):
             'details': self.details,
             'traceback': self.traceback
         }
+
+    def __str__(self):
+        return self.message
