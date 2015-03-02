@@ -98,24 +98,144 @@
       },
       "additionalProperties": false
     },
-    "proxy":{
+    "proxy": {
+      "type": "object",
       "properties": {
         "hosts": {
-          "type": "object"
-        },
-        "listeners": {
-          "type": "object"
+          "description": "Hosts associated with the proxy",
+          "patternProperties": {
+            ".*": {
+              "$ref": "#/definitions/host"
+            }
+          }
         },
         "upstreams": {
-          "type": "object"
+          "description": "Backends associated with the proxy",
+          "patternProperties": {
+            ".*": {
+              "$ref": "#/definitions/upstream"
+            }
+          }
+        },
+        "listeners":{
+          "description": "TCP Listeners associated with proxy (for tcp based proxy)",
+          "patternProperties": {
+            ".*": {
+              "$ref": "#/definitions/listener"
+            }
+          }
         }
       },
       "additionalProperties": false
     },
+
+    "host": {
+      "description": "Proxy Host definition",
+      "type": "object",
+      "properties": {
+        "hostname": {
+          "description": "Hostname to be registered with proxy.",
+          "type": "string"
+        },
+        "locations": {
+          "description": "Locations for given proxy host.",
+          "patternProperties": {
+            ".*": {
+              "$ref": "#/definitions/location"
+            }
+          }
+        },
+        "enabled": {
+          "description": "Is host enabled?",
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "location": {
+      "description": "Proxy location definition for a given proxy path",
+      "type": "object",
+      "properties": {
+        "path": {
+          "description": "Path to be used for proxy",
+          "type": "string"
+        },
+        "port": {
+          "description": "Internal container port for proxy.",
+          "type": "port"
+        },
+        "enabled": {
+          "description": "Is location enabled?",
+          "type": "boolean"
+        },
+        "denied-acls": {
+          "type": "array",
+          "description": "List of Denied proxy ACLs",
+          "items": { "type": "string" }
+        },
+        "allowed-acls": {
+          "type": "array",
+          "description": "List of Allowed proxy ACLs",
+          "items": { "type": "string" }
+        },
+        "force-ssl": {
+          "description": "If SSL needs to be forced at the given path",
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "upstream": {
+      "description": "Proxy Upstream (Backend) definition",
+      "type": "object",
+      "properties": {
+        "health": {
+          "$ref": "#/definitions/health"
+        },
+        "mode": {
+          "description": "Proxy mode (http or tcp)",
+          "enum": [ "http", "tcp" ],
+          "default": "http"
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "health": {
+      "description": "Health check definition for proxy upstream",
+      "type": "object",
+      "properties": {
+        "timeout": {
+          "type": "string",
+          "description": "Health check timeout represented in terms of seconds or minutes. e.g: 20s for timeout of 20 seconds",
+          "default": "5s"
+        },
+        "uri": {
+          "type": "string",
+          "description": "Path to be used for health check. If empty or not specified, tcp based check is used.",
+          "default": ""
+        },
+        "interval": {
+          "type": "string",
+          "description": "Interval to be used for health check. e.g.: 30s to run health check every 30 seconds.",
+          "default": "45s"
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "listener": {
+      "description": "Proxy TCP Listener definition",
+      "type": "object"
+    },
+
     "templates": {
       "properties": {
         ".*": {
-          "ref": "#/definitions/template"
+          "$ref": "#/definitions/template"
         }
       },
       "additionalProperties": true
@@ -205,13 +325,13 @@
     "notifications": {
       "patternProperties": {
         "hipchat": {
-          "ref": "#/definitions/notification-hipchat"
+          "$ref": "#/definitions/notification-hipchat"
         },
         "github": {
-          "ref": "#/definitions/notification-github"
+          "$ref": "#/definitions/notification-github"
         },
         ".*": {
-          "ref": "#/definitions/notification"
+          "$ref": "#/definitions/notification"
         }
       }
     },
@@ -220,6 +340,10 @@
         "enabled": {
           "type": "boolean",
           "description": "Used for enabling/disabling notification"
+        },
+        "level": {
+          "description": "Min level for the message to activate this notifier",
+          "type": "number"
         }
       },
       "additionalProperties": true
@@ -252,6 +376,10 @@
               "$ref": "#/definitions/encrypted-type"
             }
           ]
+        },
+        "level": {
+          "description": "Min level for the message to activate this notifier",
+          "type": "number"
         }
       },
       "additionalProperties": false
@@ -276,37 +404,15 @@
               "$ref": "#/definitions/encrypted-type"
             }
           ]
+        },
+        "level": {
+          "description": "Min level for the message to activate this notifier",
+          "type": "number"
         }
       },
       "additionalProperties": false
     }
   },
   "links": [
-    {
-      "rel": "self",
-      "href": "${base_url}/api/secure/hosts/{id}",
-      "mediaType": "application/vnd.saleztoolz.host-v1+json",
-      "method": "GET"
-    },
-    {
-      "title": "List Hosts",
-      "rel": "parent",
-      "href": "/api/secure/hosts",
-      "mediaType": "application/vnd.saleztoolz.host-list-v1+json",
-      "method": "GET"
-    },
-    {
-      "title": "Updates basic host info",
-      "rel": "patch",
-      "href": "/api/secure/hosts/{id}",
-      "mediaType": "application/vnd.saleztoolz.host-patch-v1+json",
-      "method": "PUT"
-    },
-    {
-      "title": "Deletes the host from the system",
-      "rel": "delete",
-      "href": "/api/secure/hosts/{id}",
-      "method": "DELETE"
-    }
   ]
 }
