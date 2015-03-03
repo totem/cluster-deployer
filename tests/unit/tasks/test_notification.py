@@ -141,7 +141,8 @@ def test_notify_hipchat(m_json, m_templatefactory, m_requests):
     # When: I send message using hipchat
     notification.notify_hipchat(
         {'message': 'mock'}, {}, LEVEL_FAILED,
-        {'token': 'mocktoken', 'room': 'mockroom'},
+        {'token': 'mocktoken', 'room': 'mockroom',
+         'colors': {'1': 'red', '3': 'green'}},
         'default')
 
     # Then: Notification gets send successfully
@@ -151,7 +152,7 @@ def test_notify_hipchat(m_json, m_templatefactory, m_requests):
             'content-type': 'application/json',
             'Authorization': 'Bearer mocktoken'},
         data={
-            'color': 'gray',
+            'color': 'red',
             'message': 'mockmsg',
             'notify': True,
             'message_format': 'html'
@@ -183,7 +184,8 @@ def test_notify_hipchat_for_level_success(m_json, m_templatefactory,
     # When: I send message using hipchat
     notification.notify_hipchat(
         {'message': 'mock'}, {}, LEVEL_SUCCESS,
-        {'token': 'mocktoken', 'room': 'mockroom'},
+        {'token': 'mocktoken', 'room': 'mockroom',
+         'colors': {'1': 'red', '3': 'green'}},
         'default')
 
     # Then: Notification gets send successfully
@@ -193,7 +195,7 @@ def test_notify_hipchat_for_level_success(m_json, m_templatefactory,
             'content-type': 'application/json',
             'Authorization': 'Bearer mocktoken'},
         data={
-            'color': 'gray',
+            'color': 'green',
             'message': 'mockmsg',
             'notify': False,
             'message_format': 'html'
