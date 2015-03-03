@@ -21,7 +21,8 @@ def _get_mock_proxy_with_hosts():
                 'locations': {
                     'loc1': {
                         'port': 8080,
-                        'path': '/path1'
+                        'path': '/path1',
+                        'force-ssl': True
                     },
                     'loc2': {
                         'port': 8081,
@@ -68,7 +69,8 @@ def test_wire_for_bluegreen(mock_yoda_cl):
         Location(
             upstream='mock-app-mock-version-8080',
             path='/path1',
-            location_name='loc1'
+            location_name='loc1',
+            force_ssl=True,
         ),
         Location(
             upstream='mock-app-mock-version-8081',

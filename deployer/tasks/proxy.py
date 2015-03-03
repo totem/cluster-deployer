@@ -92,7 +92,8 @@ def _wire_host(host, app_name, use_version):
                     'port': 8080,
                     'path': '/',
                     'allowed-acls': ['public'],
-                    'denied-acls': ['global-black-list']
+                    'denied-acls': ['global-black-list'],
+                    'force-ssl': False
                 }
             }
         }
@@ -112,7 +113,8 @@ def _wire_host(host, app_name, use_version):
             path=location['path'],
             allowed_acls=location.get('allowed-acls', []),
             denied_acls=location.get('denied-acls', []),
-            location_name=location_key
+            location_name=location_key,
+            force_ssl=location.get('force-ssl', False)
         ) for location_key, location in host['locations'].iteritems()]
     yoda_host = Host(host['hostname'], yoda_locations)
     yoda_cl.wire_proxy(yoda_host)
