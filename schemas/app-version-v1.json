@@ -163,7 +163,8 @@
         },
         "port": {
           "description": "Internal container port for proxy.",
-          "type": "port"
+          "type": "number",
+          "minimum": 1
         },
         "enabled": {
           "description": "Is location enabled?",
