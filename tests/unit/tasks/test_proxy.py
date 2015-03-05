@@ -97,7 +97,7 @@ def test_wire_for_ab(mock_yoda_cl):
     proxy = {
         'hosts': {
             'host1': {
-                'hostname': 'mockhostname1',
+                'hostname': 'mockhostname1,mockhostname2',
                 'locations': {
                     'home': {
                         'port': 8080,
@@ -124,7 +124,8 @@ def test_wire_for_ab(mock_yoda_cl):
                     upstream='mock-app-8080',
                     path='/path1'
                 )
-            ]
+            ],
+            aliases=['mockhostname2']
         ))
     ])
 

@@ -3,6 +3,7 @@ Tasks for yoda proxy. Uses yoda-py library for making calls to yoda.
 """
 from __future__ import absolute_import
 import logging
+import re
 import yoda.client
 
 from celery.canvas import chord, group
@@ -86,7 +87,7 @@ def _wire_host(host, app_name, use_version):
 
     :param host: Dictionary containing host parameters. e.g.:
         {
-            'hostname': 'myapp.example.com',
+            'hostname': 'myapp.example.com,mapp2.example.com',
             'locations': {
                 'home': {
                     'port': 8080,
@@ -116,7 +117,8 @@ def _wire_host(host, app_name, use_version):
             location_name=location_key,
             force_ssl=location.get('force-ssl', False)
         ) for location_key, location in host['locations'].iteritems()]
-    yoda_host = Host(host['hostname'], yoda_locations)
+    hostnames = re.split('[\\s,]*', host['hostname'])
+    yoda_host = Host(hostnames[0], yoda_locations, aliases=hostnames[1:])
     yoda_cl.wire_proxy(yoda_host)
 
 
