@@ -117,7 +117,8 @@ def _wire_host(host, app_name, use_version):
             location_name=location_key,
             force_ssl=location.get('force-ssl', False)
         ) for location_key, location in host['locations'].iteritems()]
-    hostnames = re.split('[\\s,]*', host['hostname'])
+    hostnames = [hostname.strip() for hostname in
+                 re.split('[\\s,]*', host['hostname']) if hostname]
     yoda_host = Host(hostnames[0], yoda_locations, aliases=hostnames[1:])
     yoda_cl.wire_proxy(yoda_host)
 
