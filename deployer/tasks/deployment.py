@@ -8,7 +8,6 @@ import socket
 from fabric.exceptions import NetworkError
 from fleet.client.fleet_fabric import FleetExecutionException
 from paramiko import SSHException
-from conf.celeryconfig import CLUSTER_NAME
 from deployer.services.distributed_lock import LockService, \
     ResourceLockedException
 from deployer.services.security import decrypt_config
@@ -41,7 +40,7 @@ from conf.appconfig import DEPLOYMENT_DEFAULTS, DEPLOYMENT_TYPE_GIT_QUAY, \
     TEMPLATE_DEFAULTS, TASK_SETTINGS, DEPLOYMENT_MODE_BLUEGREEN, \
     DEPLOYMENT_MODE_REDGREEN, DEPLOYMENT_STATE_STARTED, \
     DEPLOYMENT_STATE_FAILED, DEPLOYMENT_STATE_PROMOTED, UPSTREAM_DEFAULTS, \
-    LEVEL_STARTED, LEVEL_FAILED, LEVEL_SUCCESS, BASE_URL
+    LEVEL_STARTED, LEVEL_FAILED, LEVEL_SUCCESS, BASE_URL, CLUSTER_NAME
 
 from deployer.tasks.common import async_wait
 from deployer.tasks.proxy import wire_proxy, register_upstreams, \

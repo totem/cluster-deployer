@@ -176,12 +176,16 @@ TOTEM_ETCD_SETTINGS = {
     'yoda_base': os.getenv('ETCD_YODA_BASE', '/yoda'),
 }
 
+TOTEM_ENV = os.getenv('TOTEM_ENV', 'local')
+CLUSTER_NAME = os.getenv('CLUSTER_NAME', TOTEM_ENV)
+SEARCH_INDEX = os.getenv('SEARCH_INDEX', 'totem-{0}'.format(TOTEM_ENV))
+
 SEARCH_SETTINGS = {
     'enabled': os.getenv('SEARCH_ENABLED', 'false').strip().lower() in
     BOOLEAN_TRUE_VALUES,
     'host': os.getenv('ELASTICSEARCH_HOST', '172.17.42.1'),
     'port': os.getenv('ELASTICSEARCH_PORT', '9200'),
-    'default-index': 'cluster-deployer-%s' % os.getenv('CLUSTER_NAME', 'local')
+    'default-index': SEARCH_INDEX
 }
 
 CORS_SETTINGS = {
