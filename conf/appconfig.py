@@ -229,3 +229,7 @@ API_DEFAULT_PAGE_SIZE = 10
 
 HEALTH_OK = 'ok'
 HEALTH_FAILED = 'failed'
+
+# Elasticsearch doc types
+DOC_TYPE_DEPLOYMENTS = 'deployments'
+DOC_TYPE_EVENTS = 'events'

@@ -4,15 +4,13 @@ Module for updating/searching elastic search.
 import copy
 import datetime
 from conf.appconfig import DEPLOYMENT_STATE_PROMOTED, \
-    DEPLOYMENT_STATE_DECOMMISSIONED, DEPLOYMENT_STATE_STARTED
+    DEPLOYMENT_STATE_DECOMMISSIONED, DEPLOYMENT_STATE_STARTED, \
+    DOC_TYPE_DEPLOYMENTS, DOC_TYPE_EVENTS
 
 from deployer.celery import app
 from deployer.elasticsearch import deployment_search
 from deployer.util import dict_merge
 
-
-TYPE_DEPLOYMENTS = 'deployments'
-TYPE_EVENTS = 'events'
 
 EVENT_NEW_DEPLOYMENT = 'NEW_DEPLOYMENT'
 EVENT_ACQUIRED_LOCK = 'ACQUIRED_LOCK'
@@ -63,7 +61,7 @@ def index_deployment(deployment, ret_value=None, es=None, idx=None):
     Creates a new deployment
     :param deployment: Dictionary containing deployment parameters
     """
-    es.index(idx, TYPE_DEPLOYMENTS, massage_config(deployment),
+    es.index(idx, DOC_TYPE_DEPLOYMENTS, massage_config(deployment),
              id=deployment['id'])
     return ret_value or deployment
 
@@ -79,7 +77,7 @@ def update_deployment_state(id, state, ret_value=None, es=None, idx=None):
     :keyword ret_value: Value to be returned. If None, the updated search
      document is returned.
     """
-    updated_doc = es.update(idx, TYPE_DEPLOYMENTS, id, body={
+    updated_doc = es.update(idx, DOC_TYPE_DEPLOYMENTS, id, body={
         'doc': {
             'state': state
         }
@@ -119,8 +117,9 @@ def add_search_event(event_type, details=None, search_params={}, es=None,
         'type': event_type,
         'details': massage_config(details),
         'date': datetime.datetime.utcnow(),
+        'component': 'deployer'
     })
-    return es.create(idx, TYPE_EVENTS, event_upd)
+    return es.create(idx, DOC_TYPE_EVENTS, event_upd)
 
 
 @app.task
@@ -139,7 +138,7 @@ def add_search_event_details(details, event_type, search_params):
 
 @deployment_search
 def find_apps(es=None, idx=None):
-    results = es.search(idx, doc_type=TYPE_DEPLOYMENTS, body={
+    results = es.search(idx, doc_type=DOC_TYPE_DEPLOYMENTS, body={
         'size': 0,
         'aggs': {
             'apps': {
@@ -169,7 +168,7 @@ def get_promoted_deployments(name, version=None, es=None, idx=None):
             ]
         }
     }
-    results = es.search(idx, TYPE_DEPLOYMENTS, body=query)
+    results = es.search(idx, DOC_TYPE_DEPLOYMENTS, body=query)
 
     return [hit['_id'] for hit in results['hits']['hits']]
 
@@ -184,7 +183,7 @@ def mark_decommissioned(ids, es=None, idx=None):
                 {'update': {'_id': _id}},
                 {'doc': {'state': DEPLOYMENT_STATE_DECOMMISSIONED}}
             ]
-        return es.bulk(body, index=idx, doc_type=TYPE_DEPLOYMENTS)
+        return es.bulk(body, index=idx, doc_type=DOC_TYPE_DEPLOYMENTS)
 
 
 @deployment_search
@@ -199,7 +198,7 @@ def find_deployments(name, version=None, page=0, size=10, es=None, idx=None):
             ]
         }
     }
-    results = es.search(idx, TYPE_DEPLOYMENTS, body=query)
+    results = es.search(idx, DOC_TYPE_DEPLOYMENTS, body=query)
     return [hit['_source'] for hit in results['hits']['hits']]
 
 
@@ -218,5 +217,5 @@ def find_running_deployments(name, version=None, page=0, size=10, es=None,
             ]
         }
     }
-    results = es.search(idx, TYPE_DEPLOYMENTS, body=query)
+    results = es.search(idx, DOC_TYPE_DEPLOYMENTS, body=query)
     return [hit['_source'] for hit in results['hits']['hits']]
