@@ -546,7 +546,7 @@ def _pre_create_undeploy(deployment, search_params, next_task=None):
         version = None
     else:
         # Do not undeploy anything when mode is custom or A/B
-        return next_task() if next_task else None
+        return next_task.delay() if next_task else None
     name = deployment['deployment']['name']
     undeploy_chain = [
         _fleet_undeploy.si(name, version, ignore_error=False),
@@ -562,7 +562,7 @@ def _pre_create_undeploy(deployment, search_params, next_task=None):
     ]
     if next_task:
         undeploy_chain.append(next_task)
-    return chain(undeploy_chain)()
+    return chain(undeploy_chain).delay()
 
 
 @app.task(bind=True)
