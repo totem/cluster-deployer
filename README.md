@@ -95,6 +95,8 @@ sudo docker run -it --rm -h cluster-deployer-${USER} --name cluster-deployer -P 
 | HIPCHAT_ROOM | Room to be used for hipchat notifications | not-set | not-set |
 | GITHUB_NOTIFICATION_ENABLED | Set it to true to enable github commit notifications. | false | false |
 | BASE_URL | Base Url for Cluster Deployer (used for forming notification URLs)| http://localhost:9000| http://172.17.42.1:9000 |
+| CLUSTER_NAME | Name of the cluster where orchestrator is deployed | local | local |
+| TOTEM_ENV | Name of totem environment (e.g. production, local, development) | local |
 
  
 

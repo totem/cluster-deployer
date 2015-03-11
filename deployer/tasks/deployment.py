@@ -8,7 +8,6 @@ import socket
 from fabric.exceptions import NetworkError
 from fleet.client.fleet_fabric import FleetExecutionException
 from paramiko import SSHException
-from conf.celeryconfig import CLUSTER_NAME
 from deployer.services.distributed_lock import LockService, \
     ResourceLockedException
 from deployer.services.security import decrypt_config
@@ -41,7 +40,7 @@ from conf.appconfig import DEPLOYMENT_DEFAULTS, DEPLOYMENT_TYPE_GIT_QUAY, \
     TEMPLATE_DEFAULTS, TASK_SETTINGS, DEPLOYMENT_MODE_BLUEGREEN, \
     DEPLOYMENT_MODE_REDGREEN, DEPLOYMENT_STATE_STARTED, \
     DEPLOYMENT_STATE_FAILED, DEPLOYMENT_STATE_PROMOTED, UPSTREAM_DEFAULTS, \
-    LEVEL_STARTED, LEVEL_FAILED, LEVEL_SUCCESS, BASE_URL
+    LEVEL_STARTED, LEVEL_FAILED, LEVEL_SUCCESS, BASE_URL, CLUSTER_NAME
 
 from deployer.tasks.common import async_wait
 from deployer.tasks.proxy import wire_proxy, register_upstreams, \
@@ -547,7 +546,7 @@ def _pre_create_undeploy(deployment, search_params, next_task=None):
         version = None
     else:
         # Do not undeploy anything when mode is custom or A/B
-        return next_task() if next_task else None
+        return next_task.delay() if next_task else None
     name = deployment['deployment']['name']
     undeploy_chain = [
         _fleet_undeploy.si(name, version, ignore_error=False),
@@ -563,7 +562,7 @@ def _pre_create_undeploy(deployment, search_params, next_task=None):
     ]
     if next_task:
         undeploy_chain.append(next_task)
-    return chain(undeploy_chain)()
+    return chain(undeploy_chain).delay()
 
 
 @app.task(bind=True)
