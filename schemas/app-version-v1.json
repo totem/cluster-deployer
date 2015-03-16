@@ -134,9 +134,9 @@
       "type": "object",
       "properties": {
         "hostname": {
-          "description": "Hostname(s) to be registered with proxy. If multiple hosts needs to be specified, separate them using comma or space",
+          "description": "Hostname(s) to be registered with proxy. If multiple hosts need to be specified, separate them using comma or space",
           "type": "string",
-          "pattern": "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])(\\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9]))*[\\s,]*)+$"
+          "pattern": "^[a-zA-Z0-9\\-.\\s,]*[a-zA-Z0-9\\s\\-,]$"
         },
         "locations": {
           "description": "Locations for given proxy host.",
