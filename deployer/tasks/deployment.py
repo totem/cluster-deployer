@@ -778,4 +778,4 @@ def _check_node(self, node, path, attempts, timeout):
         raise self.retry(
             exc=NodeCheckFailed(node, str(exc)),
             max_retries=attempts-1,
-            countdown=TASK_SETTINGS['CHECK_DEPLOYMENT_RETRY_DELAY'])
+            countdown=TASK_SETTINGS['CHECK_NODE_RETRY_DELAY'])
