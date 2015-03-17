@@ -140,3 +140,30 @@ class TaskExecutionException(Exception):
 
     def __str__(self):
         return self.message
+
+
+class NodeCheckFailed(Exception):
+    """
+    Exception corresponding to failed deployment check for a given node.
+    """
+
+    def __init__(self, node, reason):
+        self.node = node
+        self.message = 'Deployment check failed for node: {0} due to: {1}'\
+            .format(node, reason)
+        super(NodeCheckFailed, self).__init__(node, reason)
+
+    def to_dict(self):
+        return {
+            'message': self.message,
+            'code': 'NODE_CHECK_FAILED',
+            'details': {
+                'node': self.node
+            }
+        }
+
+    def __str__(self):
+        return self.message
+
+    def __eq__(self, other):
+        return self.node == other.node and self.message == other.message

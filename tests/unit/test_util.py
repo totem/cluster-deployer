@@ -1,6 +1,8 @@
-from nose.tools import eq_
+from nose.tools import eq_, raises
+from deployer import util
 
 from deployer.util import dict_merge
+from tests.helper import dict_compare
 
 
 __author__ = 'sukrit'
@@ -43,3 +45,62 @@ def test_dict_merge():
         },
         'key3': 'value3',
     })
+
+
+def test_to_milliseconds_for_valid_formats():
+    """
+    Should convert given set of intervals to milliseconds
+    """
+
+    # Given: Intervals that needs to be converted
+    intervals = ['5s', '2h', '2m', '3ms']
+
+    # When: I convert given intervals to milliseconds
+    converted = [util.to_milliseconds(interval) for interval in intervals]
+
+    # Then: Expected millisends for each interval is returned
+    eq_(converted, [5000, 7200000, 120000, 3])
+
+
+@raises(util.InvalidInterval)
+def test_to_milliseconds_for_invalid_format():
+    """
+    Should raise exception when interval format is invalid
+    """
+
+    # When: I convert invalid interval to ms
+    util.to_milliseconds('5invalid')
+
+    # Then: InvalidInterval exception is thrown
+
+
+def test_dict_representation_for_invalid_interval():
+    """
+    Should return dict representation
+    """
+
+    # When: I get dict representation for InvalidInterval exception
+    output = util.InvalidInterval('invalid').to_dict()
+
+    # Then: Expected representation is returned
+    dict_compare(output, {
+        'code': 'INVALID_INTERVAL',
+        'message': 'Invalid interval specified:invalid. Interval should '
+                   'match format: ^\\s*(\d+)(ms|h|m|s)\\s*$',
+        'details': {
+            'interval': 'invalid'
+        }
+    })
+
+
+def test_str_representation_for_invalid_interval():
+    """
+    Should return str representation for InvalidInterval exception
+    """
+
+    # When: I get str representation for InvalidInterval exception
+    output = str(util.InvalidInterval('invalid'))
+
+    # Then: Expected representation is returned
+    eq_(output, 'Invalid interval specified:invalid. Interval should '
+                'match format: ^\\s*(\d+)(ms|h|m|s)\\s*$')

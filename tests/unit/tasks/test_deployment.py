@@ -1,7 +1,8 @@
 import datetime
 
 from freezegun import freeze_time
-from mock import patch, ANY
+from mock import patch, ANY, MagicMock
+import nose
 from nose.tools import raises, eq_, assert_raises
 from paramiko import SSHException
 
@@ -9,7 +10,8 @@ from conf.appconfig import DEPLOYMENT_MODE_BLUEGREEN, DEPLOYMENT_MODE_REDGREEN, 
     DEPLOYMENT_STATE_STARTED, NOTIFICATIONS_DEFAULTS, BASE_URL
 from conf.celeryconfig import CLUSTER_NAME
 from deployer.celery import app
-from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning
+from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning, \
+    NodeCheckFailed
 from deployer.util import dict_merge
 from tests.helper import dict_compare
 
@@ -18,7 +20,7 @@ __author__ = 'sukrit'
 
 from deployer.tasks.deployment import _deployment_defaults, \
     _pre_create_undeploy, _wait_for_undeploy, _get_exposed_ports, \
-    _fleet_check_deploy, _notify_ctx
+    _fleet_check_deploy, _notify_ctx, _check_node, _check_deployment
 
 NOW = datetime.datetime(2014, 01, 01)
 
@@ -104,7 +106,9 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
             'mode': DEPLOYMENT_MODE_BLUEGREEN,
             'check': {
                 'min-nodes': 1,
-                'port': None
+                'port': None,
+                'attempts': 10,
+                'timeout': '10s'
             }
         },
         'templates': {
@@ -209,7 +213,9 @@ def test_deployment_defaults_with_proxy(mock_time):
             'mode': DEPLOYMENT_MODE_BLUEGREEN,
             'check': {
                 'min-nodes': 1,
-                'port': None
+                'port': None,
+                'attempts': 10,
+                'timeout': '10s'
             }
         },
         'templates': {
@@ -330,7 +336,9 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
             'mode': DEPLOYMENT_MODE_BLUEGREEN,
             'check': {
                 'min-nodes': 1,
-                'port': None
+                'port': None,
+                'attempts': 10,
+                'timeout': '10s'
             }
         },
         'templates': {
@@ -428,7 +436,9 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
             'mode': DEPLOYMENT_MODE_BLUEGREEN,
             'check': {
                 'min-nodes': 1,
-                'port': None
+                'port': None,
+                'attempts': 10,
+                'timeout': '10s'
             }
         },
         'templates': {
@@ -712,3 +722,102 @@ def test_notify_ctx():
             'url': BASE_URL
         }
     })
+
+
+@patch('urllib.urlopen')
+def test_check_node(m_urlopen):
+    """
+    Should perform deployment check for a given node successfully.
+    """
+
+    # When: I call check node with a given path
+    _check_node('localhost:8080', '/mock', 5, '5s')
+
+    # Then: Http URL Check is performed for given path
+    m_urlopen.assert_called_once_with('http://localhost:8080/mock', None, 5000)
+
+
+@patch('urllib.urlopen')
+def test_check_node_for_path_not_beginning_with_forward_slash(m_urlopen):
+    """
+    Should perform deployment check for a given node successfully.
+    """
+
+    # When: I call check node with a given path
+    _check_node('localhost:8080', 'mock', 5, '5s')
+
+    # Then: Http URL Check is performed for given path
+    m_urlopen.assert_called_once_with('http://localhost:8080/mock', None, 5000)
+
+
+@patch('urllib.urlopen')
+def test_check_node_for_unhealthy_node(m_urlopen):
+    """
+    Should fail node check for unhealthy node.
+    """
+
+    # Given: Unhealthy node
+    m_urlopen.side_effect = RuntimeError('Mock')
+
+    # And: Mock Implementation for retry
+    _check_node.retry = MagicMock()
+
+    def retry(*args, **kwargs):
+        raise kwargs.get('exc')
+
+    _check_node.retry.side_effect = retry
+
+    # When: I call check node with a given path
+    with nose.tools.assert_raises(NodeCheckFailed) as cm:
+        _check_node('localhost:8080', 'mock', 5, '5s')
+
+    # Then: NodeCheckFailed exception is raised
+    eq_(cm.exception, NodeCheckFailed('localhost:8080', 'Mock'))
+
+
+@patch('deployer.tasks.deployment._check_node')
+@patch('deployer.tasks.deployment.group')
+def test_check_deployment(m_group, m_check_node):
+    """
+    Should perform node check for all discovered nodes
+    """
+
+    # Given: DIscovered Nodes
+    nodes = {
+        'node1': 'localhost:8080',
+        'node2': 'localhost:8081'
+    }
+
+    # And: Path for deployment check
+    path = '/mockpath'
+
+    # When: I perform deployment check for discovered nodes
+    result = _check_deployment(nodes, path, 3, '5s')
+
+    # Then: Node check is performed for all discovered nodes
+    eq_(result, m_group.return_value.delay.return_value)
+    eq_(list(m_group.call_args[0][0]),
+        [m_check_node.si.return_value] * 2)
+    m_check_node.si.assert_any_call('localhost:8080', '/mockpath', 3, '5s')
+    m_check_node.si.assert_any_call('localhost:8081', '/mockpath', 3, '5s')
+
+
+@patch('deployer.tasks.deployment._check_node')
+@patch('deployer.tasks.deployment.group')
+def test_check_deployment_with_no_path_specified(m_group, m_check_node):
+    """
+    Should not perform node check when path is not given
+    """
+
+    # Given: Discovered Nodes
+    nodes = {
+        'node1': 'localhost:8080',
+        'node2': 'localhost:8081'
+    }
+
+    # When: I perform deployment check for discovered nodes
+    result = _check_deployment(nodes, None, 3, '5s')
+
+    # Then: Node check is skipped for all discovered nodes
+    eq_(result, None)
+    eq_(m_group.call_count, 0)
