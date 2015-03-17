@@ -724,7 +724,7 @@ def test_notify_ctx():
     })
 
 
-@patch('urllib.urlopen')
+@patch('urllib2.urlopen')
 def test_check_node(m_urlopen):
     """
     Should perform deployment check for a given node successfully.
@@ -737,7 +737,7 @@ def test_check_node(m_urlopen):
     m_urlopen.assert_called_once_with('http://localhost:8080/mock', None, 5000)
 
 
-@patch('urllib.urlopen')
+@patch('urllib2.urlopen')
 def test_check_node_for_path_not_beginning_with_forward_slash(m_urlopen):
     """
     Should perform deployment check for a given node successfully.
@@ -750,7 +750,7 @@ def test_check_node_for_path_not_beginning_with_forward_slash(m_urlopen):
     m_urlopen.assert_called_once_with('http://localhost:8080/mock', None, 5000)
 
 
-@patch('urllib.urlopen')
+@patch('urllib2.urlopen')
 def test_check_node_for_unhealthy_node(m_urlopen):
     """
     Should fail node check for unhealthy node.
@@ -819,5 +819,23 @@ def test_check_deployment_with_no_path_specified(m_group, m_check_node):
     result = _check_deployment(nodes, None, 3, '5s')
 
     # Then: Node check is skipped for all discovered nodes
+    eq_(result, None)
+    eq_(m_group.call_count, 0)
+
+
+@patch('deployer.tasks.deployment._check_node')
+@patch('deployer.tasks.deployment.group')
+def test_check_deployment_with_no_discovered_nodes(m_group, m_check_node):
+    """
+    Should not perform node check when path is not given
+    """
+
+    # Given: No nodes were discovered
+    nodes = {}
+
+    # When: I perform deployment check
+    result = _check_deployment(nodes, '/mockpath', 3, '5s')
+
+    # Then: Node check is skipped
     eq_(result, None)
     eq_(m_group.call_count, 0)

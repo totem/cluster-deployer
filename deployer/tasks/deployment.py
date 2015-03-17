@@ -5,9 +5,9 @@ import copy
 import datetime
 import json
 import socket
-import urllib
 import logging
 import time
+import urllib2
 from fabric.exceptions import NetworkError
 from fleet.client.fleet_fabric import FleetExecutionException
 from paramiko import SSHException
@@ -750,7 +750,7 @@ def _check_deployment(nodes, path, attempts, timeout):
     :return: GroupResult
     """
 
-    if path:
+    if path and nodes:
         return group(_check_node.si(node, path, attempts, timeout)
                      for _, node in nodes.iteritems()).delay()
 
@@ -773,7 +773,7 @@ def _check_node(self, node, path, attempts, timeout):
     check_url = 'http://{0}{1}'.format(node, path)
     timeout_ms = to_milliseconds(timeout)
     try:
-        urllib.urlopen(check_url, None, timeout_ms)
+        urllib2.urlopen(check_url, None, timeout_ms)
     except BaseException as exc:
         raise self.retry(
             exc=NodeCheckFailed(node, str(exc)),

@@ -120,7 +120,8 @@ def add_search_event(event_type, details=None, search_params={}, es=None,
         'date': datetime.datetime.utcnow(),
         'component': 'deployer'
     })
-    return ret_value or es.create(idx, DOC_TYPE_EVENTS, event_upd)
+    es.create(idx, DOC_TYPE_EVENTS, event_upd)
+    return ret_value
 
 
 @app.task
