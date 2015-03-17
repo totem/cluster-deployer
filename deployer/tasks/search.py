@@ -19,6 +19,7 @@ EVENT_UNITS_ADDED = 'UNITS_ADDED'
 EVENT_UNITS_STARTED = 'UNITS_STARTED'
 EVENT_UNITS_DEPLOYED = 'UNITS_DEPLOYED'
 EVENT_NODES_DISCOVERED = 'NODES_DISCOVERED'
+EVENT_DEPLOYMENT_CHECK_PASSED = 'DEPLOYMENT_CHECK_PASSED'
 EVENT_WIRED = 'WIRED'
 EVENT_UPSTREAMS_REGISTERED = 'UPSTREAMS_REGISTERED'
 EVENT_PROMOTED = 'PROMOTED'
@@ -111,7 +112,7 @@ def create_search_parameters(deployment, defaults=None):
 @app.task
 @deployment_search
 def add_search_event(event_type, details=None, search_params={}, es=None,
-                     idx=None):
+                     idx=None, ret_value=None):
     event_upd = copy.deepcopy(search_params)
     event_upd.update({
         'type': event_type,
@@ -119,7 +120,8 @@ def add_search_event(event_type, details=None, search_params={}, es=None,
         'date': datetime.datetime.utcnow(),
         'component': 'deployer'
     })
-    return es.create(idx, DOC_TYPE_EVENTS, event_upd)
+    es.create(idx, DOC_TYPE_EVENTS, event_upd)
+    return ret_value
 
 
 @app.task
@@ -133,7 +135,8 @@ def add_search_event_details(details, event_type, search_params):
     :return:
     """
     return add_search_event.si(
-        event_type, search_params=search_params, details=details)()
+        event_type, search_params=search_params, details=details,
+        ret_value=details)()
 
 
 @deployment_search

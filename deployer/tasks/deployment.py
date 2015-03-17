@@ -5,6 +5,9 @@ import copy
 import datetime
 import json
 import socket
+import logging
+import time
+import urllib2
 from fabric.exceptions import NetworkError
 from fleet.client.fleet_fabric import FleetExecutionException
 from paramiko import SSHException
@@ -12,7 +15,8 @@ from deployer.services.distributed_lock import LockService, \
     ResourceLockedException
 from deployer.services.security import decrypt_config
 from deployer.tasks import notification
-from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning
+from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning, \
+    NodeCheckFailed
 
 from deployer.tasks.search import index_deployment, update_deployment_state, \
     EVENT_NEW_DEPLOYMENT, \
@@ -22,13 +26,7 @@ from deployer.tasks.search import index_deployment, update_deployment_state, \
     add_search_event, EVENT_WIRED, EVENT_UNITS_ADDED, \
     get_promoted_deployments, mark_decommissioned, EVENT_UNITS_STARTED, \
     EVENT_UPSTREAMS_REGISTERED, EVENT_NODES_DISCOVERED, \
-    add_search_event_details, massage_config
-
-__author__ = 'sukrit'
-__all__ = ['create', 'delete']
-
-import logging
-import time
+    add_search_event_details, massage_config, EVENT_DEPLOYMENT_CHECK_PASSED
 
 from celery.canvas import group, chord, chain
 
@@ -46,7 +44,11 @@ from deployer.tasks.common import async_wait
 from deployer.tasks.proxy import wire_proxy, register_upstreams, \
     _check_discover
 
-from deployer.util import dict_merge
+from deployer.util import dict_merge, to_milliseconds
+
+__author__ = 'sukrit'
+__all__ = ['create', 'delete']
+
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +100,8 @@ def create(deployment):
     nodes = deployment['deployment']['nodes']
     min_nodes = deployment['deployment'].get('check', {}).get(
         'min-nodes', nodes)
-    check_port = deployment['deployment'].get('check', {}).get('port')
+    deployment_check = deployment['deployment'].get('check', {})
+    check_port = deployment_check.get('port')
     deployment_mode = deployment['deployment']['mode']
     notify_ctx = _notify_ctx(deployment, 'create')
     notification.notify.si(
@@ -106,6 +109,18 @@ def create(deployment):
         level=LEVEL_STARTED,
         notifications=deployment['notifications'],
         security_profile=deployment['security']['profile']).delay()
+
+    # Tasks to be performed on error
+    error_tasks = [
+        _deployment_error_event.s(deployment, search_params),
+        update_deployment_state.si(deployment['id'],
+                                   DEPLOYMENT_STATE_FAILED),
+        _fleet_undeploy.si(
+            app_name,
+            version=app_version,
+            ignore_error=True
+        )
+    ]
 
     return (
         index_deployment.si(deployment) |
@@ -137,18 +152,21 @@ def create(deployment):
                                    min_nodes, deployment_mode) |
                 add_search_event_details.s(EVENT_NODES_DISCOVERED,
                                            search_params=search_params) |
+                _check_deployment.s(
+                    deployment_check.get('path'),
+                    deployment_check.get('attempts'),
+                    deployment_check.get('timeout')
+                ) |
+                async_wait.s(
+                    default_retry_delay=TASK_SETTINGS[
+                        'CHECK_DEPLOYMENT_RETRY_DELAY'],
+                    max_retries=TASK_SETTINGS['CHECK_DEPLOYMENT_RETRIES']
+                ) |
+                add_search_event.si(EVENT_DEPLOYMENT_CHECK_PASSED,
+                                    search_params=search_params) |
                 _promote_deployment.si(deployment, search_params)
             ),
-            error_tasks=[
-                _deployment_error_event.s(deployment, search_params),
-                update_deployment_state.si(deployment['id'],
-                                           DEPLOYMENT_STATE_FAILED),
-                _fleet_undeploy.si(
-                    app_name,
-                    version=app_version,
-                    ignore_error=True
-                )
-            ]
+            error_tasks=error_tasks
         )
     ).apply_async()
 
@@ -716,3 +734,48 @@ def _promote_deployment(deployment, search_params):
         deployment['proxy'],
         next_task=(chain(tasks))
     )()
+
+
+@app.task
+def _check_deployment(nodes, path, attempts, timeout):
+    """
+    Performs a deployment check on discovered nodes
+
+    :param nodes: List of discovered nodes
+    :type nodes: list
+    :param attempts: Max no. of attempts for deployment check for a given node.
+    :type attempts: int
+    :param timeout: Deployment check timeout
+    :type timeout: str
+    :return: GroupResult
+    """
+
+    if path and nodes:
+        return group(_check_node.si(node, path, attempts, timeout)
+                     for _, node in nodes.iteritems()).delay()
+
+
+@app.task(bind=True)
+def _check_node(self, node, path, attempts, timeout):
+    """
+    Performs deployment check on single node.
+
+    :param node: Node on which deployment check needs to be performed.
+    :type node: str
+    :param attempts: Max no. of attempts for deployment check for a given node.
+    :type attempts: int
+    :param timeout: Deployment check timeout
+    :type timeout: str
+    :return: None
+    """
+
+    path = '/' + path if not path.startswith('/') else path
+    check_url = 'http://{0}{1}'.format(node, path)
+    timeout_ms = to_milliseconds(timeout)
+    try:
+        urllib2.urlopen(check_url, None, timeout_ms)
+    except BaseException as exc:
+        raise self.retry(
+            exc=NodeCheckFailed(node, str(exc)),
+            max_retries=attempts-1,
+            countdown=TASK_SETTINGS['CHECK_NODE_RETRY_DELAY'])

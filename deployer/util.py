@@ -6,6 +6,7 @@ from __future__ import (absolute_import, division,
 import errno
 from functools import wraps
 import os
+import re
 from future.builtins import (  # noqa
     bytes, dict, int, list, object, range, str,
     ascii, chr, hex, input, next, oct, open,
@@ -16,6 +17,8 @@ import copy
 import signal
 import time
 import math
+
+INTERVAL_FORMAT = '^\\s*(\d+)(ms|h|m|s)\\s*$'
 
 
 def dict_merge(*dictionaries):
@@ -124,3 +127,57 @@ def retry(tries, delay=3, backoff=2, except_on=(Exception, )):
                 tries, delay, backoff, except_on, f, *args, **kwargs)
         return f_retry  # true decorator -> decorated function
     return decorator    # @retry(arg[, ...]) -> true decorator
+
+
+def to_milliseconds(interval):
+    """
+    Converts string interval to milliseoncds
+
+    :param interval: Time interval represented in string format. (.e.g: 5s)
+    :type interval: str
+    :return: Interval in milliseconds
+    :rtype: long
+    """
+
+    match = re.search(INTERVAL_FORMAT, interval)
+    if match and len(match.groups()) == 2:
+        # Suffix can be 'h' , 'm', 's' or 'ms'
+        suffix = match.group(2)
+        prefix = int(match.group(1))
+        converter = {
+            's': lambda prefix: prefix * 1000,
+            'm': lambda prefix: prefix * 60 * 1000,
+            'h': lambda prefix: prefix * 60 * 60 * 1000,
+        }.get(suffix, lambda prefix: prefix)
+        return converter(prefix)
+    else:
+        # Invalid interval. Raise exception.
+        raise InvalidInterval(interval)
+
+
+class InvalidInterval(Exception):
+    """
+    Exception corresponding to invalid time interval.
+    """
+
+    def __init__(self, interval):
+        """
+        :param interval: Invalid interval
+        :type interval: str
+        """
+        self.message = 'Invalid interval specified:{0}. Interval should ' \
+                       'match format: {1}'.format(interval, INTERVAL_FORMAT)
+        self.interval = interval
+        super(InvalidInterval, self).__init__(interval)
+
+    def to_dict(self):
+        return {
+            'code': 'INVALID_INTERVAL',
+            'message': self.message,
+            'details': {
+                'interval': self.interval
+            }
+        }
+
+    def __str__(self):
+        return self.message

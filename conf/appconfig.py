@@ -104,7 +104,9 @@ DEPLOYMENT_DEFAULTS = {
             'nodes': 1,
             'check': {
                 'min-nodes': 1,
-                'port': None
+                'port': None,
+                'attempts': 10,
+                'timeout': '10s'
             }
         },
         'templates': {
@@ -165,8 +167,10 @@ TASK_SETTINGS = {
     'LOCK_RETRIES': 10,
     'LOCK_RETRY_DELAY': 60,
     'DEPLOYMENT_WAIT_RETRIES': 40,
-    'DEPLOYMENT_WAIT_RETRY_DELAY': 30
-
+    'DEPLOYMENT_WAIT_RETRY_DELAY': 30,
+    'CHECK_DEPLOYMENT_RETRY_DELAY': 20,
+    'CHECK_DEPLOYMENT_RETRIES': 30,
+    'CHECK_NODE_RETRY_DELAY': 10,
 }
 
 TOTEM_ETCD_SETTINGS = {
