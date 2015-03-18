@@ -11,12 +11,15 @@ import urllib2
 from fabric.exceptions import NetworkError
 from fleet.client.fleet_fabric import FleetExecutionException
 from paramiko import SSHException
+import sys
+
 from deployer.services.distributed_lock import LockService, \
     ResourceLockedException
 from deployer.services.security import decrypt_config
 from deployer.tasks import notification
 from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning, \
     NodeCheckFailed
+from deployer.tasks import util
 
 from deployer.tasks.search import index_deployment, update_deployment_state, \
     EVENT_NEW_DEPLOYMENT, \
@@ -675,10 +678,7 @@ def _deployment_error_event(task_id, deployment, search_params):
     return add_search_event.si(
         EVENT_DEPLOYMENT_FAILED,
         search_params=search_params,
-        details={
-            'error': str(output.result),
-            'traceback': output.traceback
-        })
+        details={'deployment-error': util.as_dict(output.result)}).delay()
 
 
 @app.task
@@ -773,9 +773,17 @@ def _check_node(self, node, path, attempts, timeout):
     check_url = 'http://{0}{1}'.format(node, path)
     timeout_ms = to_milliseconds(timeout)
     try:
-        urllib2.urlopen(check_url, None, timeout_ms)
-    except BaseException as exc:
+        urllib2.urlopen(check_url, None, timeout_ms/1000)
+    except IOError as exc:
+        # Clear the current exception so that celery does not raise original
+        # exception
+        reason = exc.reason if hasattr(exc, 'reason') else str(exc)
+        kwargs = {}
+        if hasattr(exc, 'read'):
+            kwargs.update(response={'raw': exc.read()}, status=exc.code)
+
+        sys.exc_clear()
         raise self.retry(
-            exc=NodeCheckFailed(node, str(exc)),
+            exc=NodeCheckFailed(check_url, reason, **kwargs),
             max_retries=attempts-1,
             countdown=TASK_SETTINGS['CHECK_NODE_RETRY_DELAY'])

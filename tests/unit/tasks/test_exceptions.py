@@ -1,3 +1,4 @@
+from nose.tools import eq_
 from deployer.tasks.exceptions import MinNodesNotRunning, MinNodesNotDiscovered, \
     NodeCheckFailed
 from tests.helper import dict_compare
@@ -46,14 +47,27 @@ def test_dict_repr_for_min_nodes_not_discovered_exception():
 def test_dict_repr_for_node_check_failed():
 
     # When: I call to_dict for NodeCheckFailed exception
-    result = NodeCheckFailed('localhost:8080', 'MockReason').to_dict()
+    result = NodeCheckFailed('http://localhost:8080', 'MockReason',
+                             status=500, response={'raw': 'Mock'}).to_dict()
 
     # Then: Expected result is returned
     dict_compare(result, {
-        'message': 'Deployment check failed for node: localhost:8080 '
+        'message': 'Deployment check failed for url: http://localhost:8080 '
                    'due to: MockReason',
         'code': 'NODE_CHECK_FAILED',
         'details': {
-            'node': 'localhost:8080'
+            'url': 'http://localhost:8080',
+            'status': 500,
+            'response': {'raw': 'Mock'}
         }
     })
+
+
+def test_str_repr_for_node_check_failed():
+
+    # When: I call str representation for NodeCheckFailed exception
+    result = str(NodeCheckFailed('http://localhost:8080', 'MockReason'))
+
+    # Then: Expected result is returned
+    eq_(result, 'Deployment check failed for url: http://localhost:8080 due '
+                'to: MockReason')

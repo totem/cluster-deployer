@@ -1,4 +1,5 @@
 import datetime
+import urllib2
 
 from freezegun import freeze_time
 from mock import patch, ANY, MagicMock
@@ -734,7 +735,7 @@ def test_check_node(m_urlopen):
     _check_node('localhost:8080', '/mock', 5, '5s')
 
     # Then: Http URL Check is performed for given path
-    m_urlopen.assert_called_once_with('http://localhost:8080/mock', None, 5000)
+    m_urlopen.assert_called_once_with('http://localhost:8080/mock', None, 5)
 
 
 @patch('urllib2.urlopen')
@@ -747,7 +748,7 @@ def test_check_node_for_path_not_beginning_with_forward_slash(m_urlopen):
     _check_node('localhost:8080', 'mock', 5, '5s')
 
     # Then: Http URL Check is performed for given path
-    m_urlopen.assert_called_once_with('http://localhost:8080/mock', None, 5000)
+    m_urlopen.assert_called_once_with('http://localhost:8080/mock', None, 5)
 
 
 @patch('urllib2.urlopen')
@@ -757,7 +758,10 @@ def test_check_node_for_unhealthy_node(m_urlopen):
     """
 
     # Given: Unhealthy node
-    m_urlopen.side_effect = RuntimeError('Mock')
+    fp = MagicMock()
+    fp.read.return_value = 'MockResponse'
+    m_urlopen.side_effect = urllib2.HTTPError(
+        'http://mockurl', 500, 'MockError', None, fp)
 
     # And: Mock Implementation for retry
     _check_node.retry = MagicMock()
@@ -772,7 +776,9 @@ def test_check_node_for_unhealthy_node(m_urlopen):
         _check_node('localhost:8080', 'mock', 5, '5s')
 
     # Then: NodeCheckFailed exception is raised
-    eq_(cm.exception, NodeCheckFailed('localhost:8080', 'Mock'))
+    eq_(cm.exception, NodeCheckFailed(
+        'http://localhost:8080/mock', 'MockError', status=500,
+        response={'raw': 'MockResponse'}))
 
 
 @patch('deployer.tasks.deployment._check_node')
