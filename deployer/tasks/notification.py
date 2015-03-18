@@ -15,6 +15,7 @@ from conf.appconfig import LEVEL_FAILED, \
 from deployer import templatefactory
 from deployer.celery import app
 from deployer.services.security import decrypt_config
+from deployer.tasks import util
 
 
 @app.task
@@ -38,19 +39,6 @@ def notify(obj, ctx=None, level=LEVEL_FAILED,
             obj, ctx, level, notification, security_profile).delay()
 
 
-def _as_dict(obj):
-    if isinstance(obj, dict):
-        return obj
-    elif getattr(obj, 'to_dict', None):
-        obj_dict = obj.to_dict()
-        return obj_dict
-    else:
-        return {
-            'message': repr(obj),
-            'code': 'INTERNAL'
-        }
-
-
 @app.task
 def notify_hipchat(obj, ctx, level, config, security_profile):
     config = decrypt_config(config, profile=security_profile)
@@ -58,7 +46,7 @@ def notify_hipchat(obj, ctx, level, config, security_profile):
     room_url = '{0}/v2/room/{1}/notification'.format(
         api_url, config.get('room'))
     msg = templatefactory.render_template(
-        'hipchat.html', notification=_as_dict(obj), ctx=ctx, level=level)
+        'hipchat.html', notification=util.as_dict(obj), ctx=ctx, level=level)
     headers = {
         'content-type': 'application/json',
         'Authorization': 'Bearer {0}'.format(
@@ -83,7 +71,7 @@ def notify_github(obj, ctx, level, config, security_profile):
     git_type = git.get('type', 'github')
     token = config.get('token') or DEFAULT_GITHUB_TOKEN
     if owner and repo and commit and token and git_type == 'github':
-        desc = _as_dict(obj).get('message', str(obj))
+        desc = util.as_dict(obj).get('message', str(obj))
         # Max 140 characters allowed for description
         use_desc = desc[:137] + '...' if len(desc) > 140 else desc
 

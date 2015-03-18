@@ -12,12 +12,14 @@ from fabric.exceptions import NetworkError
 from fleet.client.fleet_fabric import FleetExecutionException
 from paramiko import SSHException
 import sys
+
 from deployer.services.distributed_lock import LockService, \
     ResourceLockedException
 from deployer.services.security import decrypt_config
 from deployer.tasks import notification
 from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning, \
     NodeCheckFailed
+from deployer.tasks import util
 
 from deployer.tasks.search import index_deployment, update_deployment_state, \
     EVENT_NEW_DEPLOYMENT, \
@@ -676,10 +678,7 @@ def _deployment_error_event(task_id, deployment, search_params):
     return add_search_event.si(
         EVENT_DEPLOYMENT_FAILED,
         search_params=search_params,
-        details={
-            'error': str(output.result),
-            'traceback': output.traceback
-        }).delay()
+        details={'deployment-error': util.as_dict(output.result)}).delay()
 
 
 @app.task
