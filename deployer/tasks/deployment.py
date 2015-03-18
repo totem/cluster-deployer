@@ -678,7 +678,7 @@ def _deployment_error_event(task_id, deployment, search_params):
         details={
             'error': str(output.result),
             'traceback': output.traceback
-        })
+        }).delay()
 
 
 @app.task
