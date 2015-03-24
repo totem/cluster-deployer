@@ -27,6 +27,7 @@ def test_get_health_when_elasticsearch_is_enabled(client, get_es, ping):
     """
 
     # Given: Operational external services"
+    ping.delay().get.return_value = 'pong'
     get_es().info.return_value = 'mock'
     EtcdInfo = namedtuple('Info', ('machines', 'leader'))
     client.Client.return_value = EtcdInfo(['machine1'], 'machine1')
@@ -46,6 +47,10 @@ def test_get_health_when_elasticsearch_is_enabled(client, get_es, ping):
         'elasticsearch': {
             'status': HEALTH_OK,
             'details': 'mock'
+        },
+        'celery': {
+            'status': HEALTH_OK,
+            'details': 'Celery ping:pong'
         }
     })
 
@@ -61,6 +66,7 @@ def test_get_health_when_elasticsearch_is_disabled(client, ping):
     """
 
     # Given: Operational external services"
+    ping.delay().get.return_value = 'pong'
     EtcdInfo = namedtuple('Info', ('machines', 'leader'))
     client.Client.return_value = EtcdInfo(['machine1'], 'machine1')
 
@@ -75,7 +81,11 @@ def test_get_health_when_elasticsearch_is_disabled(client, ping):
                 'machines': ['machine1'],
                 'leader': 'machine1'
             }
-        }
+        },
+        'celery': {
+            'status': HEALTH_OK,
+            'details': 'Celery ping:pong'
+        },
     })
 
 
