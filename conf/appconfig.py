@@ -80,9 +80,6 @@ DEPLOYMENT_DEFAULTS = {
             },
             'yoda-register': {
                 'name': 'yoda-ec2-register'
-            },
-            'logger': {
-                'name': 'default-logger'
             }
         }
     },
