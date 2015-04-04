@@ -1,8 +1,10 @@
+from __future__ import absolute_import
+import deployer.logger
+from celery.signals import setup_logging
+
+
 __version__ = '0.1.10'
 __author__ = 'sukrit'
 
-import logging
-from conf.appconfig import LOG_FORMAT, LOG_DATE, LOG_ROOT_LEVEL
-
-
-logging.basicConfig(format=LOG_FORMAT, datefmt=LOG_DATE, level=LOG_ROOT_LEVEL)
+deployer.logger.init_logging('root')
+setup_logging.connect(deployer.logger.init_celery_logging)

@@ -4,21 +4,8 @@ ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get update && \
     apt-get install -y \
-    openssh-server \
-    openssh-client \
     libffi-dev \
     gettext nano
-
-##SSH Server (To troubleshoot issues with discover)
-RUN mkdir /var/run/sshd && \
-    mkdir /root/.ssh && \
-    chmod  500 /root/.ssh && \
-    chown -R root:root /root/.ssh
-
-#Syslog
-RUN echo '$PreserveFQDN on' | cat - /etc/rsyslog.conf > /tmp/rsyslog.conf && \
-    sudo mv /tmp/rsyslog.conf /etc/rsyslog.conf && \
-    sed -i 's~^#\$ModLoad immark\(.*\)$~$ModLoad immark \1~' /etc/rsyslog.conf
 
 #Confd
 ENV CONFD_VERSION 0.6.2
@@ -46,10 +33,6 @@ RUN chmod +x /usr/sbin/supervisord-wrapper.sh && \
 #Confd Defaults
 ADD bin/confd-wrapper.sh /usr/sbin/confd-wrapper.sh
 RUN chmod +x /usr/sbin/confd-wrapper.sh
-
-#SSH Keys
-ADD bin/decrypt-ssh-keys.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/decrypt-ssh-keys.sh
 
 #Etc Config
 ADD etc /etc
