@@ -16,7 +16,7 @@ def init_logging(name):
 
     else:
         formatter = logging.Formatter(
-            '{0}-%(processName)s[%(process)d]: %(name)s: %(message)s'
+            'deployer-{0}[%(process)d]: %(name)s: %(message)s'
             .format(TOTEM_ENV))
         handler = logging.handlers.SysLogHandler(
             address='/dev/log',
