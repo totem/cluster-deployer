@@ -40,7 +40,7 @@ ADD etc /etc
 ADD . /opt/cluster-deployer
 RUN pip install -r /opt/cluster-deployer/requirements.txt
 
-EXPOSE 9000 22
+EXPOSE 9000
 
 WORKDIR /opt/cluster-deployer
 
