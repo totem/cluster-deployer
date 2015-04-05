@@ -34,6 +34,10 @@ RUN chmod +x /usr/sbin/supervisord-wrapper.sh && \
 ADD bin/confd-wrapper.sh /usr/sbin/confd-wrapper.sh
 RUN chmod +x /usr/sbin/confd-wrapper.sh
 
+#SSH Keys
+ADD bin/decrypt-ssh-keys.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/decrypt-ssh-keys.sh
+
 #Etc Config
 ADD etc /etc
 
