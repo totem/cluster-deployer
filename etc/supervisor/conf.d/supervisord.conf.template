@@ -8,8 +8,6 @@ autorestart=true
 startsecs=5
 stdout_logfile=syslog
 stderr_logfile=syslog
-stdout_identifier=deployer-${TOTEM_ENV}
-stderr_identifier=deployer-${TOTEM_ENV}
 
 [program:celerybeat]
 command=/usr/local/bin/celery --loglevel=info -A deployer beat
@@ -17,8 +15,6 @@ autorestart=true
 startsecs=5
 stderr_logfile=syslog
 stdout_logfile=syslog
-stdout_identifier=deployer-${TOTEM_ENV}
-stderr_identifier=deployer-${TOTEM_ENV}
 
 [program:celery-worker-default]
 process_name=%(program_name)s-%(process_num)02d
@@ -28,8 +24,6 @@ autorestart=true
 startsecs=5
 stderr_logfile=syslog
 stdout_logfile=syslog
-stdout_identifier=deployer-${TOTEM_ENV}
-stderr_identifier=deployer-${TOTEM_ENV}
 
 [program:celery-worker-prefork]
 process_name=%(program_name)s-%(process_num)02d
@@ -38,8 +32,6 @@ autorestart=true
 startsecs=5
 stderr_logfile=syslog
 stdout_logfile=syslog
-stdout_identifier=deployer-${TOTEM_ENV}
-stderr_identifier=deployer-${TOTEM_ENV}
 
 [program:uwsgi]
 command=/usr/local/bin/uwsgi --master --catch-exceptions --processes %(ENV_API_EXECUTORS)s --gevent 100 --http :9000 --http-timeout 610 --gevent-monkey-patch --module deployer.server --callable app
@@ -47,6 +39,4 @@ autorestart=true
 startsecs=5
 stderr_logfile=syslog
 stdout_logfile=syslog
-stdout_identifier=deployer-${TOTEM_ENV}
-stderr_identifier=deployer-${TOTEM_ENV}
 

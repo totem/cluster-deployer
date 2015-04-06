@@ -7,6 +7,10 @@ RUN apt-get update && \
     libffi-dev \
     gettext nano
 
+##SSH Key for fleet
+RUN mkdir /root/.ssh
+RUN chmod  500 /root/.ssh & chown -R root:root /root/.ssh
+
 #Confd
 ENV CONFD_VERSION 0.6.2
 RUN curl -L https://github.com/kelseyhightower/confd/releases/download/v$CONFD_VERSION/confd-${CONFD_VERSION}-linux-amd64 -o /usr/local/bin/confd && \
@@ -20,7 +24,7 @@ RUN curl -L https://github.com/coreos/etcd/releases/download/$ETCDCTL_VERSION/et
     rm -rf /tmp/etcd-$ETCDCTL_VERSION-linux-amd64.tar.gz
 
 # Supervisor and App dependencies
-RUN pip install https://github.com/totem/supervisor/archive/feature_syslog-tag.tar.gz
+RUN pip install supervisor==3.1.2
 ADD requirements.txt /opt/requirements.txt
 RUN pip install -r /opt/requirements.txt
 
