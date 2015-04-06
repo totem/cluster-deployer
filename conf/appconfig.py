@@ -4,6 +4,7 @@ import os
 LOG_FORMAT = '%(asctime)s [%(name)s] %(levelname)s %(message)s'
 LOG_DATE = '%Y-%m-%d %I:%M:%S %p'
 LOG_ROOT_LEVEL = os.getenv('LOG_ROOT_LEVEL', 'INFO').upper()
+LOG_IDENTIFIER = os.getenv('LOG_IDENTIFIER', 'cluster-deployer')
 
 
 DEFAULT_DEPLOYMENT_TYPE = 'git-quay'

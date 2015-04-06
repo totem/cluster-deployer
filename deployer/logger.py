@@ -2,7 +2,8 @@ from __future__ import absolute_import
 
 import logging
 from logging.handlers import SysLogHandler
-from conf.appconfig import LOG_FORMAT, LOG_DATE, LOG_ROOT_LEVEL, TOTEM_ENV
+from conf.appconfig import LOG_FORMAT, LOG_DATE, LOG_ROOT_LEVEL, TOTEM_ENV, \
+    LOG_IDENTIFIER
 
 
 def init_logging(name):
@@ -16,8 +17,8 @@ def init_logging(name):
 
     else:
         formatter = logging.Formatter(
-            'deployer-{0}[%(process)d]: %(name)s: %(message)s'
-            .format(TOTEM_ENV))
+            '{0}[%(process)d]: %(name)s: %(message)s'
+            .format(LOG_IDENTIFIER))
         handler = logging.handlers.SysLogHandler(
             address='/dev/log',
             facility=SysLogHandler.LOG_DAEMON)
