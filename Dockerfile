@@ -20,7 +20,7 @@ RUN curl -L https://github.com/coreos/etcd/releases/download/$ETCDCTL_VERSION/et
     rm -rf /tmp/etcd-$ETCDCTL_VERSION-linux-amd64.tar.gz
 
 # Supervisor and App dependencies
-RUN pip install supervisor==3.1.2
+RUN pip install https://github.com/totem/supervisor/archive/feature_syslog-tag.tar.gz
 ADD requirements.txt /opt/requirements.txt
 RUN pip install -r /opt/requirements.txt
 
