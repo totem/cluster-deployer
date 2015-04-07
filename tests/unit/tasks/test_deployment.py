@@ -130,11 +130,6 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
                 'args': {},
                 'enabled': True,
                 'name': 'yoda-ec2-register'
-            },
-            'logger': {
-                'args': {},
-                'enabled': True,
-                'name': 'default-logger'
             }
         },
         'id': 'testowner-testrepo-testref-101',
@@ -239,11 +234,6 @@ def test_deployment_defaults_with_proxy(mock_time):
                 'args': {},
                 'enabled': True,
                 'name': 'yoda-ec2-register'
-            },
-            'logger': {
-                'args': {},
-                'enabled': True,
-                'name': 'default-logger'
             }
         },
         'id': 'testowner-testrepo-testref-101',

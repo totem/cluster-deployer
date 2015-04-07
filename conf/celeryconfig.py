@@ -97,3 +97,7 @@ CELERYBEAT_SCHEDULE = {
         'args': (),
     }
 }
+
+# Logging
+CELERYD_LOG_COLOR = False
+CELERYD_HIJACK_ROOT_LOGGER = False

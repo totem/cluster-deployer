@@ -4,21 +4,12 @@ ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get update && \
     apt-get install -y \
-    openssh-server \
-    openssh-client \
     libffi-dev \
     gettext nano
 
-##SSH Server (To troubleshoot issues with discover)
-RUN mkdir /var/run/sshd && \
-    mkdir /root/.ssh && \
-    chmod  500 /root/.ssh && \
-    chown -R root:root /root/.ssh
-
-#Syslog
-RUN echo '$PreserveFQDN on' | cat - /etc/rsyslog.conf > /tmp/rsyslog.conf && \
-    sudo mv /tmp/rsyslog.conf /etc/rsyslog.conf && \
-    sed -i 's~^#\$ModLoad immark\(.*\)$~$ModLoad immark \1~' /etc/rsyslog.conf
+##SSH Key for fleet
+RUN mkdir /root/.ssh
+RUN chmod  500 /root/.ssh & chown -R root:root /root/.ssh
 
 #Confd
 ENV CONFD_VERSION 0.6.2
@@ -57,7 +48,7 @@ ADD etc /etc
 ADD . /opt/cluster-deployer
 RUN pip install -r /opt/cluster-deployer/requirements.txt
 
-EXPOSE 9000 22
+EXPOSE 9000
 
 WORKDIR /opt/cluster-deployer
 

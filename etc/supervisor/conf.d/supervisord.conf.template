@@ -6,27 +6,14 @@ nodaemon=true
 command=/usr/sbin/confd-wrapper.sh
 autorestart=true
 startsecs=5
-redirect_stderr=true
 stdout_logfile=syslog
-
-[program:sshd]
-command=/usr/sbin/sshd -D
-autorestart=true
-startsecs=5
-redirect_stderr=true
-stdout_logfile=syslog
-
-[program:rsyslog]
-command=rsyslogd -n -c5
-autostart=true
-autorestart=true
-redirect_stderr=true
+stderr_logfile=syslog
 
 [program:celerybeat]
 command=/usr/local/bin/celery --loglevel=info -A deployer beat
 autorestart=true
 startsecs=5
-redirect_stderr=true
+stderr_logfile=syslog
 stdout_logfile=syslog
 
 [program:celery-worker-default]
@@ -35,7 +22,7 @@ command=/usr/local/bin/celery --loglevel=info -Q cluster-deployer-%(ENV_CLUSTER_
 numprocs=${CELERY_GEVENT_EXECUTORS}
 autorestart=true
 startsecs=5
-redirect_stderr=true
+stderr_logfile=syslog
 stdout_logfile=syslog
 
 [program:celery-worker-prefork]
@@ -43,13 +30,13 @@ process_name=%(program_name)s-%(process_num)02d
 command=/usr/local/bin/celery --loglevel=info -Q cluster-deployer-%(ENV_CLUSTER_NAME)s-prefork -n %(program_name)s-%(process_num)02d.%(ENV_HOSTNAME)s -A deployer -c %(ENV_CELERY_PREFORK_CONCURRENCY)s worker
 autorestart=true
 startsecs=5
-redirect_stderr=true
+stderr_logfile=syslog
 stdout_logfile=syslog
 
 [program:uwsgi]
 command=/usr/local/bin/uwsgi --master --catch-exceptions --processes %(ENV_API_EXECUTORS)s --gevent 100 --http :9000 --http-timeout 610 --gevent-monkey-patch --module deployer.server --callable app
 autorestart=true
 startsecs=5
-redirect_stderr=true
+stderr_logfile=syslog
 stdout_logfile=syslog
 
