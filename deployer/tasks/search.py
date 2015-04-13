@@ -5,7 +5,7 @@ import copy
 import datetime
 from conf.appconfig import DEPLOYMENT_STATE_PROMOTED, \
     DEPLOYMENT_STATE_DECOMMISSIONED, DEPLOYMENT_STATE_STARTED, \
-    DOC_TYPE_DEPLOYMENTS, DOC_TYPE_EVENTS
+    DOC_TYPE_DEPLOYMENTS, DOC_TYPE_EVENTS, API_DEFAULT_PAGE_SIZE
 
 from deployer.celery import app
 from deployer.elasticsearch import deployment_search
@@ -142,11 +142,11 @@ def add_search_event_details(details, event_type, search_params):
 @deployment_search
 def find_apps(es=None, idx=None):
     results = es.search(idx, doc_type=DOC_TYPE_DEPLOYMENTS, body={
-        'size': 0,
         'aggs': {
             'apps': {
                 'terms': {
-                    'field': 'deployment.name'
+                    'field': 'deployment.name',
+                    'size': 0
                 }
             }
         }
@@ -190,7 +190,8 @@ def mark_decommissioned(ids, es=None, idx=None):
 
 
 @deployment_search
-def find_deployments(name, version=None, page=0, size=10, es=None, idx=None):
+def find_deployments(name, version=None, page=0, size=API_DEFAULT_PAGE_SIZE,
+                     es=None, idx=None):
     query = {
         "size": size,
         "from": page,
@@ -206,8 +207,8 @@ def find_deployments(name, version=None, page=0, size=10, es=None, idx=None):
 
 
 @deployment_search
-def find_running_deployments(name, version=None, page=0, size=10, es=None,
-                             idx=None):
+def find_running_deployments(name, version=None, page=0,
+                             size=API_DEFAULT_PAGE_SIZE, es=None, idx=None):
     query = {
         "size": size,
         "from": page,
