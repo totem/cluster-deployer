@@ -7,8 +7,7 @@ from conf.appconfig import MIME_JSON, MIME_TASK_V1, \
     SCHEMA_APP_VERSION_V1, MIME_APP_VERSION_V1, MIME_APP_DELETE_V1, \
     SCHEMA_APP_LIST_V1, MIME_APP_LIST_V1, SCHEMA_APP_VERSION_LIST_V1, \
     MIME_APP_VERSION_LIST_V1, MIME_APP_VERSION_DELETE_V1, \
-    SCHEMA_APP_VERSION_UNIT_LIST_V1, MIME_APP_VERSION_UNIT_LIST_V1, \
-    API_DEFAULT_PAGE_SIZE
+    SCHEMA_APP_VERSION_UNIT_LIST_V1, MIME_APP_VERSION_UNIT_LIST_V1
 from deployer.tasks import search
 
 from deployer.tasks.deployment import create, delete, list_units
@@ -60,15 +59,14 @@ class ApplicationApi(MethodView):
         MIME_JSON: SCHEMA_APP_LIST_V1,
         MIME_APP_LIST_V1: SCHEMA_APP_LIST_V1
     }, default=MIME_APP_LIST_V1)
-    @use_paging
-    def list(self, page=0, size=API_DEFAULT_PAGE_SIZE, **kwargs):
+    def list(self, **kwargs):
         """
         Lists all applications. Require search to be enabled.
 
         :param kwargs:
         :return:
         """
-        apps = search.find_apps(page=page, size=size) or []
+        apps = search.find_apps() or []
         return build_response(apps)
 
     @hypermedia.produces({

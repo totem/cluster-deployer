@@ -140,14 +140,13 @@ def add_search_event_details(details, event_type, search_params):
 
 
 @deployment_search
-def find_apps(page=0, size=API_DEFAULT_PAGE_SIZE, es=None, idx=None):
+def find_apps(es=None, idx=None):
     results = es.search(idx, doc_type=DOC_TYPE_DEPLOYMENTS, body={
-        'size': size,
-        'from': page,
         'aggs': {
             'apps': {
                 'terms': {
-                    'field': 'deployment.name'
+                    'field': 'deployment.name',
+                    'size': 0
                 }
             }
         }
