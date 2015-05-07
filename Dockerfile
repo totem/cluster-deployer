@@ -7,8 +7,8 @@ RUN apt-get update --fix-missing && \
     apt-get clean && rm -rf /var/cache/apt/archives/* /var/lib/apt/lists/*
 
 ##SSH Key for fleet
-RUN mkdir /root/.ssh &&
-    chmod  500 /root/.ssh &&
+RUN mkdir /root/.ssh && \
+    chmod  500 /root/.ssh && \
     chown -R root:root /root/.ssh
 
 #Confd
