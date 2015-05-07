@@ -1,15 +1,15 @@
-FROM totem/python-base:2.7-trusty
+FROM totem/python-base:2.7-trusty-b2
 
 ENV DEBIAN_FRONTEND noninteractive
 
-RUN apt-get update && \
-    apt-get install -y \
-    libffi-dev \
-    gettext nano
+RUN apt-get update --fix-missing && \
+    apt-get install -y gettext && \
+    apt-get clean && rm -rf /var/cache/apt/archives/* /var/lib/apt/lists/*
 
 ##SSH Key for fleet
-RUN mkdir /root/.ssh
-RUN chmod  500 /root/.ssh & chown -R root:root /root/.ssh
+RUN mkdir /root/.ssh &&
+    chmod  500 /root/.ssh &&
+    chown -R root:root /root/.ssh
 
 #Confd
 ENV CONFD_VERSION 0.6.2

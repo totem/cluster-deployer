@@ -130,7 +130,8 @@ UPSTREAM_DEFAULTS = {
     'mode': 'http',
     'health': {
         'timeout': '5s'
-    }
+    },
+    'ttl': '1w'
 }
 
 TEMPLATE_DEFAULTS = {

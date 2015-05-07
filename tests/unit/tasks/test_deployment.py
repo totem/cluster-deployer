@@ -261,19 +261,22 @@ def test_deployment_defaults_with_proxy(mock_time):
                     'mode': 'http',
                     'health': {
                         'timeout': '5s'
-                    }
+                    },
+                    'ttl': '1w'
                 },
                 '8081': {
                     'mode': 'tcp',
                     'health': {
                         'timeout': '5s'
-                    }
+                    },
+                    'ttl': '1w'
                 },
                 '8082': {
                     'mode': 'http',
                     'health': {
                         'timeout': '5s'
-                    }
+                    },
+                    'ttl': '1w'
                 }
             },
             'listeners': {}
