@@ -216,6 +216,11 @@
           "description": "Proxy mode (http or tcp)",
           "enum": [ "http", "tcp" ],
           "default": "http"
+        },
+        "ttl": {
+          "description": "Time to live for this upstream during which no registration is received for node discovery.",
+          "default": "1w",
+          "type": "string"
         }
       },
       "additionalProperties": false

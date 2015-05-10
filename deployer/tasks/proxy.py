@@ -9,10 +9,11 @@ import yoda.client
 from celery.canvas import chord, group
 from deployer.celery import app
 from conf.appconfig import TOTEM_ETCD_SETTINGS, DEPLOYMENT_MODE_BLUEGREEN, \
-    TASK_SETTINGS
+    TASK_SETTINGS, UPSTREAM_DEFAULTS
 from yoda.model import Location, Host, TcpListener
 from yoda.client import as_upstream
 from deployer.tasks.exceptions import MinNodesNotDiscovered
+from deployer.util import to_milliseconds
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +76,9 @@ def register_upstreams(app_name, app_version, upstreams,
         yoda_cl.register_upstream(
             upstream_name, mode=upstream.get('mode', 'http'),
             health_uri=health.get('uri'), health_timeout=health.get('timeout'),
-            health_interval=health.get('interval')
+            health_interval=health.get('interval'),
+            ttl=to_milliseconds(
+                upstream.get('ttl', UPSTREAM_DEFAULTS['ttl'])) / 1000
         )
     return next_task() if next_task else None
 

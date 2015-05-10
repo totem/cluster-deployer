@@ -18,7 +18,7 @@ import signal
 import time
 import math
 
-INTERVAL_FORMAT = '^\\s*(\d+)(ms|h|m|s)\\s*$'
+INTERVAL_FORMAT = '^\\s*(\d+)(ms|h|m|s|d|w)\\s*$'
 
 
 def dict_merge(*dictionaries):
@@ -145,10 +145,12 @@ def to_milliseconds(interval):
         suffix = match.group(2)
         prefix = int(match.group(1))
         converter = {
-            's': lambda prefix: prefix * 1000,
-            'm': lambda prefix: prefix * 60 * 1000,
-            'h': lambda prefix: prefix * 60 * 60 * 1000,
-        }.get(suffix, lambda prefix: prefix)
+            's': lambda use_prefix: use_prefix * 1000,
+            'm': lambda use_prefix: use_prefix * 60 * 1000,
+            'h': lambda use_prefix: use_prefix * 60 * 60 * 1000,
+            'd': lambda use_prefix: use_prefix * 24 * 60 * 60 * 1000,
+            'w': lambda use_prefix: use_prefix * 07 * 24 * 60 * 60 * 1000,
+        }.get(suffix, lambda use_prefix: use_prefix)
         return converter(prefix)
     else:
         # Invalid interval. Raise exception.

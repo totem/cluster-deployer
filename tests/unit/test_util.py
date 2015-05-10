@@ -53,13 +53,13 @@ def test_to_milliseconds_for_valid_formats():
     """
 
     # Given: Intervals that needs to be converted
-    intervals = ['5s', '2h', '2m', '3ms']
+    intervals = ['5s', '2h', '2m', '3ms', '2d', '3w']
 
     # When: I convert given intervals to milliseconds
     converted = [util.to_milliseconds(interval) for interval in intervals]
 
     # Then: Expected millisends for each interval is returned
-    eq_(converted, [5000, 7200000, 120000, 3])
+    eq_(converted, [5000, 7200000, 120000, 3, 172800000, 1814400000])
 
 
 @raises(util.InvalidInterval)
@@ -86,7 +86,7 @@ def test_dict_representation_for_invalid_interval():
     dict_compare(output, {
         'code': 'INVALID_INTERVAL',
         'message': 'Invalid interval specified:invalid. Interval should '
-                   'match format: ^\\s*(\d+)(ms|h|m|s)\\s*$',
+                   'match format: ^\\s*(\d+)(ms|h|m|s|d|w)\\s*$',
         'details': {
             'interval': 'invalid'
         }
@@ -103,4 +103,4 @@ def test_str_representation_for_invalid_interval():
 
     # Then: Expected representation is returned
     eq_(output, 'Invalid interval specified:invalid. Interval should '
-                'match format: ^\\s*(\d+)(ms|h|m|s)\\s*$')
+                'match format: ^\\s*(\d+)(ms|h|m|s|d|w)\\s*$')

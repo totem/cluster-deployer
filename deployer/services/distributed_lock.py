@@ -4,7 +4,7 @@ Provides distributed locking using Etcd Backed store
 import uuid
 
 import etcd
-from conf.appconfig import TOTEM_ETCD_SETTINGS
+from conf.appconfig import TOTEM_ETCD_SETTINGS, DEFAULT_LOCK_TTL
 
 
 __author__ = 'sukrit'
@@ -34,7 +34,8 @@ class LockService:
     """
 
     def __init__(self, etcd_cl=None, etcd_base=TOTEM_ETCD_SETTINGS['base'],
-                 lock_base='/cluster-deployer/locks/apps', lock_ttl=600):
+                 lock_base='/cluster-deployer/locks/apps',
+                 lock_ttl=DEFAULT_LOCK_TTL):
         """
         :param etcd_cl: Etcd Client instance. If None, a new client is created
             based on env settings.

@@ -11,6 +11,7 @@ from tests.helper import dict_compare
 
 MOCK_APP = 'mock-app'
 MOCK_VERSION = 'mock-version'
+DEFAULT_TTL_MS = 604800
 
 
 def _get_mock_proxy_with_hosts():
@@ -158,9 +159,11 @@ def test_register_upstreams_for_blue_green(mock_yoda_cl):
     eq_(mock_yoda_cl().register_upstream.call_count, 2)
     eq_(mock_yoda_cl().register_upstream.call_args_list, [
         call('mock-app-mock-version-8080', health_uri='/health',
-             health_timeout='5s', mode='http', health_interval='5m'),
+             health_timeout='5s', mode='http', health_interval='5m',
+             ttl=DEFAULT_TTL_MS),
         call('mock-app-mock-version-22', health_uri=None,
-             health_timeout=None, mode='tcp', health_interval=None)
+             health_timeout=None, mode='tcp', health_interval=None,
+             ttl=DEFAULT_TTL_MS),
         ])
 
 
@@ -191,9 +194,11 @@ def test_register_upstreams_for_ab_deploy(mock_yoda_cl):
     eq_(mock_yoda_cl().register_upstream.call_count, 2)
     eq_(mock_yoda_cl().register_upstream.call_args_list, [
         call('mock-app-8080', health_uri='/health',
-             health_timeout='5s', mode='http', health_interval=None),
+             health_timeout='5s', mode='http', health_interval=None,
+             ttl=DEFAULT_TTL_MS),
         call('mock-app-22', health_uri=None,
-             health_timeout=None, mode='tcp', health_interval=None)
+             health_timeout=None, mode='tcp', health_interval=None,
+             ttl=DEFAULT_TTL_MS)
         ])
 
 
