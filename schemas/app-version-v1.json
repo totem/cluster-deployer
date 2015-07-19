@@ -117,6 +117,7 @@
       "type": "object",
       "properties": {
         "hosts": {
+          "type": "object",
           "description": "Hosts associated with the proxy",
           "patternProperties": {
             ".*": {
@@ -155,6 +156,7 @@
         },
         "locations": {
           "description": "Locations for given proxy host.",
+          "type": "object",
           "patternProperties": {
             ".*": {
               "$ref": "#/definitions/location"

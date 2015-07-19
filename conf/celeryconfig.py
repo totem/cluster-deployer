@@ -4,11 +4,13 @@ from ast import literal_eval
 
 from celery.schedules import crontab
 from kombu import Queue
+from conf.appconfig import MONGODB_DB, MONGODB_HOST, MONGODB_AUTH, MONGODB_PORT
 
 TOTEM_ENV = os.getenv('TOTEM_ENV', 'local')
 CLUSTER_NAME = os.getenv('CLUSTER_NAME', TOTEM_ENV)
 
 MESSAGES_TTL = 7200 * 1000
+
 
 # Broker and Queue Settings
 AMQP_USERNAME = os.getenv('AMQP_USERNAME', 'guest')
@@ -52,7 +54,13 @@ CELERY_ROUTES = {
     }
 }
 
-CELERY_RESULT_BACKEND = 'amqp'
+# Backend Settings
+CELERY_RESULT_BACKEND = 'mongodb://{0}{1}:{2}/{3}'.format(
+    MONGODB_AUTH, MONGODB_HOST, MONGODB_PORT, MONGODB_DB)
+CELERY_MONGODB_BACKEND_SETTINGS = {
+    'database': MONGODB_DB,
+    'taskmeta_collection': 'deployer-task-results-%s' % CLUSTER_NAME,
+}
 CELERY_RESULT_EXCHANGE = 'cluster-deployer-%s-results' % CLUSTER_NAME
 CELERY_IMPORTS = ('deployer.tasks', 'deployer.tasks.deployment',
                   'deployer.tasks.common', 'deployer.tasks.proxy',
