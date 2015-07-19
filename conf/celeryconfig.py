@@ -4,7 +4,7 @@ from ast import literal_eval
 
 from celery.schedules import crontab
 from kombu import Queue
-from conf.appconfig import MONGODB_DB, MONGODB_HOST, MONGODB_AUTH, MONGODB_PORT
+from conf.appconfig import MONGODB_DB, MONGODB_URL
 
 TOTEM_ENV = os.getenv('TOTEM_ENV', 'local')
 CLUSTER_NAME = os.getenv('CLUSTER_NAME', TOTEM_ENV)
@@ -55,8 +55,7 @@ CELERY_ROUTES = {
 }
 
 # Backend Settings
-CELERY_RESULT_BACKEND = 'mongodb://{0}{1}:{2}/{3}'.format(
-    MONGODB_AUTH, MONGODB_HOST, MONGODB_PORT, MONGODB_DB)
+CELERY_RESULT_BACKEND = MONGODB_URL
 CELERY_MONGODB_BACKEND_SETTINGS = {
     'database': MONGODB_DB,
     'taskmeta_collection': 'deployer-task-results-%s' % CLUSTER_NAME,
