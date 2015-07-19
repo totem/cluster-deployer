@@ -34,9 +34,12 @@
         "job-id": {
           "type": "string",
           "maxLength": 100
+        },
+        "deployer": {
+          "type": "object"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "git": {
       "properties": {
@@ -57,7 +60,7 @@
           "maxLength": 100
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "deployment": {
       "properties": {
