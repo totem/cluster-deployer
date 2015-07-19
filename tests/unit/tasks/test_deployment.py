@@ -97,6 +97,9 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
                 'ref': 'testref',
                 'commit': 'testcommit',
                 'type': 'github'
+            },
+            'deployer': {
+                'cluster': CLUSTER_NAME
             }
         },
         'deployment': {
@@ -199,6 +202,9 @@ def test_deployment_defaults_with_proxy(mock_time):
                 'ref': 'testref',
                 'commit': 'testcommit',
                 'type': 'github'
+            },
+            'deployer': {
+                'cluster': CLUSTER_NAME
             }
         },
         'deployment': {
@@ -320,6 +326,9 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
                 'ref': 'testref',
                 'commit': 'testcommit',
                 'type': 'github'
+            },
+            'deployer': {
+                'cluster': CLUSTER_NAME
             }
         },
         'deployment': {
@@ -420,6 +429,9 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
                 'ref': 'testref',
                 'commit': 'testcommit',
                 'type': 'github'
+            },
+            'deployer': {
+                'cluster': CLUSTER_NAME
             }
         },
         'deployment': {

@@ -438,6 +438,13 @@ def _deployment_defaults(deployment):
         env['DISCOVER_MODE'] = deployment_upd['deployment']['mode']
         env['DISCOVER_HEALTH'] = json.dumps(
             _create_discover_check(deployment_upd))
+
+    # Override/Set Clustername in meta-info
+    deployment_upd['meta-info'] = dict_merge({
+        'deployer': {
+            'cluster': CLUSTER_NAME
+        }
+    }, deployment_upd['meta-info'])
     return deployment_upd
 
 
