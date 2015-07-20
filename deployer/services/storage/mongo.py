@@ -85,9 +85,9 @@ class MongoStore(AbstractStore):
 
     def update_state(self, deployment_id, state):
         if state == 'PROMOTED':
-            expiry = datetime.datetime.now(tz=pytz.UTC)
-        else:
             expiry = datetime.datetime.max
+        else:
+            expiry = datetime.datetime.now(tz=pytz.UTC)
         self._deployments.update_one(
             {
                 'deployment.id': deployment_id,
