@@ -540,7 +540,7 @@ def test_get_exposed_ports_with_hosts_and_listenres():
 
 
 @app.task
-def mock_callback():
+def mock_callback():  # pragma: no cover
     return True
 
 
