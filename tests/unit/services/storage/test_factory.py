@@ -25,7 +25,7 @@ def test_get_default_store_from_cache(mock_create):
 @raises(NotImplementedError)
 def test_get_non_existing_store():
     # When: I get the default store from the factory
-    store = get_store(name='fakestore')
+    get_store(name='fakestore')
 
 
 class TestAbstractStorageFactory:
