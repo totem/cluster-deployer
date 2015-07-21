@@ -29,6 +29,10 @@ class TestAbstractStore:
         self.store.update_state('fake_id', 'PROMOTED')
 
     @raises(NotImplementedError)
+    def test_update_state_bulk(self):
+        self.store.update_state_bulk('myapp', 'DECOMMISSIONED')
+
+    @raises(NotImplementedError)
     def test_get_health(self):
         self.store.health()
 

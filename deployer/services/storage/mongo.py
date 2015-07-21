@@ -3,7 +3,8 @@ from pymongo import MongoClient
 import pymongo
 import pytz
 from conf.appconfig import MONGODB_URL, MONGODB_DEPLOYMENT_COLLECTION, \
-    MONGODB_DB, DEPLOYMENT_EXPIRY_SECONDS, MONGODB_EVENT_COLLECTION
+    MONGODB_DB, DEPLOYMENT_EXPIRY_SECONDS, MONGODB_EVENT_COLLECTION, \
+    DEPLOYMENT_STATE_PROMOTED
 from deployer.services.storage.base import AbstractStore
 
 __author__ = 'sukrit'
@@ -54,8 +55,7 @@ class MongoStore(AbstractStore):
 
         if 'modified_idx' not in idxs:
             self._deployments.create_index(
-                [('modified', pymongo.DESCENDING)], name='modified_idx',
-                unique=True)
+                [('modified', pymongo.DESCENDING)], name='modified_idx')
 
         if 'expiry_idx' not in idxs:
             self._deployments.create_index(
@@ -95,11 +95,13 @@ class MongoStore(AbstractStore):
             upsert=True
         )
 
+    @staticmethod
+    def _generate_expiry(state):
+        if state == DEPLOYMENT_STATE_PROMOTED:
+            return datetime.datetime.max
+        return datetime.datetime.now(tz=pytz.UTC)
+
     def update_state(self, deployment_id, state):
-        if state == 'PROMOTED':
-            expiry = datetime.datetime.max
-        else:
-            expiry = datetime.datetime.now(tz=pytz.UTC)
         self._deployments.update_one(
             {
                 'deployment.id': deployment_id,
@@ -108,7 +110,7 @@ class MongoStore(AbstractStore):
                 '$set': {
                     'state': state,
                     'modified': datetime.datetime.now(tz=pytz.UTC),
-                    '_expiry': expiry
+                    '_expiry': self._generate_expiry(state)
                 }
             }
         )
@@ -140,3 +142,22 @@ class MongoStore(AbstractStore):
         :return:
         """
         self._events.insert_one(event)
+
+    def update_state_bulk(self, name, new_state, existing_state=None,
+                          version=None):
+        u_filter = {
+            'deployment.name': name
+        }
+        if existing_state:
+            u_filter['state'] = existing_state
+
+        if version:
+            u_filter['deployment.version'] = version
+
+        self._deployments.update_many(u_filter, {
+            '$set': {
+                'state': new_state,
+                'modified': datetime.datetime.now(tz=pytz.UTC),
+                '_expiry': self._generate_expiry(new_state)
+            }
+        })

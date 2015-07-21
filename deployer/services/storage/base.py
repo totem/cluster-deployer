@@ -10,6 +10,19 @@ Module containing methods for storing deployment/other information in persist
 storage like mongo
 """
 
+EVENT_NEW_DEPLOYMENT = 'NEW_DEPLOYMENT'
+EVENT_ACQUIRED_LOCK = 'ACQUIRED_LOCK'
+EVENT_UNDEPLOYED_EXISTING = 'UNDEPLOYED_EXISTING'
+EVENT_UNITS_ADDED = 'UNITS_ADDED'
+EVENT_UNITS_STARTED = 'UNITS_STARTED'
+EVENT_UNITS_DEPLOYED = 'UNITS_DEPLOYED'
+EVENT_NODES_DISCOVERED = 'NODES_DISCOVERED'
+EVENT_DEPLOYMENT_CHECK_PASSED = 'DEPLOYMENT_CHECK_PASSED'
+EVENT_WIRED = 'WIRED'
+EVENT_UPSTREAMS_REGISTERED = 'UPSTREAMS_REGISTERED'
+EVENT_PROMOTED = 'PROMOTED'
+EVENT_DEPLOYMENT_FAILED = 'DEPLOYMENT_FAILED'
+
 
 class AbstractStore:
 
@@ -77,6 +90,25 @@ class AbstractStore:
             'component': 'deployer'
         })
         self._add_raw_event(event_upd)
+
+    def update_state_bulk(self, name, new_state, existing_state=None,
+                          version=None):
+        """
+        Bulk update the state for deployments matching name , optional version
+        and optional state to new state
+        :param name: Name of the deployment
+        :type name: str
+        :param new_state: New state for the deployment
+        :type new_state: str
+        :keyword existing_state: Existing state of deployment. If None,
+            deployments matching all state are updated
+        :type existing_state: str
+        :keyword version: Optional version of the deployment. If None,
+            deployments matching all versions are updated
+        :type version: str
+        :return: None
+        """
+        self.not_supported()
 
     def _add_raw_event(self, event):
         """
