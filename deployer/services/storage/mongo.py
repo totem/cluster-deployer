@@ -161,3 +161,12 @@ class MongoStore(AbstractStore):
                 '_expiry': self._generate_expiry(new_state)
             }
         })
+
+    def find_apps(self):
+        return [
+            app['_id'] for app in
+            self._deployments.aggregate([
+                {'$group': {'_id': '$deployment.name'}},
+                {'$sort':  {'_id':  1}}
+            ]) or []
+        ]

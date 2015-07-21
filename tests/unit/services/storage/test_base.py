@@ -61,6 +61,10 @@ class TestAbstractStore:
         self.store.setup()
         # NOOP
 
+    @raises(NotImplementedError)
+    def test_find_apps(self):
+        self.store.find_apps()
+
     @freeze_time(NOW)
     def test_apply_modified_ts(self):
 

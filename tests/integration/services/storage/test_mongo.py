@@ -39,6 +39,15 @@ EXISTING_DEPLOYMENTS = {
         },
         'state': DEPLOYMENT_STATE_NEW,
         '_expiry': NOW_CURRENT_TZ
+    },
+    'test-deployment2-v1': {
+        'deployment': {
+            'id': 'test-deployment2-v1',
+            'name': 'test-deployment2',
+            'version': 'v2'
+        },
+        'state': DEPLOYMENT_STATE_NEW,
+        '_expiry': NOW_CURRENT_TZ
     }
 }
 
@@ -212,3 +221,10 @@ class TestMongoStore():
                 deployment_name))
         eq_(deployments[0]['state'], DEPLOYMENT_STATE_DECOMMISSIONED)
         eq_(deployments[1]['state'], DEPLOYMENT_STATE_NEW)
+
+    def test_find_apps(self):
+        # When: I find applications from the store
+        apps = self.store.find_apps()
+
+        # Then: Expected apps are returned
+        eq_(apps, ['test-deployment1', 'test-deployment2'])

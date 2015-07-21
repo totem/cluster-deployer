@@ -110,6 +110,14 @@ class AbstractStore:
         """
         self.not_supported()
 
+    def find_apps(self):
+        """
+        Looks up all applications names
+        :return: List of application names (str)
+        :rtype: list
+        """
+        self.not_supported()
+
     def _add_raw_event(self, event):
         """
         Adds raw event to store.
@@ -120,6 +128,10 @@ class AbstractStore:
         self.not_supported()
 
     def setup(self):
+        """
+        Setup the store prior to use.
+        :return: None
+        """
         # No Setup needed by default
         pass
 
