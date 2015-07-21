@@ -257,7 +257,9 @@ MONGODB_DEFAULT_URL = 'mongodb://{0}{1}:{2}/{3}'.format(
     MONGODB_AUTH, MONGODB_HOST, MONGODB_PORT, MONGODB_DB)
 MONGODB_URL = os.getenv('MONGODB_URL') or MONGODB_DEFAULT_URL
 MONGODB_DEPLOYMENT_COLLECTION = os.getenv('MONGODB_DEPLOYMENT_COLLECTION') or \
-    'deployments-{}'.format(CLUSTER_NAME)
+    'deployments'
+MONGODB_EVENT_COLLECTION = os.getenv('MONGODB_EVENT_COLLECTION') or \
+    'events'
 
 # Number of seconds after a non running deployment will expire
 DEFAULT_DEPLOYMENT_EXPIRY_SECONDS = 4 * 7 * 24 * 3600  # 4 weeks

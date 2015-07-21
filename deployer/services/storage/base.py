@@ -1,3 +1,4 @@
+import copy
 import datetime
 import pytz
 from deployer.util import dict_merge
@@ -50,8 +51,39 @@ class AbstractStore:
         """
         Update the state of given deployment
         :param deployment_id: Deployment id
+        :type deployment_id: str
         :param state: State of the deployment (e.g. PROMOTED, NEW, etc)
-        :return:
+        :type state: str
+        :return: None
+        """
+        self.not_supported()
+
+    def add_event(self, event_type, details=None, search_params=None):
+        """
+        Adds event to event store
+        :param event_type: Type of event
+        :type event_type: str
+        :keyword details: Details associated with event
+        :type details: dict
+        :keyword search_params: Additional meta-info associated with event
+        :type search_params: dict
+        :return: None
+        """
+        event_upd = copy.deepcopy(search_params or {})
+        event_upd.update({
+            'type': event_type,
+            'details': details,
+            'date': datetime.datetime.utcnow(),
+            'component': 'deployer'
+        })
+        self._add_raw_event(event_upd)
+
+    def _add_raw_event(self, event):
+        """
+        Adds raw event to store.
+        :param event: Event Details
+        :type event: dict
+        :return: None
         """
         self.not_supported()
 

@@ -58,9 +58,9 @@ CELERY_ROUTES = {
 CELERY_RESULT_BACKEND = MONGODB_URL
 CELERY_MONGODB_BACKEND_SETTINGS = {
     'database': MONGODB_DB,
-    'taskmeta_collection': 'deployer-task-results-%s' % CLUSTER_NAME,
+    'taskmeta_collection': 'deployer-task-results',
 }
-CELERY_RESULT_EXCHANGE = 'cluster-deployer-%s-results' % CLUSTER_NAME
+CELERY_RESULT_EXCHANGE = 'cluster-deployer-results'
 CELERY_IMPORTS = ('deployer.tasks', 'deployer.tasks.deployment',
                   'deployer.tasks.common', 'deployer.tasks.proxy',
                   'celery.task')

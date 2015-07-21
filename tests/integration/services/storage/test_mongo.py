@@ -29,8 +29,12 @@ class TestMongoStore():
 
     @classmethod
     def setup(cls):
-        cls.store = create(deployment_coll='deployments-integration-store')
+        cls.store = create(
+            deployment_coll='deployments-integration-store',
+            event_coll='events-integration-store'
+        )
         cls.store._deployments.drop()
+        cls.store._events.drop()
         cls.store.setup()
         cls.store._deployments.insert_one(copy.deepcopy(EXISTING_DEPLOYMENT1))
 
@@ -110,3 +114,31 @@ class TestMongoStore():
         # Then: Expected health instance is returned
         for key in ('nodes', 'primary', 'secondaries', 'collections'):
             ok_(key in health)
+
+    @freeze_time(NOW)
+    def test_add_event(self):
+
+        # When: I add event to mongo store
+        self.store.add_event(
+            'MOCK_EVENT',
+            details={'mock': 'details'},
+            search_params={
+                'meta-info': {
+                    'mock': 'search'
+                }
+            })
+
+        # Then: Event gets added as expected
+        event = self.store._events.find_one({'type': 'MOCK_EVENT'})
+        del(event['_id'])
+        dict_compare(event, {
+            'component': 'deployer',
+            'type': 'MOCK_EVENT',
+            'date': NOW,
+            'meta-info': {
+                'mock': 'search'
+            },
+            'details': {
+                'mock': 'details'
+            }
+        })

@@ -59,6 +59,7 @@ def get_store(name=DEFAULT_STORE_NAME, factory=DEFAULT_FACTORY):
     Gets store provider from factory
     :param factory:
     :param store_name:
-    :return:
+    :return: Storage Provider
+    :rtype: deployer.services.storage.base.AbstractStore
     """
     return factory.get(name)

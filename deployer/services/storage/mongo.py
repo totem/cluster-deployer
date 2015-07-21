@@ -3,14 +3,16 @@ from pymongo import MongoClient
 import pymongo
 import pytz
 from conf.appconfig import MONGODB_URL, MONGODB_DEPLOYMENT_COLLECTION, \
-    MONGODB_DB, DEPLOYMENT_EXPIRY_SECONDS
+    MONGODB_DB, DEPLOYMENT_EXPIRY_SECONDS, MONGODB_EVENT_COLLECTION
 from deployer.services.storage.base import AbstractStore
 
 __author__ = 'sukrit'
 
 
 def create(url=MONGODB_URL, dbname=MONGODB_DB,
-           deployment_coll=MONGODB_DEPLOYMENT_COLLECTION):
+           deployment_coll=MONGODB_DEPLOYMENT_COLLECTION,
+           event_coll=MONGODB_EVENT_COLLECTION
+           ):
     """
     Creates Instance of MongoStore
     :keyword url: MongoDB Connection String
@@ -22,7 +24,7 @@ def create(url=MONGODB_URL, dbname=MONGODB_DB,
     :return: Instance of MongoStore
     :rtype: MongoStore
     """
-    return MongoStore(url, dbname, deployment_coll)
+    return MongoStore(url, dbname, deployment_coll, event_coll)
 
 
 class MongoStore(AbstractStore):
@@ -30,10 +32,11 @@ class MongoStore(AbstractStore):
     Mongo based implementation of store.
     """
 
-    def __init__(self, url, dbname, deployment_coll):
+    def __init__(self, url, dbname, deployment_coll, event_coll):
         self.client = MongoClient(url)
         self.dbname = dbname
         self.deployment_coll = deployment_coll
+        self.event_coll = event_coll
 
     def setup(self):
         """
@@ -71,6 +74,15 @@ class MongoStore(AbstractStore):
         :rtype: pymongo.collection.Collection
         """
         return self._db[self.deployment_coll]
+
+    @property
+    def _events(self):
+        """
+        Gets the events collection reference
+        :return: Event collection reference
+        :rtype: pymongo.collection.Collection
+        """
+        return self._db[self.event_coll]
 
     def create_deployment(self, deployment):
         deployment_upd = self.apply_modified_ts(deployment)
@@ -120,3 +132,11 @@ class MongoStore(AbstractStore):
             'collections': self._db.collection_names(
                 include_system_collections=False)
         }
+
+    def _add_raw_event(self, event):
+        """
+        Adds event to event store
+        :param event:
+        :return:
+        """
+        self._events.insert_one(event)

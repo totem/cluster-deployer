@@ -8,6 +8,7 @@ from tests.helper import dict_compare
 
 
 NOW = datetime.datetime(2022, 01, 01, tzinfo=pytz.UTC)
+NOW_NOTZ = datetime.datetime(2022, 01, 01)
 
 
 class TestAbstractStore:
@@ -30,6 +31,27 @@ class TestAbstractStore:
     @raises(NotImplementedError)
     def test_get_health(self):
         self.store.health()
+
+    @freeze_time(NOW_NOTZ)
+    def test_add_event(self):
+        # Given: Mock implementation for adding raw event
+        self.store._add_raw_event = MagicMock()
+
+        # When: I add event to the store
+        self.store.add_event('MOCK_EVENT')
+
+        # Then: Event gets added to the store
+        self.store._add_raw_event.assert_called_once_with({
+            'type': 'MOCK_EVENT',
+            'component': 'deployer',
+            'details': None,
+            'date': NOW_NOTZ
+
+        })
+
+    @raises(NotImplementedError)
+    def test_add_raw_event(self):
+        self.store.add_event({})
 
     def test_setup(self):
         self.store.setup()
