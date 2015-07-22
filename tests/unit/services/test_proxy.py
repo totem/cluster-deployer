@@ -1,13 +1,13 @@
 """
-Tests for tasks defined in deployer.tasks.yoda
+Tests proxy service methods
 """
 from mock import patch, call
-from nose.tools import eq_, assert_raises
+from nose.tools import eq_
 from yoda import Host, Location
-from deployer.tasks.exceptions import MinNodesNotDiscovered
-from deployer.tasks.proxy import wire_proxy, register_upstreams, \
-    _check_discover
-from tests.helper import dict_compare
+from conf.appconfig import DEPLOYMENT_MODE_BLUEGREEN, DEPLOYMENT_MODE_AB
+from deployer.services.proxy import wire_proxy, register_upstreams, \
+    get_discovered_nodes
+
 
 MOCK_APP = 'mock-app'
 MOCK_VERSION = 'mock-version'
@@ -53,8 +53,7 @@ def test_wire_for_bluegreen(mock_yoda_cl):
     proxy = _get_mock_proxy_with_hosts()
 
     # When: I wire the proxy
-    result = wire_proxy.delay(MOCK_APP, MOCK_VERSION, proxy)
-    result.get(timeout=1)
+    wire_proxy(MOCK_APP, MOCK_VERSION, proxy)
 
     # Then: Yoda proxy hosts are created using given version
     eq_(mock_yoda_cl().wire_proxy.call_count, 2)
@@ -110,9 +109,8 @@ def test_wire_for_ab(mock_yoda_cl):
     }
 
     # When: I wire the proxy in a/b mode
-    result = wire_proxy.delay(MOCK_APP, MOCK_VERSION, proxy,
-                              deployment_mode='a/b')
-    result.get(timeout=1)
+    wire_proxy(MOCK_APP, MOCK_VERSION, proxy,
+               deployment_mode=DEPLOYMENT_MODE_AB)
 
     # Then: Yoda proxy hosts are created as expected
     eq_(mock_yoda_cl().wire_proxy.call_count, 1)
@@ -150,12 +148,10 @@ def test_register_upstreams_for_blue_green(mock_yoda_cl):
     }
 
     # When: I wire the proxy in a/b mode
-    result = register_upstreams.delay(
+    register_upstreams(
         MOCK_APP, MOCK_VERSION, upstreams, deployment_mode='blue-green')
-    output = result.get(timeout=1)
 
     # Then: Upstreams get registered
-    eq_(output, None)
     eq_(mock_yoda_cl().register_upstream.call_count, 2)
     eq_(mock_yoda_cl().register_upstream.call_args_list, [
         call('mock-app-mock-version-8080', health_uri='/health',
@@ -185,12 +181,10 @@ def test_register_upstreams_for_ab_deploy(mock_yoda_cl):
     }
 
     # When: I wire the proxy in a/b mode
-    result = register_upstreams.delay(
+    register_upstreams(
         MOCK_APP, MOCK_VERSION, upstreams, deployment_mode='a/b')
-    output = result.get(timeout=1)
 
     # Then: Upstreams get registered
-    eq_(output, None)
     eq_(mock_yoda_cl().register_upstream.call_count, 2)
     eq_(mock_yoda_cl().register_upstream.call_args_list, [
         call('mock-app-8080', health_uri='/health',
@@ -206,7 +200,8 @@ def test_register_upstreams_for_ab_deploy(mock_yoda_cl):
 def test_check_discover_when_port_is_not_defined(mock_yoda_cl):
 
     # When: I check discover for app with no check-port defined
-    nodes = _check_discover('mockapp', 'mockversion', None, 1, 'blue-green')
+    nodes = get_discovered_nodes('mockapp', 'mockversion', None,
+                                 DEPLOYMENT_MODE_BLUEGREEN)
 
     # Then: Discover check is skipped
     eq_(nodes, {})
@@ -222,7 +217,8 @@ def test_check_discover_for_existing_nodes(mock_yoda_cl):
     }
 
     # When: I check discover for app with no check-port defined
-    nodes = _check_discover('mockapp', 'mockversion', 8080, 2, 'blue-green')
+    nodes = get_discovered_nodes(
+        'mockapp', 'mockversion', 8080, DEPLOYMENT_MODE_BLUEGREEN)
 
     # Then: Discover check passes
     eq_(nodes, mock_yoda_cl().get_nodes.return_value)
@@ -239,28 +235,10 @@ def test_check_discover_for_existing_nodes_with_ab_deploy(mock_yoda_cl):
     }
 
     # When: I check discover for app with no check-port defined
-    nodes = _check_discover('mockapp', 'mockversion', 8080, 2, 'a/b')
+    nodes = get_discovered_nodes(
+        'mockapp', 'mockversion', 8080, DEPLOYMENT_MODE_AB)
 
     # Then: Discover check passes
     eq_(nodes, mock_yoda_cl().get_nodes.return_value)
     mock_yoda_cl().get_nodes.assert_called_once_with(
         'mockapp-8080')
-
-
-@patch('yoda.client.Client')
-def test_check_discover_for_min_node_criteria_not_met(mock_yoda_cl):
-    # Given: Existing nodes
-    mock_yoda_cl().get_nodes.return_value = {
-        'node1': 'mockhost1:48080',
-    }
-
-    # When: I check discover for app with no check-port defined
-    with assert_raises(MinNodesNotDiscovered) as cm:
-        _check_discover('mockapp', 'mockversion', 8080, 2, 'blue-green')
-
-    # Then: Discover check fails
-    error = cm.exception
-    eq_(error.name, 'mockapp')
-    eq_(error.version, 'mockversion')
-    eq_(error.min_nodes, 2)
-    dict_compare(error.discovered_nodes, {'node1': 'mockhost1:48080'})
