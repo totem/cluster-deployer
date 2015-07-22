@@ -21,8 +21,8 @@ NOW = datetime.datetime(2022, 01, 01)
 
 EXISTING_DEPLOYMENTS = {
     'test-deployment1-v0': {
+        'id': 'test-deployment1-v0',
         'deployment': {
-            'id': 'test-deployment1-v0',
             'name': 'test-deployment1',
             'version': 'v0'
         },
@@ -30,8 +30,8 @@ EXISTING_DEPLOYMENTS = {
         '_expiry': NOW
     },
     'test-deployment1-v1': {
+        'id': 'test-deployment1-v1',
         'deployment': {
-            'id': 'test-deployment1-v1',
             'name': 'test-deployment1',
             'version': 'v1'
         },
@@ -39,8 +39,8 @@ EXISTING_DEPLOYMENTS = {
         '_expiry': NOW
     },
     'test-deployment1-v2': {
+        'id': 'test-deployment1-v2',
         'deployment': {
-            'id': 'test-deployment1-v2',
             'name': 'test-deployment1',
             'version': 'v2'
         },
@@ -48,8 +48,8 @@ EXISTING_DEPLOYMENTS = {
         '_expiry': NOW
     },
     'test-deployment2-v1': {
+        'id': 'test-deployment2-v1',
         'deployment': {
-            'id': 'test-deployment2-v1',
             'name': 'test-deployment2',
             'version': 'v2'
         },
@@ -76,7 +76,7 @@ class TestMongoStore():
 
     def _get_raw_document_without_internal_id(self, deployment_id):
         deployment = self.store._deployments.find_one(
-            {'deployment.id': deployment_id},
+            {'id': deployment_id},
             projection={'_id': False}
         )
         return deployment
@@ -84,7 +84,7 @@ class TestMongoStore():
     def _find_matching_deployments_with_name(self, name):
         deployments = self.store._deployments.find({
             'deployment.name': name
-        }, projection={'_id': False}).sort('deployment.id',
+        }, projection={'_id': False}).sort('id',
                                            pymongo.ASCENDING)
         deployments = [deployment for deployment in deployments]
         return deployments
@@ -116,9 +116,8 @@ class TestMongoStore():
 
         # Given: Deployment to be created
         deployment = {
-            'deployment': {
-                'id': 'test-deployment-create'
-            },
+            'id': 'test-deployment-create',
+            'deployment': {},
             'state': 'NEW',
         }
 

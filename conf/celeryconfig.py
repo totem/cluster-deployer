@@ -62,8 +62,7 @@ CELERY_MONGODB_BACKEND_SETTINGS = {
 }
 CELERY_RESULT_EXCHANGE = 'cluster-deployer-results'
 CELERY_IMPORTS = ('deployer.tasks', 'deployer.tasks.deployment',
-                  'deployer.tasks.common', 'deployer.tasks.proxy',
-                  'celery.task')
+                  'deployer.tasks.common', 'celery.task')
 CELERY_ACCEPT_CONTENT = ['json', 'pickle']
 CELERY_TASK_SERIALIZER = 'pickle'
 CELERY_RESULT_SERIALIZER = 'pickle'

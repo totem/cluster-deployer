@@ -45,13 +45,14 @@ class MongoStore(AbstractStore):
         :return:
         """
         idxs = self._deployments.index_information()
+        self._deployments.drop_indexes()
         if 'created_idx' not in idxs:
             self._deployments.create_index(
                 [('date', pymongo.DESCENDING)], name='created_idx')
 
         if 'identity_idx' not in idxs:
             self._deployments.create_index(
-                'deployment.id', name='identity_idx', unique=True)
+                'id', name='identity_idx', unique=True)
 
         if 'modified_idx' not in idxs:
             self._deployments.create_index(
@@ -89,7 +90,7 @@ class MongoStore(AbstractStore):
         deployment_upd['_expiry'] = datetime.datetime.now(tz=pytz.UTC)
         self._deployments.replace_one(
             {
-                'deployment.id': deployment_upd['deployment']['id']
+                'id': deployment_upd['id']
             },
             self.apply_modified_ts(deployment_upd),
             upsert=True
@@ -104,7 +105,7 @@ class MongoStore(AbstractStore):
     def update_state(self, deployment_id, state):
         self._deployments.update_one(
             {
-                'deployment.id': deployment_id,
+                'id': deployment_id,
             },
             {
                 '$set': {
@@ -118,7 +119,7 @@ class MongoStore(AbstractStore):
     def get_deployment(self, deployment_id):
         return self._deployments.find_one(
             {
-                'deployment.id': deployment_id,
+                'id': deployment_id,
             },
             projection={
                 '_id': False,
