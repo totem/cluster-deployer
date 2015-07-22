@@ -1,11 +1,8 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
-from future.builtins import (  # noqa
-    bytes, dict, int, list, object, range, str,
-    ascii, chr, hex, input, next, oct, open,
-    pow, round, super,
-    filter, map, zip)
-from deployer.tasks.search import massage_config
+from conf.appconfig import CLUSTER_NAME, BASE_URL
+
+from deployer.services.util import massage_config, create_notify_ctx
 from tests.helper import dict_compare
 
 
@@ -42,4 +39,28 @@ def test_massage_config():
                 'key3.1': 'value3.1'
             }
         ]
+    })
+
+
+def test_create_notify_ctx():
+    """
+    Should return notification context for a given deployment
+    """
+
+    # Given: Existing deployment
+    deployment = {
+        "key": "value"
+    }
+
+    # When: I create notification context for given deployment
+    ctx = create_notify_ctx(deployment, operation='mockop')
+
+    # Then: Expected context is returned
+    dict_compare(ctx, {
+        'deployment': deployment,
+        'cluster': CLUSTER_NAME,
+        'operation': 'mockop',
+        'deployer': {
+            'url': BASE_URL
+        }
     })

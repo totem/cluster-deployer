@@ -8,11 +8,11 @@ from nose.tools import raises, eq_, assert_raises
 from paramiko import SSHException
 
 from conf.appconfig import DEPLOYMENT_MODE_BLUEGREEN, DEPLOYMENT_MODE_REDGREEN, \
-    DEPLOYMENT_STATE_STARTED, NOTIFICATIONS_DEFAULTS, BASE_URL
+    DEPLOYMENT_STATE_STARTED, NOTIFICATIONS_DEFAULTS
 from conf.celeryconfig import CLUSTER_NAME
 from deployer.celery import app
 from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning, \
-    NodeCheckFailed
+    NodeCheckFailed, MinNodesNotDiscovered
 from deployer.util import dict_merge
 from tests.helper import dict_compare
 
@@ -21,7 +21,8 @@ __author__ = 'sukrit'
 
 from deployer.tasks.deployment import _deployment_defaults, \
     _pre_create_undeploy, _wait_for_undeploy, _get_exposed_ports, \
-    _fleet_check_deploy, _notify_ctx, _check_node, _check_deployment
+    _fleet_check_deploy, _check_node, _check_deployment, \
+    _check_discover
 
 NOW = datetime.datetime(2014, 01, 01)
 
@@ -132,7 +133,7 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
             'yoda-register': {
                 'args': {},
                 'enabled': True,
-                'name': 'yoda-ec2-register'
+                'name': 'yoda-register'
             }
         },
         'id': 'testowner-testrepo-testref-101',
@@ -239,7 +240,7 @@ def test_deployment_defaults_with_proxy(mock_time):
             'yoda-register': {
                 'args': {},
                 'enabled': True,
-                'name': 'yoda-ec2-register'
+                'name': 'yoda-register'
             }
         },
         'id': 'testowner-testrepo-testref-101',
@@ -361,7 +362,7 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
             'yoda-register': {
                 'args': {},
                 'enabled': True,
-                'name': 'yoda-ec2-register'
+                'name': 'yoda-register'
             },
             'logger': {
                 'args': {},
@@ -540,15 +541,13 @@ def test_get_exposed_ports_with_hosts_and_listenres():
 
 
 @app.task
-def mock_callback():
+def mock_callback():  # pragma: no cover
     return True
 
 
-@patch('deployer.tasks.deployment.add_search_event')
 @patch('deployer.tasks.deployment.undeploy')
 @patch('deployer.tasks.deployment.filter_units')
-def test_pre_create_undeploy_for_red_green(mock_filter_units, mock_undeploy,
-                                           mock_add_search_event):
+def test_pre_create_undeploy_for_red_green(mock_filter_units, mock_undeploy):
     """
     Should un-deploy all versions for mode: red-green
     """
@@ -570,11 +569,9 @@ def test_pre_create_undeploy_for_red_green(mock_filter_units, mock_undeploy,
                                      None, exclude_version=None)
 
 
-@patch('deployer.tasks.deployment.add_search_event')
 @patch('deployer.tasks.deployment.undeploy')
 @patch('deployer.tasks.deployment.filter_units')
-def test_pre_create_undeploy_for_blue_green(mock_filter_units, mock_undeploy,
-                                            mock_add_search_event):
+def test_pre_create_undeploy_for_blue_green(mock_filter_units, mock_undeploy):
     """
     Should undeploy all versions for mode: red-green
     """
@@ -597,11 +594,9 @@ def test_pre_create_undeploy_for_blue_green(mock_filter_units, mock_undeploy,
                                      exclude_version=None)
 
 
-@patch('deployer.tasks.deployment.add_search_event')
 @patch('deployer.tasks.deployment.undeploy')
 @patch('deployer.tasks.deployment.filter_units')
-def test_pre_create_undeploy_for_ab(mock_filter_units, mock_undeploy,
-                                    mock_add_search_event):
+def test_pre_create_undeploy_for_ab(mock_filter_units, mock_undeploy):
     """
     Should undeploy all versions for mode: red-green
     """
@@ -706,30 +701,6 @@ def test_fleet_check_deploy_when_ssh_error_is_thrown(mock_filter_units):
     # Then: Check SSHException exception is thrown
 
 
-def test_notify_ctx():
-    """
-    Should return notification context for a given deployment
-    """
-
-    # Given: Existing deployment
-    deployment = {
-        "key": "value"
-    }
-
-    # When: I create notification context for given deployment
-    ctx = _notify_ctx(deployment, operation='mockop')
-
-    # Then: Expected context is returned
-    dict_compare(ctx, {
-        'deployment': deployment,
-        'cluster': CLUSTER_NAME,
-        'operation': 'mockop',
-        'deployer': {
-            'url': BASE_URL
-        }
-    })
-
-
 @patch('urllib2.urlopen')
 def test_check_node(m_urlopen):
     """
@@ -787,8 +758,8 @@ def test_check_node_for_unhealthy_node(m_urlopen):
 
 
 @patch('deployer.tasks.deployment._check_node')
-@patch('deployer.tasks.deployment.group')
-def test_check_deployment(m_group, m_check_node):
+@patch('deployer.tasks.deployment.chord')
+def test_check_deployment(m_chord, m_check_node):
     """
     Should perform node check for all discovered nodes
     """
@@ -806,8 +777,8 @@ def test_check_deployment(m_group, m_check_node):
     result = _check_deployment(nodes, path, 3, '5s')
 
     # Then: Node check is performed for all discovered nodes
-    eq_(result, m_group.return_value.delay.return_value)
-    eq_(list(m_group.call_args[0][0]),
+    eq_(result, m_chord.return_value.delay.return_value)
+    eq_(list(m_chord.call_args[0][0]),
         [m_check_node.si.return_value] * 2)
     m_check_node.si.assert_any_call('localhost:8080', '/mockpath', 3, '5s')
     m_check_node.si.assert_any_call('localhost:8081', '/mockpath', 3, '5s')
@@ -850,3 +821,23 @@ def test_check_deployment_with_no_discovered_nodes(m_group, m_check_node):
     # Then: Node check is skipped
     eq_(result, None)
     eq_(m_group.call_count, 0)
+
+
+@patch('yoda.client.Client')
+def test_check_discover_for_min_node_criteria_not_met(mock_yoda_cl):
+    # Given: Existing nodes
+    mock_yoda_cl().get_nodes.return_value = {
+        'node1': 'mockhost1:48080',
+        }
+
+    # When: I check discover for app with no check-port defined
+    with assert_raises(MinNodesNotDiscovered) as cm:
+        _check_discover('mockapp', 'mockversion', 8080, 2,
+                        DEPLOYMENT_MODE_BLUEGREEN)
+
+    # Then: Discover check fails
+    error = cm.exception
+    eq_(error.name, 'mockapp')
+    eq_(error.version, 'mockversion')
+    eq_(error.min_nodes, 2)
+    dict_compare(error.discovered_nodes, {'node1': 'mockhost1:48080'})

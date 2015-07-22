@@ -21,7 +21,9 @@ __author__ = 'sukrit'
 @patch('deployer.services.health.ping')
 @patch('deployer.services.health.get_search_client')
 @patch('deployer.services.health.client')
-def test_get_health_when_elasticsearch_is_enabled(client, get_es, ping):
+@patch('deployer.services.health.get_store')
+def test_get_health_when_elasticsearch_is_enabled(
+        get_store, client, get_es, ping):
     """
     Should get the health status when elastic search is enabled
     """
@@ -31,6 +33,7 @@ def test_get_health_when_elasticsearch_is_enabled(client, get_es, ping):
     get_es().info.return_value = 'mock'
     EtcdInfo = namedtuple('Info', ('machines',))
     client.Client.return_value = EtcdInfo(['machine1'])
+    get_store.return_value.health.return_value = {'type': 'mock'}
 
     # When: I get the health of external services
     health_status = health.get_health()
@@ -41,6 +44,12 @@ def test_get_health_when_elasticsearch_is_enabled(client, get_es, ping):
             'status': HEALTH_OK,
             'details': {
                 'machines': ['machine1']
+            }
+        },
+        'store': {
+            'status': HEALTH_OK,
+            'details': {
+                'type': 'mock'
             }
         },
         'elasticsearch': {
@@ -59,7 +68,8 @@ def test_get_health_when_elasticsearch_is_enabled(client, get_es, ping):
 })
 @patch('deployer.services.health.ping')
 @patch('deployer.services.health.client')
-def test_get_health_when_elasticsearch_is_disabled(client, ping):
+@patch('deployer.services.health.get_store')
+def test_get_health_when_elasticsearch_is_disabled(get_store, client, ping):
     """
     Should get the health status when elastic search is enabled
     """
@@ -68,6 +78,7 @@ def test_get_health_when_elasticsearch_is_disabled(client, ping):
     ping.delay().get.return_value = 'pong'
     EtcdInfo = namedtuple('Info', ('machines',))
     client.Client.return_value = EtcdInfo(['machine1'])
+    get_store.return_value.health.return_value = {'type': 'mock'}
 
     # When: I get the health of external services
     health_status = health.get_health()
@@ -78,6 +89,12 @@ def test_get_health_when_elasticsearch_is_disabled(client, ping):
             'status': HEALTH_OK,
             'details': {
                 'machines': ['machine1']
+            }
+        },
+        'store': {
+            'status': HEALTH_OK,
+            'details': {
+                'type': 'mock'
             }
         },
         'celery': {
@@ -92,7 +109,8 @@ def test_get_health_when_elasticsearch_is_disabled(client, ping):
 })
 @patch('deployer.services.health.ping')
 @patch('deployer.services.health.client')
-def test_get_health_when_celery_is_enabled(client, ping):
+@patch('deployer.services.health.get_store')
+def test_get_health_when_celery_is_enabled(get_store, client, ping):
     """
     Should get the health status when elastic search is enabled
     """
@@ -101,6 +119,7 @@ def test_get_health_when_celery_is_enabled(client, ping):
     ping.delay().get.return_value = 'pong'
     EtcdInfo = namedtuple('Info', ('machines',))
     client.Client.return_value = EtcdInfo(['machine1'])
+    get_store.return_value.health.return_value = {'type': 'mock'}
 
     # When: I get the health of external services
     health_status = health.get_health(check_celery=True)
@@ -111,6 +130,12 @@ def test_get_health_when_celery_is_enabled(client, ping):
             'status': HEALTH_OK,
             'details': {
                 'machines': ['machine1']
+            }
+        },
+        'store': {
+            'status': HEALTH_OK,
+            'details': {
+                'type': 'mock'
             }
         },
         'celery': {

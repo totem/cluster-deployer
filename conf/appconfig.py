@@ -3,7 +3,7 @@ import os
 # Logging configuration
 LOG_FORMAT = '%(asctime)s [%(name)s] %(levelname)s %(message)s'
 LOG_DATE = '%Y-%m-%d %I:%M:%S %p'
-LOG_ROOT_LEVEL = os.getenv('LOG_ROOT_LEVEL', 'DEBUG').upper()
+LOG_ROOT_LEVEL = os.getenv('LOG_ROOT_LEVEL', 'INFO').upper()
 LOG_IDENTIFIER = os.getenv('LOG_IDENTIFIER', 'cluster-deployer')
 
 
@@ -18,10 +18,14 @@ DEPLOYMENT_MODE_REDGREEN = 'red-green'
 DEPLOYMENT_MODE_AB = 'a/b'
 DEPLOYMENT_MODE_CUSTOM = 'custom'
 
+DEPLOYMENT_STATE_NEW = 'NEW'
 DEPLOYMENT_STATE_STARTED = 'STARTED'
 DEPLOYMENT_STATE_PROMOTED = 'PROMOTED'
 DEPLOYMENT_STATE_FAILED = 'FAILED'
 DEPLOYMENT_STATE_DECOMMISSIONED = 'DECOMMISSIONED'
+
+RUNNING_DEPLOYMENT_STATES = [DEPLOYMENT_STATE_NEW, DEPLOYMENT_STATE_STARTED,
+                             DEPLOYMENT_STATE_PROMOTED]
 
 BOOLEAN_TRUE_VALUES = {"true", "yes", "y", "1", "on"}
 
@@ -80,7 +84,7 @@ DEPLOYMENT_DEFAULTS = {
                 'name': 'default-app',
             },
             'yoda-register': {
-                'name': 'yoda-ec2-register'
+                'name': 'yoda-register'
             }
         }
     },
@@ -161,16 +165,14 @@ TASK_SETTINGS = {
     'DEFAULT_RETRY_DELAY': 10,
     'SSH_RETRY_DELAY': 10,
     'SSH_RETRIES': 10,
-    'CHECK_RUNNING_RETRIES': 60,
-    'CHECK_RUNNING_RETRY_DELAY': 10,
+    'CHECK_RUNNING_RETRIES': 30,
+    'CHECK_RUNNING_RETRY_DELAY': 30,
     'CHECK_DISCOVERY_RETRIES': 20,
     'CHECK_DISCOVERY_RETRY_DELAY': 30,
     'LOCK_RETRIES': 64,
     'LOCK_RETRY_DELAY': 60,
-    'DEPLOYMENT_WAIT_RETRIES': 40,
-    'DEPLOYMENT_WAIT_RETRY_DELAY': 30,
-    'CHECK_DEPLOYMENT_RETRY_DELAY': 20,
-    'CHECK_DEPLOYMENT_RETRIES': 30,
+    'DEPLOYMENT_WAIT_RETRIES': 60,
+    'DEPLOYMENT_WAIT_RETRY_DELAY': 60,
     'CHECK_NODE_RETRY_DELAY': 10,
 }
 
@@ -243,10 +245,12 @@ HEALTH_FAILED = 'failed'
 DOC_TYPE_DEPLOYMENTS = 'deployments'
 DOC_TYPE_EVENTS = 'events'
 
+# Storage
+DEFAULT_STORE_NAME = 'mongo'
 # Mongo Settings
 MONGODB_USERNAME = os.getenv('MONODB_USERNAME', '')
 MONGODB_PASSWORD = os.getenv('MONODB_PASSWORD', '')
-MONGODB_HOST = os.getenv('MONGODB_HOST', '172.17.42.1')
+MONGODB_HOST = os.getenv('MONGODB_HOST', '127.0.0.1')
 MONGODB_PORT = int(os.getenv('MONGODB_PORT', '27017'))
 MONGODB_DB = os.getenv('MONGODB_DB', 'totem')
 MONGODB_AUTH = '{0}:{1}@'.format(MONGODB_USERNAME, MONGODB_PASSWORD) \
@@ -254,3 +258,12 @@ MONGODB_AUTH = '{0}:{1}@'.format(MONGODB_USERNAME, MONGODB_PASSWORD) \
 MONGODB_DEFAULT_URL = 'mongodb://{0}{1}:{2}/{3}'.format(
     MONGODB_AUTH, MONGODB_HOST, MONGODB_PORT, MONGODB_DB)
 MONGODB_URL = os.getenv('MONGODB_URL') or MONGODB_DEFAULT_URL
+MONGODB_DEPLOYMENT_COLLECTION = os.getenv('MONGODB_DEPLOYMENT_COLLECTION') or \
+    'deployments'
+MONGODB_EVENT_COLLECTION = os.getenv('MONGODB_EVENT_COLLECTION') or \
+    'events'
+
+# Number of seconds after a non running deployment will expire
+DEFAULT_DEPLOYMENT_EXPIRY_SECONDS = 4 * 7 * 24 * 3600  # 4 weeks
+DEPLOYMENT_EXPIRY_SECONDS = int(
+    os.getenv('DEPLOYMENT_EXPIRY_SECONDS', DEFAULT_DEPLOYMENT_EXPIRY_SECONDS))

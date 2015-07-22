@@ -16,20 +16,18 @@ import sys
 from deployer.services.distributed_lock import LockService, \
     ResourceLockedException
 from deployer.services.security import decrypt_config
+from deployer.services.storage.factory import get_store
+from deployer.services.util import create_notify_ctx
 from deployer.tasks import notification
 from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning, \
-    NodeCheckFailed
+    NodeCheckFailed, MinNodesNotDiscovered
 from deployer.tasks import util
 
-from deployer.tasks.search import index_deployment, update_deployment_state, \
-    EVENT_NEW_DEPLOYMENT, \
-    EVENT_ACQUIRED_LOCK, \
-    EVENT_UNDEPLOYED_EXISTING, EVENT_UNITS_DEPLOYED, \
-    EVENT_PROMOTED, EVENT_DEPLOYMENT_FAILED, create_search_parameters, \
-    add_search_event, EVENT_WIRED, EVENT_UNITS_ADDED, \
-    get_promoted_deployments, mark_decommissioned, EVENT_UNITS_STARTED, \
-    EVENT_UPSTREAMS_REGISTERED, EVENT_NODES_DISCOVERED, \
-    add_search_event_details, massage_config, EVENT_DEPLOYMENT_CHECK_PASSED
+from deployer.services.storage.base import EVENT_NEW_DEPLOYMENT, \
+    EVENT_ACQUIRED_LOCK, EVENT_UNDEPLOYED_EXISTING, EVENT_UNITS_DEPLOYED, \
+    EVENT_PROMOTED, EVENT_DEPLOYMENT_FAILED, EVENT_DEPLOYMENT_CHECK_PASSED, \
+    EVENT_UNITS_ADDED, EVENT_UNITS_STARTED, \
+    EVENT_WIRED, EVENT_UPSTREAMS_REGISTERED, EVENT_NODES_DISCOVERED
 
 from celery.canvas import group, chord, chain
 
@@ -41,11 +39,12 @@ from conf.appconfig import DEPLOYMENT_DEFAULTS, DEPLOYMENT_TYPE_GIT_QUAY, \
     TEMPLATE_DEFAULTS, TASK_SETTINGS, DEPLOYMENT_MODE_BLUEGREEN, \
     DEPLOYMENT_MODE_REDGREEN, DEPLOYMENT_STATE_STARTED, \
     DEPLOYMENT_STATE_FAILED, DEPLOYMENT_STATE_PROMOTED, UPSTREAM_DEFAULTS, \
-    LEVEL_STARTED, LEVEL_FAILED, LEVEL_SUCCESS, BASE_URL, CLUSTER_NAME
+    LEVEL_STARTED, LEVEL_FAILED, LEVEL_SUCCESS, CLUSTER_NAME, \
+    DEPLOYMENT_STATE_DECOMMISSIONED
 
 from deployer.tasks.common import async_wait
-from deployer.tasks.proxy import wire_proxy, register_upstreams, \
-    _check_discover
+from deployer.services.proxy import wire_proxy, register_upstreams, \
+    get_discovered_nodes
 
 from deployer.util import dict_merge, to_milliseconds
 
@@ -59,21 +58,73 @@ RETRYABLE_FLEET_EXCEPTIONS = (SSHException, EOFError, NetworkError,
                               socket.error, FleetExecutionException)
 
 
-def _notify_ctx(deployment, operation=None):
+def create_search_parameters(deployment, defaults=None):
     """
-    Creates context to be used for notification (hipchat/github)
+    Creates search parameters for a given deployment.
 
-    :param meta_info
-    :return: Dictionary representing notification context.
+    :param deployment: Dictionary containing deployment parameters.
+    :type deployment: dict
+    :return: Dictionary containing search parameters
+    :rtype: dict
     """
+
+    deployment = dict_merge(deployment or {}, defaults or {}, {
+        'meta-info': {}
+    })
     return {
-        'deployment': massage_config(deployment),
-        'cluster': CLUSTER_NAME,
-        'operation': operation,
-        'deployer': {
-            'url': BASE_URL
+        'meta-info': copy.deepcopy(deployment['meta-info']),
+        'deployment': {
+            'name': deployment['deployment']['name'],
+            'version': deployment['deployment']['version'],
+            'id': deployment['id']
         }
     }
+
+
+@app.task
+def _register_upstreams(
+        app_name, app_version, upstreams,
+        deployment_mode=DEPLOYMENT_MODE_BLUEGREEN, search_params=None):
+    register_upstreams(app_name, app_version, upstreams,
+                       deployment_mode=deployment_mode)
+    get_store().add_event(EVENT_UPSTREAMS_REGISTERED,
+                          search_params=search_params)
+
+
+@app.task(bind=True,
+          default_retry_delay=TASK_SETTINGS['CHECK_DISCOVERY_RETRY_DELAY'],
+          max_retries=TASK_SETTINGS['CHECK_DISCOVERY_RETRIES'])
+def _check_discover(self, app_name, app_version, check_port, min_nodes,
+                    deployment_mode, search_params=None):
+    """
+    Checks if min. no. of nodes for a given application have been discovered
+    in yoda proxy
+
+    :param app_name: Application name
+    :type app_name: str
+    :param app_version: Application version
+    :type app_version: str
+    :param check_port: Port to be used discover check. If None, discover check
+        is skipped.
+    :param min_nodes: Minimum no. of nodes to be discovered.
+    :param deployment_mode: mode of deploy (blue-green, red-green, a/b etc)
+    :return: discovered nodes
+    :rtype: dict
+    """
+    if check_port is None:
+        # Skip discover if port is not passed
+        return {}
+
+    discovered_nodes = get_discovered_nodes(app_name, app_version, check_port,
+                                            deployment_mode)
+    if len(discovered_nodes) < min_nodes:
+        raise self.retry(exc=MinNodesNotDiscovered(
+            app_name, app_version, min_nodes, discovered_nodes))
+
+    get_store().add_event(EVENT_NODES_DISCOVERED,
+                          details=discovered_nodes,
+                          search_params=search_params)
+    return discovered_nodes
 
 
 @app.task
@@ -106,7 +157,7 @@ def create(deployment):
     deployment_check = deployment['deployment'].get('check', {})
     check_port = deployment_check.get('port')
     deployment_mode = deployment['deployment']['mode']
-    notify_ctx = _notify_ctx(deployment, 'create')
+    notify_ctx = create_notify_ctx(deployment, 'create')
     notification.notify.si(
         {'message': 'Started provisioning'}, ctx=notify_ctx,
         level=LEVEL_STARTED,
@@ -116,58 +167,45 @@ def create(deployment):
     # Tasks to be performed on error
     error_tasks = [
         _deployment_error_event.s(deployment, search_params),
-        update_deployment_state.si(deployment['id'],
-                                   DEPLOYMENT_STATE_FAILED),
         _fleet_undeploy.si(
             app_name,
             version=app_version,
             ignore_error=True
         )
     ]
+    store = get_store()
+    store.create_deployment(deployment)
+    store.add_event(EVENT_NEW_DEPLOYMENT, details=deployment,
+                    search_params=search_params)
 
     return (
-        index_deployment.si(deployment) |
-
-        add_search_event.si(EVENT_NEW_DEPLOYMENT, details=deployment,
-                            search_params=search_params) |
         _using_lock.si(
             search_params,
             app_name,
             do_task=_pre_create_undeploy.si(
                 deployment,
                 search_params,
-                next_task=register_upstreams.si(
+                next_task=_register_upstreams.si(
                     app_name,
                     app_version,
                     upstreams=deployment['proxy']['upstreams'],
-                    deployment_mode=deployment_mode) |
-                add_search_event.si(
-                    EVENT_UPSTREAMS_REGISTERED, search_params=search_params) |
-                _deploy_all.si(deployment, search_params) |
-                async_wait.s(
-                    default_retry_delay=TASK_SETTINGS[
-                        'DEPLOYMENT_WAIT_RETRY_DELAY'],
-                    max_retries=TASK_SETTINGS['DEPLOYMENT_WAIT_RETRIES']
+                    deployment_mode=deployment_mode,
+                    search_params=search_params
                 ) |
-                add_search_event_details.s(EVENT_UNITS_DEPLOYED,
-                                           search_params=search_params) |
-                _check_discover.si(app_name, app_version, check_port,
-                                   min_nodes, deployment_mode) |
-                add_search_event_details.s(EVENT_NODES_DISCOVERED,
-                                           search_params=search_params) |
-                _check_deployment.s(
-                    deployment_check.get('path'),
-                    deployment_check.get('attempts'),
-                    deployment_check.get('timeout')
-                ) |
-                async_wait.s(
-                    default_retry_delay=TASK_SETTINGS[
-                        'CHECK_DEPLOYMENT_RETRY_DELAY'],
-                    max_retries=TASK_SETTINGS['CHECK_DEPLOYMENT_RETRIES']
-                ) |
-                add_search_event.si(EVENT_DEPLOYMENT_CHECK_PASSED,
-                                    search_params=search_params) |
-                _promote_deployment.si(deployment, search_params)
+                _deploy_all.si(
+                    deployment, search_params,
+                    next_task=_check_discover.si(
+                        app_name, app_version, check_port,
+                        min_nodes, deployment_mode, search_params) |
+                    _check_deployment.s(
+                        deployment_check.get('path'),
+                        deployment_check.get('attempts'),
+                        deployment_check.get('timeout'),
+                        search_params=search_params,
+                        next_task=_promote_deployment.si(deployment,
+                                                         search_params)
+                    )
+                )
             ),
             error_tasks=error_tasks
         )
@@ -195,9 +233,7 @@ def delete(name, version=None):
         search_params, name,
         do_task=(
             _fleet_undeploy.si(name, version) |
-            get_promoted_deployments.si(name, version) |
-            mark_decommissioned.s() |
-            _wait_for_undeploy.si(name, version, ret_value='done')
+            _wait_for_undeploy.si(name, version, search_params=search_params)
         )
     )()
 
@@ -246,12 +282,12 @@ def _using_lock(self, search_params, name, do_task, cleanup_tasks=None,
     error_tasks.append(_release_lock_s)
     cleanup_tasks.append(_release_lock_s)
 
+    get_store().add_event(
+        EVENT_ACQUIRED_LOCK, search_params=search_params, details={
+            'name': name
+        })
+
     return (
-        add_search_event.si(
-            EVENT_ACQUIRED_LOCK, search_params=search_params,
-            details={
-                'name': name
-            }) |
         do_task |
         async_wait.s(
             default_retry_delay=TASK_SETTINGS['DEPLOYMENT_WAIT_RETRY_DELAY'],
@@ -277,12 +313,12 @@ def _release_lock(lock):
 
 
 @app.task
-def _deploy_all(deployment, search_params):
+def _deploy_all(deployment, search_params, next_task=None):
     """
     Deploys all services for a given deployment
     :param deployment: Deployment parameters
     :type deployment: dict
-    :return:
+    :return: Result  of execution of next tasj
     """
 
     security_profile = deployment.get('security', {})\
@@ -307,7 +343,8 @@ def _deploy_all(deployment, search_params):
             for service_type, template in templates.iteritems()
             if template['enabled']
         ),
-        _fleet_start_and_wait.si(deployment, search_params)
+        _fleet_start_and_wait.si(deployment, search_params,
+                                 next_task=next_task)
     )()
 
 
@@ -475,16 +512,14 @@ def _fleet_deploy(self, search_params, name, version, nodes, service_type,
     except RETRYABLE_FLEET_EXCEPTIONS as exc:
         raise self.retry(exc=exc, max_retries=TASK_SETTINGS['SSH_RETRIES'],
                          countdown=TASK_SETTINGS['SSH_RETRY_DELAY'])
-    return add_search_event.si(
-        EVENT_UNITS_ADDED,
-        search_params=search_params,
-        details={
+    get_store().add_event(
+        EVENT_UNITS_ADDED, search_params=search_params, details={
             'name': name,
             'version': version,
             'nodes': nodes,
             'service_type': service_type,
             'template': template
-        })()
+        })
 
 
 @app.task(bind=True)
@@ -512,20 +547,18 @@ def _fleet_start(self, search_params, name, version, nodes, service_type,
         raise self.retry(exc=exc, max_retries=TASK_SETTINGS['SSH_RETRIES'],
                          countdown=TASK_SETTINGS['SSH_RETRY_DELAY'])
 
-    return add_search_event.si(
-        EVENT_UNITS_STARTED,
-        search_params=search_params,
-        details={
+    get_store().add_event(
+        EVENT_UNITS_STARTED, search_params=search_params, details={
             'name': name,
             'version': version,
             'nodes': nodes,
             'service_type': service_type,
             'template': template
-        })()
+        })
 
 
 @app.task
-def _fleet_start_and_wait(deployment, search_params):
+def _fleet_start_and_wait(deployment, search_params, next_task=None):
     """
     Starts the units for the deployment and performs an asynchronous wait for
     all unit states to reach running state.
@@ -551,7 +584,8 @@ def _fleet_start_and_wait(deployment, search_params):
             for service_type, template in deployment['templates'].iteritems()
             if template['enabled']
         ),
-        _fleet_check_deploy.si(name, version, len(service_types), min_nodes)
+        _fleet_check_deploy.si(name, version, len(service_types), min_nodes,
+                               search_params, next_task=next_task)
     )()
 
 
@@ -578,15 +612,7 @@ def _pre_create_undeploy(deployment, search_params, next_task=None):
     name = deployment['deployment']['name']
     undeploy_chain = [
         _fleet_undeploy.si(name, version, ignore_error=False),
-        _wait_for_undeploy.si(name, version),
-        add_search_event.si(
-            EVENT_UNDEPLOYED_EXISTING,
-            search_params=search_params,
-            details={
-                'name': name,
-                'version': version
-            }
-        )
+        _wait_for_undeploy.si(name, version, search_params=search_params)
     ]
     if next_task:
         undeploy_chain.append(next_task)
@@ -608,19 +634,22 @@ def _fleet_undeploy(self, name, version=None, exclude_version=None,
     try:
         undeploy(get_fleet_provider(), name, version,
                  exclude_version=exclude_version)
-        return ret_value
     except RETRYABLE_FLEET_EXCEPTIONS as exc:
         raise self.retry(exc=exc, max_retries=TASK_SETTINGS['SSH_RETRIES'],
                          countdown=TASK_SETTINGS['SSH_RETRY_DELAY'])
     except:
-        if ignore_error:
-            return ret_value
-        else:
+        if not ignore_error:
             raise
+    store = get_store()
+    store.update_state_bulk(name, DEPLOYMENT_STATE_DECOMMISSIONED,
+                            existing_state=DEPLOYMENT_STATE_PROMOTED,
+                            version=version)
+    return ret_value
 
 
 @app.task(bind=True, default_retry_delay=5, max_retries=5)
-def _wait_for_undeploy(self, name, version, ret_value=None):
+def _wait_for_undeploy(self, name, version, ret_value=None,
+                       search_params=None):
     """
     Wait for undeploy to finish.
 
@@ -637,13 +666,22 @@ def _wait_for_undeploy(self, name, version, ret_value=None):
                          countdown=TASK_SETTINGS['SSH_RETRY_DELAY'])
     if deployed_units:
         raise self.retry(exc=NodeNotUndeployed(name, version, deployed_units))
+    get_store().add_event(
+        EVENT_UNDEPLOYED_EXISTING,
+        search_params=search_params,
+        details={
+            'name': name,
+            'version': version
+        }
+    )
     return ret_value
 
 
 @app.task(bind=True,
           default_retry_delay=TASK_SETTINGS['CHECK_RUNNING_RETRY_DELAY'],
           max_retries=TASK_SETTINGS['CHECK_RUNNING_RETRIES'])
-def _fleet_check_deploy(self, name, version, service_cnt, min_nodes):
+def _fleet_check_deploy(self, name, version, service_cnt, min_nodes,
+                        search_params=None, next_task=None):
     expected_cnt = min_nodes * service_cnt
     try:
         units = filter_units(get_fleet_provider(), name, version=version)
@@ -657,6 +695,10 @@ def _fleet_check_deploy(self, name, version, service_cnt, min_nodes):
         raise self.retry(exc=MinNodesNotRunning(
             name, version, expected_cnt, units))
     else:
+        get_store().add_event(EVENT_UNITS_DEPLOYED, details=running_units,
+                              search_params=search_params)
+        if next_task:
+            return next_task.delay()
         return running_units
 
 
@@ -677,15 +719,33 @@ def _deployment_error_event(task_id, deployment, search_params):
     """
     app.set_current()
     output = app.AsyncResult(task_id)
-    notify_ctx = _notify_ctx(deployment, 'create')
+    notify_ctx = create_notify_ctx(deployment, 'create')
     notification.notify.si(
         output.result, ctx=notify_ctx, level=LEVEL_FAILED,
         notifications=deployment['notifications'],
         security_profile=deployment['security']['profile']).delay()
-    return add_search_event.si(
+    store = get_store()
+    store.update_state(deployment['id'], DEPLOYMENT_STATE_FAILED)
+    store.add_event(
         EVENT_DEPLOYMENT_FAILED,
+        details={'deployment-error': util.as_dict(output.result)},
         search_params=search_params,
-        details={'deployment-error': util.as_dict(output.result)}).delay()
+    )
+
+
+@app.task
+def _promote_success(deployment, search_params=None):
+    store = get_store()
+    deployment_id = deployment['deployment']['id']
+    notify_ctx = create_notify_ctx(deployment, 'create')
+    store.add_event(EVENT_PROMOTED, search_params=search_params)
+    store.update_state(deployment_id, DEPLOYMENT_STATE_PROMOTED)
+    notification.notify.si(
+        {'message': 'Promoted'}, ctx=notify_ctx,
+        level=LEVEL_SUCCESS,
+        notifications=deployment['notifications'],
+        security_profile=deployment['security']['profile']),
+    _processed_deployment.si(deployment)
 
 
 @app.task
@@ -698,53 +758,41 @@ def _promote_deployment(deployment, search_params):
     :param search_params: Ductionary containing search parameters
     :type deployment: dict
     """
-    tasks = []
     name = deployment['deployment']['name']
     version = deployment['deployment']['version']
-    notify_ctx = _notify_ctx(deployment, 'create')
 
-    # Add Proxy Wired to the chain
-    tasks.append(
-        add_search_event.si(
-            EVENT_WIRED, search_params=search_params,
-            details={
-                'name': name,
-                'version': version,
-                'proxy': deployment['proxy']
-            }
-        )
+    wire_proxy(name, version, deployment['proxy'])
+    get_store().add_event(
+        EVENT_WIRED, search_params=search_params, details={
+            'name': name,
+            'version': version,
+            'proxy': deployment['proxy']
+        }
     )
 
+    tasks = []
+
     if deployment['deployment']['mode'] == DEPLOYMENT_MODE_BLUEGREEN:
-        tasks += [
+        tasks.append(
             _fleet_undeploy.subtask((name,), {'exclude_version': version},
-                                    countdown=120, immutable=True),
-            get_promoted_deployments.si(name),
-            mark_decommissioned.s()
-        ]
+                                    countdown=120, immutable=True))
 
-    tasks += [
-        update_deployment_state.si(deployment['id'],
-                                   DEPLOYMENT_STATE_PROMOTED),
-        add_search_event.si(EVENT_PROMOTED, search_params=search_params),
-        notification.notify.si(
-            {'message': 'Promoted'}, ctx=notify_ctx,
-            level=LEVEL_SUCCESS,
-            notifications=deployment['notifications'],
-            security_profile=deployment['security']['profile']),
-        _processed_deployment.si(deployment)
-    ]
+    tasks.append(_promote_success.si(deployment, search_params=search_params))
 
-    return wire_proxy.si(
-        deployment['deployment']['name'],
-        deployment['deployment']['version'],
-        deployment['proxy'],
-        next_task=(chain(tasks))
-    )()
+    return chain(tasks).delay()
 
 
 @app.task
-def _check_deployment(nodes, path, attempts, timeout):
+def _deployment_check_passed(search_params=None, next_task=None):
+    get_store().add_event(EVENT_DEPLOYMENT_CHECK_PASSED,
+                          search_params=search_params)
+    if next_task:
+        return next_task.delay()
+
+
+@app.task
+def _check_deployment(nodes, path, attempts, timeout, search_params=None,
+                      next_task=None):
     """
     Performs a deployment check on discovered nodes
 
@@ -758,8 +806,12 @@ def _check_deployment(nodes, path, attempts, timeout):
     """
 
     if path and nodes:
-        return group(_check_node.si(node, path, attempts, timeout)
-                     for _, node in nodes.iteritems()).delay()
+        return chord(
+            group(_check_node.si(node, path, attempts, timeout)
+                  for _, node in nodes.iteritems()),
+            _deployment_check_passed.si(search_params=search_params,
+                                        next_task=next_task)
+        ).delay()
 
 
 @app.task(bind=True)

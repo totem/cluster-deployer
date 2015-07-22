@@ -8,7 +8,7 @@ from conf.appconfig import MIME_JSON, MIME_TASK_V1, \
     SCHEMA_APP_LIST_V1, MIME_APP_LIST_V1, SCHEMA_APP_VERSION_LIST_V1, \
     MIME_APP_VERSION_LIST_V1, MIME_APP_VERSION_DELETE_V1, \
     SCHEMA_APP_VERSION_UNIT_LIST_V1, MIME_APP_VERSION_UNIT_LIST_V1
-from deployer.tasks import search
+from deployer.services.storage.factory import get_store
 
 from deployer.tasks.deployment import create, delete, list_units
 from deployer.views import hypermedia, task_client
@@ -66,7 +66,7 @@ class ApplicationApi(MethodView):
         :param kwargs:
         :return:
         """
-        apps = search.find_apps() or []
+        apps = get_store().find_apps()
         return build_response(apps)
 
     @hypermedia.produces({
@@ -108,7 +108,7 @@ class VersionApi(MethodView):
         MIME_APP_VERSION_LIST_V1: SCHEMA_APP_VERSION_LIST_V1
     }, default=MIME_APP_VERSION_LIST_V1)
     @use_paging
-    def list(self, name, page=0, size=10, **kwargs):
+    def list(self, name, **kwargs):
         """
         Lists all applications. Require search to be enabled.
 
@@ -116,8 +116,7 @@ class VersionApi(MethodView):
         :return: Flask Response wrapping deployment list.
         """
 
-        deployments = search.find_running_deployments(
-            name, page=page, size=size) or []
+        deployments = get_store().filter_deployments(name)
         return build_response(deployments)
 
     @hypermedia.produces({
@@ -132,7 +131,7 @@ class VersionApi(MethodView):
         :return: Flask Response wrapping deployment.
         """
 
-        deployments = search.find_deployments(name, version=version) or []
+        deployments = get_store().filter_deployments(name, version=version)
         if not deployments:
             flask.abort(404)
         return build_response(deployments[0])
