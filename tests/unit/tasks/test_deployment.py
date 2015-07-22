@@ -133,7 +133,7 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
             'yoda-register': {
                 'args': {},
                 'enabled': True,
-                'name': 'yoda-ec2-register'
+                'name': 'yoda-register'
             }
         },
         'id': 'testowner-testrepo-testref-101',
@@ -240,7 +240,7 @@ def test_deployment_defaults_with_proxy(mock_time):
             'yoda-register': {
                 'args': {},
                 'enabled': True,
-                'name': 'yoda-ec2-register'
+                'name': 'yoda-register'
             }
         },
         'id': 'testowner-testrepo-testref-101',
@@ -362,7 +362,7 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
             'yoda-register': {
                 'args': {},
                 'enabled': True,
-                'name': 'yoda-ec2-register'
+                'name': 'yoda-register'
             },
             'logger': {
                 'args': {},

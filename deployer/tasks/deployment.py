@@ -585,7 +585,7 @@ def _fleet_start_and_wait(deployment, search_params, next_task=None):
             if template['enabled']
         ),
         _fleet_check_deploy.si(name, version, len(service_types), min_nodes,
-                               search_params, next_task=None)
+                               search_params, next_task=next_task)
     )()
 
 

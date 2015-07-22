@@ -84,7 +84,7 @@ DEPLOYMENT_DEFAULTS = {
                 'name': 'default-app',
             },
             'yoda-register': {
-                'name': 'yoda-ec2-register'
+                'name': 'yoda-register'
             }
         }
     },
@@ -165,16 +165,14 @@ TASK_SETTINGS = {
     'DEFAULT_RETRY_DELAY': 10,
     'SSH_RETRY_DELAY': 10,
     'SSH_RETRIES': 10,
-    'CHECK_RUNNING_RETRIES': 60,
-    'CHECK_RUNNING_RETRY_DELAY': 10,
+    'CHECK_RUNNING_RETRIES': 30,
+    'CHECK_RUNNING_RETRY_DELAY': 30,
     'CHECK_DISCOVERY_RETRIES': 20,
     'CHECK_DISCOVERY_RETRY_DELAY': 30,
     'LOCK_RETRIES': 64,
     'LOCK_RETRY_DELAY': 60,
-    'DEPLOYMENT_WAIT_RETRIES': 40,
-    'DEPLOYMENT_WAIT_RETRY_DELAY': 30,
-    'CHECK_DEPLOYMENT_RETRY_DELAY': 20,
-    'CHECK_DEPLOYMENT_RETRIES': 30,
+    'DEPLOYMENT_WAIT_RETRIES': 60,
+    'DEPLOYMENT_WAIT_RETRY_DELAY': 60,
     'CHECK_NODE_RETRY_DELAY': 10,
 }
 
