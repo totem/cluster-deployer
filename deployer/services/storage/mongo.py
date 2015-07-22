@@ -128,6 +128,7 @@ class MongoStore(AbstractStore):
 
     def health(self):
         return {
+            'type': 'mongo',
             'nodes': list(self.client.nodes),
             'primary': self.client.primary,
             'secondaries': list(self.client.secondaries),
