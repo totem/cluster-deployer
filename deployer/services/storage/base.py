@@ -118,6 +118,21 @@ class AbstractStore:
         """
         self.not_supported()
 
+    def filter_deployments(self, name, version=None, only_running=True):
+        """
+        Filter deployments for a given application
+        :param name: Application name
+        :type name: str
+        :keyword version: Application version
+        :type version: str
+        :keyword only_running: If True, gets the list of running deployments
+            else gets all deployments
+        :type only_running: bool
+        :return: List of deployments
+        :rtype list
+        """
+        self.not_supported()
+
     def _add_raw_event(self, event):
         """
         Adds raw event to store.

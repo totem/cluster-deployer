@@ -4,7 +4,7 @@ import pymongo
 import pytz
 from conf.appconfig import MONGODB_URL, MONGODB_DEPLOYMENT_COLLECTION, \
     MONGODB_DB, DEPLOYMENT_EXPIRY_SECONDS, MONGODB_EVENT_COLLECTION, \
-    DEPLOYMENT_STATE_PROMOTED
+    DEPLOYMENT_STATE_PROMOTED, RUNNING_DEPLOYMENT_STATES
 from deployer.services.storage.base import AbstractStore
 
 __author__ = 'sukrit'
@@ -169,4 +169,21 @@ class MongoStore(AbstractStore):
                 {'$group': {'_id': '$deployment.name'}},
                 {'$sort':  {'_id':  1}}
             ]) or []
+        ]
+
+    def filter_deployments(self, name, version=None, only_running=True):
+        u_filter = {
+            'deployment.name': name
+        }
+        if version:
+            u_filter['deployment.version'] = version
+        if only_running:
+            u_filter['state'] = {
+                '$in': RUNNING_DEPLOYMENT_STATES
+            }
+        return [
+            deployment for deployment in
+            self._deployments.find(u_filter, projection={
+                '_id': False
+            }).sort('deployment.version')
         ]

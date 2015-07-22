@@ -65,6 +65,10 @@ class TestAbstractStore:
     def test_find_apps(self):
         self.store.find_apps()
 
+    @raises(NotImplementedError)
+    def test_filter_deployments(self):
+        self.store.filter_deployments('myapp')
+
     @freeze_time(NOW)
     def test_apply_modified_ts(self):
 
