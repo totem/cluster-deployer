@@ -173,9 +173,13 @@ class MongoStore(AbstractStore):
             ]) or []
         ]
 
-    def filter_deployments(self, name, version=None, only_running=True):
-        u_filter = {
-            'deployment.name': name
+    def filter_deployments(self, name=None, version=None, only_running=True,
+                           only_ids=False):
+        u_filter = {}
+        if name:
+            u_filter['deployment.name'] = name
+        projection = {
+            '_id': False
         }
         if version:
             u_filter['deployment.version'] = version
@@ -183,9 +187,37 @@ class MongoStore(AbstractStore):
             u_filter['state'] = {
                 '$in': RUNNING_DEPLOYMENT_STATES
             }
+        if only_ids:
+            projection['id'] = True
+
         return [
             deployment for deployment in
-            self._deployments.find(u_filter, projection={
-                '_id': False
-            }).sort('deployment.version')
+            self._deployments.find(u_filter, projection=projection)
+                .sort('deployment.version')
         ]
+
+    def update_runtime_upstreams(self, deployment_id, upstreams):
+        self._deployments.update_one(
+            {
+                'id': deployment_id,
+                },
+            {
+                '$set': {
+                    'runtime.upstreams': upstreams,
+                    'modified': datetime.datetime.now(tz=pytz.UTC)
+                }
+            }
+        )
+
+    def update_runtime_units(self, deployment_id, units):
+        self._deployments.update_one(
+            {
+                'id': deployment_id,
+                },
+            {
+                '$set': {
+                    'runtime.units': units,
+                    'modified': datetime.datetime.now(tz=pytz.UTC)
+                }
+            }
+        )

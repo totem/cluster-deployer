@@ -159,6 +159,11 @@ FLEET_TEMPLATE_SETTINGS = {
 
 DEFAULT_LOCK_TTL = 3600
 
+LOCK_JOB_TTL = 120
+LOCK_JOB_BASE = '/cluster-deployer/locks/jobs'
+LOCK_JOB_SYNC_PROMOTED_UPSTREAMS = 'sync-promoted-upstreams'
+LOCK_JOB_SYNC_PROMOTED_UNITS = 'sync-promoted-units'
+
 TASK_SETTINGS = {
     'DEFAULT_GET_TIMEOUT': 600,
     'DEFAULT_RETRIES': 5,

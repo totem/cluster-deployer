@@ -18,6 +18,8 @@ from deployer.services.distributed_lock import LockService, \
 from deployer.services.security import decrypt_config
 from deployer.services.storage.factory import get_store
 from deployer.services.util import create_notify_ctx
+from deployer.services.deployment import fetch_runtime_units, get_exposed_ports, \
+    sync_upstreams, sync_units
 from deployer.tasks import notification
 from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning, \
     NodeCheckFailed, MinNodesNotDiscovered
@@ -32,7 +34,7 @@ from deployer.services.storage.base import EVENT_NEW_DEPLOYMENT, \
 from celery.canvas import group, chord, chain
 
 from deployer.fleet import get_fleet_provider, jinja_env
-from fleet.deploy.deployer import Deployment, undeploy, filter_units
+from fleet.deploy.deployer import Deployment, undeploy
 
 from deployer.celery import app
 from conf.appconfig import DEPLOYMENT_DEFAULTS, DEPLOYMENT_TYPE_GIT_QUAY, \
@@ -40,7 +42,7 @@ from conf.appconfig import DEPLOYMENT_DEFAULTS, DEPLOYMENT_TYPE_GIT_QUAY, \
     DEPLOYMENT_MODE_REDGREEN, DEPLOYMENT_STATE_STARTED, \
     DEPLOYMENT_STATE_FAILED, DEPLOYMENT_STATE_PROMOTED, UPSTREAM_DEFAULTS, \
     LEVEL_STARTED, LEVEL_FAILED, LEVEL_SUCCESS, CLUSTER_NAME, \
-    DEPLOYMENT_STATE_DECOMMISSIONED
+    DEPLOYMENT_STATE_DECOMMISSIONED, LOCK_JOB_BASE
 
 from deployer.tasks.common import async_wait
 from deployer.services.proxy import wire_proxy, register_upstreams, \
@@ -252,7 +254,7 @@ def list_units(name, version):
                 - active : Activation status ('activating', 'active')
                 - sub : Current state of the unit
     """
-    return filter_units(get_fleet_provider(), name, version)
+    return fetch_runtime_units(name, version)
 
 
 @app.task(bind=True, default_retry_delay=TASK_SETTINGS['LOCK_RETRY_DELAY'],
@@ -371,26 +373,6 @@ def _git_quay_defaults(deployment):
     return deployment
 
 
-def _get_exposed_ports(deployment):
-    """
-    Gets the exposed ports for the given deployment
-
-    :param deployment: Dictionary representing deployment
-    :type deployment: dict
-    :return: Sorteed list of unique exposed ports
-    :rtype: list
-    """
-    return sorted(
-        {location.get('port')
-         for host in deployment.get('proxy', {}).get('hosts', {}).values()
-         for location in host.get('locations', {}).values()} |
-        {listener.get('upstream-port')
-         for listener in deployment.get('proxy', {}).get('listeners', {})
-            .values()
-         }
-    )
-
-
 def _create_discover_check(deployment):
     """
     Creates the dictionary to be used by discover for health check
@@ -453,7 +435,7 @@ def _deployment_defaults(deployment):
     deployment_upd['started-at'] = datetime.datetime.utcnow()
 
     app_template = deployment_upd.get('templates').get('app')
-    exposed_ports = _get_exposed_ports(deployment_upd)
+    exposed_ports = get_exposed_ports(deployment_upd)
 
     # Create default upstreams (using exposed ports)
     for port in exposed_ports:
@@ -660,7 +642,7 @@ def _wait_for_undeploy(self, name, version, ret_value=None,
     :return: ret_value
     """
     try:
-        deployed_units = filter_units(get_fleet_provider(), name, version)
+        deployed_units = fetch_runtime_units(name, version)
     except RETRYABLE_FLEET_EXCEPTIONS as exc:
         raise self.retry(exc=exc, max_retries=TASK_SETTINGS['SSH_RETRIES'],
                          countdown=TASK_SETTINGS['SSH_RETRY_DELAY'])
@@ -684,7 +666,7 @@ def _fleet_check_deploy(self, name, version, service_cnt, min_nodes,
                         search_params=None, next_task=None):
     expected_cnt = min_nodes * service_cnt
     try:
-        units = filter_units(get_fleet_provider(), name, version=version)
+        units = fetch_runtime_units(name, version=version)
     except RETRYABLE_FLEET_EXCEPTIONS as exc:
         raise self.retry(exc=exc, max_retries=TASK_SETTINGS['SSH_RETRIES'],
                          countdown=TASK_SETTINGS['SSH_RETRY_DELAY'])
@@ -846,3 +828,71 @@ def _check_node(self, node, path, attempts, timeout):
             exc=NodeCheckFailed(check_url, reason, **kwargs),
             max_retries=attempts-1,
             countdown=TASK_SETTINGS['CHECK_NODE_RETRY_DELAY'])
+
+
+def _get_job_lock(job_name):
+    try:
+        return LockService(lock_base=LOCK_JOB_BASE).apply_lock(job_name)
+    except ResourceLockedException as lock_error:
+        logger.info('Job:{} already running. Skipping...'.format(
+            lock_error.name))
+
+
+@app.task
+def sync_upstreams_task(deployment_id):
+    """
+    Synchronizes upstream for given deployment
+    """
+    sync_upstreams(deployment_id)
+
+
+@app.task
+def sync_units_task(deployment_id):
+    """
+    Synchronizes upstream for given deployment
+    """
+    sync_units(deployment_id)
+
+
+@app.task(bind=True)
+def sync_promoted_upstreams(self):
+    """
+    Synchronizes upstreams of all promoted deployments
+    """
+    lock = _get_job_lock(self.name)
+    if not lock:
+        return
+
+    try:
+        deployments = get_store().filter_deployments(
+            state=DEPLOYMENT_STATE_PROMOTED)
+    except:
+        _release_lock.si(lock).delay()
+        raise
+    return chord(
+        group(sync_upstreams_task.si(deployment['id'])
+              for deployment in deployments),
+        _release_lock.si(lock)
+    ).delay()
+
+
+@app.task(bind=True)
+def sync_promoted_units(self):
+    """
+    Synchronizes upstreams of all promoted deployments
+    """
+    lock = _get_job_lock(self.name)
+    if not lock:
+        return
+
+    try:
+        deployments = get_store().filter_deployments(
+            state=DEPLOYMENT_STATE_PROMOTED)
+    except:
+        _release_lock.si(lock).delay()
+        raise
+    return chord(
+        group(sync_upstreams_task.si(deployment['id'])
+              for deployment in deployments),
+        _release_lock.si(lock)
+    ).delay()

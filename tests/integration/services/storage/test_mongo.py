@@ -234,22 +234,95 @@ class TestMongoStore():
         eq_(apps, ['test-deployment1', 'test-deployment2'])
 
     def test_filter_deployments(self):
-        # When: I find applications from the store
-        deployments = self.store.filter_deployments('test-deployment1')
+        # When: I filter deployments from the store
+        deployments = self.store.filter_deployments()
 
-        # Then: Expected apps are returned
+        # Then:Running deployments are returned
         eq_(len(deployments), 2)
         dict_compare(deployments[0],
-                     EXISTING_DEPLOYMENTS['test-deployment1-v1']),
+                     EXISTING_DEPLOYMENTS['test-deployment1-v1'])
         dict_compare(deployments[1],
-                     EXISTING_DEPLOYMENTS['test-deployment1-v2']),
+                     EXISTING_DEPLOYMENTS['test-deployment1-v2'])
+
+    def test_filter_deployments_by_name(self):
+        # When: I filter deployments from the store
+        deployments = self.store.filter_deployments('test-deployment1')
+
+        # Then: Expected deployments are returned
+        eq_(len(deployments), 2)
+        dict_compare(deployments[0],
+                     EXISTING_DEPLOYMENTS['test-deployment1-v1'])
+        dict_compare(deployments[1],
+                     EXISTING_DEPLOYMENTS['test-deployment1-v2'])
 
     def test_filter_deployments_with_version(self):
-        # When: I find applications from the store
+        # When: I filter deployments from the store with given version
         deployments = self.store.filter_deployments(
             'test-deployment1', version='v1')
 
-        # Then: Expected apps are returned
+        # Then: Expected deployments are returned
         eq_(len(deployments), 1)
         dict_compare(deployments[0],
                      EXISTING_DEPLOYMENTS['test-deployment1-v1'])
+
+    def test_filter_deployment_ids(self):
+        # When: I filter deployments from the store for ids only
+        deployments = self.store.filter_deployments('test-deployment1',
+                                                    only_ids=True)
+
+        # Then: Expected deployment ids are returned
+        eq_(len(deployments), 2)
+        dict_compare(deployments[0], {'id': 'test-deployment1-v1'})
+        dict_compare(deployments[1], {'id': 'test-deployment1-v2'})
+
+    @freeze_time(NOW)
+    def test_update_runtime_upstreams(self):
+
+        # Given: Upstreams that needs to be updated
+        upstreams = {
+            '8080': {
+                'upstream1': 'host1:40001',
+                'upstream2': 'host2:40001'
+            }
+        }
+
+        # When: I promote state for existing deployment
+        self.store.update_runtime_upstreams('test-deployment1-v1', upstreams)
+
+        # Then: Deployment state is changed to promoted and set to never expire
+        deployment = self._get_raw_document_without_internal_id(
+            'test-deployment1-v1')
+        expected_deployment = dict_merge(deployment, {
+            'runtime': {
+                'upstreams': upstreams
+            },
+            'modified': NOW,
+        })
+        dict_compare(deployment, expected_deployment)
+
+    @freeze_time(NOW)
+    def test_update_runtime_units(self):
+
+        # Given: Upstreams that needs to be updated
+        units = [
+            {
+                'name': 'unit1',
+                'machine':  'machine1',
+                'active': 'active',
+                'sub': 'dead'
+            }
+        ]
+
+        # When: I promote state for existing deployment
+        self.store.update_runtime_units('test-deployment1-v1', units)
+
+        # Then: Deployment state is changed to promoted and set to never expire
+        deployment = self._get_raw_document_without_internal_id(
+            'test-deployment1-v1')
+        expected_deployment = dict_merge(deployment, {
+            'runtime': {
+                'units': units
+            },
+            'modified': NOW,
+        })
+        dict_compare(deployment, expected_deployment)

@@ -29,6 +29,14 @@ class TestAbstractStore:
         self.store.update_state('fake_id', 'PROMOTED')
 
     @raises(NotImplementedError)
+    def test_update_runtime_upstreams(self):
+        self.store.update_runtime_upstreams('fake_id', {})
+
+    @raises(NotImplementedError)
+    def test_update_runtime_units(self):
+        self.store.update_runtime_units('fake_id', [])
+
+    @raises(NotImplementedError)
     def test_update_state_bulk(self):
         self.store.update_state_bulk('myapp', 'DECOMMISSIONED')
 

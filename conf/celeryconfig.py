@@ -51,6 +51,9 @@ CELERY_ROUTES = {
     },
     'deployer.tasks.deployment._fleet_check_running': {
         'routing_key': 'prefork',
+    },
+    'deployer.tasks.deployment.sync_units_task': {
+        'routing_key': 'prefork',
     }
 }
 
@@ -101,6 +104,11 @@ CELERYBEAT_SCHEDULE = {
         'task': 'deployer.tasks.backend_cleanup',
         'schedule': crontab(hour="*/2", minute=0),
         'args': (),
+    },
+    'deployer.tasks.deployment.sync_promoted_units': {
+        'task': 'deployer.tasks.deployment.sync_promoted_units',
+        'schedule': crontab(minute='*/2'),
+        'args': ()
     }
 }
 

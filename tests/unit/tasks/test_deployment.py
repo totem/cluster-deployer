@@ -20,7 +20,7 @@ from tests.helper import dict_compare
 __author__ = 'sukrit'
 
 from deployer.tasks.deployment import _deployment_defaults, \
-    _pre_create_undeploy, _wait_for_undeploy, _get_exposed_ports, \
+    _pre_create_undeploy, _wait_for_undeploy, \
     _fleet_check_deploy, _check_node, _check_deployment, \
     _check_discover
 
@@ -484,69 +484,13 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
     })
 
 
-def test_get_exposed_ports_with_no_proxy():
-
-    # Given: Deployment parameters (w/o proxy)
-    deployment = _create_test_deployment()
-
-    # When: I get exposed ports for deployment
-    ports = _get_exposed_ports(deployment)
-
-    # Then: Empty set is returned
-    eq_(ports, [])
-
-
-def test_get_exposed_ports_with_hosts_and_listenres():
-
-    # Given: Deployment parameters
-    deployment = _create_test_deployment()
-    deployment = dict_merge(deployment, {
-        'proxy': {
-            'hosts': {
-                'host1': {
-                    'locations': {
-                        'loc1': {
-                            'port': 8080,
-                        },
-                        'loc2': {
-                            'port': 8081
-                        }
-                    }
-                },
-                'host2': {
-                    'locations': {
-                        'loc3': {
-                            'port': 8080
-                        },
-                        'loc4': {
-                            'port': 8082
-                        }
-                    }
-                }
-            },
-            'listeners': {
-                'ssh': {
-                    'upstream-port': 22
-                }
-            }
-        }
-
-    })
-
-    # When: I get exposed ports for deployment
-    ports = _get_exposed_ports(deployment)
-
-    # Then: Empty set is returned
-    eq_(ports, [22, 8080, 8081, 8082])
-
-
 @app.task
 def mock_callback():  # pragma: no cover
     return True
 
 
 @patch('deployer.tasks.deployment.undeploy')
-@patch('deployer.tasks.deployment.filter_units')
+@patch('deployer.tasks.deployment.fetch_runtime_units')
 def test_pre_create_undeploy_for_red_green(mock_filter_units, mock_undeploy):
     """
     Should un-deploy all versions for mode: red-green
@@ -570,7 +514,7 @@ def test_pre_create_undeploy_for_red_green(mock_filter_units, mock_undeploy):
 
 
 @patch('deployer.tasks.deployment.undeploy')
-@patch('deployer.tasks.deployment.filter_units')
+@patch('deployer.tasks.deployment.fetch_runtime_units')
 def test_pre_create_undeploy_for_blue_green(mock_filter_units, mock_undeploy):
     """
     Should undeploy all versions for mode: red-green
@@ -595,7 +539,7 @@ def test_pre_create_undeploy_for_blue_green(mock_filter_units, mock_undeploy):
 
 
 @patch('deployer.tasks.deployment.undeploy')
-@patch('deployer.tasks.deployment.filter_units')
+@patch('deployer.tasks.deployment.fetch_runtime_units')
 def test_pre_create_undeploy_for_ab(mock_filter_units, mock_undeploy):
     """
     Should undeploy all versions for mode: red-green
@@ -618,7 +562,7 @@ def test_pre_create_undeploy_for_ab(mock_filter_units, mock_undeploy):
 
 
 @raises(NodeNotUndeployed)
-@patch('deployer.tasks.deployment.filter_units')
+@patch('deployer.tasks.deployment.fetch_runtime_units')
 def test_wait_for_undeploy_for_failure(mock_filter_units):
     """
     Should raise NodeNotUndeployed exception if units do not get undeployed
@@ -637,7 +581,7 @@ def test_wait_for_undeploy_for_failure(mock_filter_units):
     # NodeNotUndeployed is raised
 
 
-@patch('deployer.tasks.deployment.filter_units')
+@patch('deployer.tasks.deployment.fetch_runtime_units')
 def test_wait_for_undeploy_for_success(mock_filter_units):
     """
     Should wait for undeploy to finish.
@@ -653,7 +597,7 @@ def test_wait_for_undeploy_for_success(mock_filter_units):
     eq_(ret_value, True)
 
 
-@patch('deployer.tasks.deployment.filter_units')
+@patch('deployer.tasks.deployment.fetch_runtime_units')
 def test_fleet_check_deploy_when_units_already_running(mock_filter_units):
     # given: Running units
     mock_filter_units.return_value = [
@@ -670,7 +614,7 @@ def test_fleet_check_deploy_when_units_already_running(mock_filter_units):
     dict_compare(ret_value, mock_filter_units.return_value)
 
 
-@patch('deployer.tasks.deployment.filter_units')
+@patch('deployer.tasks.deployment.fetch_runtime_units')
 def test_fleet_check_deploy_when_units_are_not_running(mock_filter_units):
     # given: Running units
     mock_filter_units.return_value = [
@@ -690,7 +634,7 @@ def test_fleet_check_deploy_when_units_are_not_running(mock_filter_units):
 
 
 @raises(SSHException)
-@patch('deployer.tasks.deployment.filter_units')
+@patch('deployer.tasks.deployment.fetch_runtime_units')
 def test_fleet_check_deploy_when_ssh_error_is_thrown(mock_filter_units):
     # given: Running units
     mock_filter_units.side_effect = SSHException()

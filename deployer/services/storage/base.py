@@ -110,6 +110,30 @@ class AbstractStore:
         """
         self.not_supported()
 
+    def update_runtime_upstreams(self, deployment_id, upstreams):
+        """
+        Updates the runtime upstreams information in the store
+
+        :param deployment_id: Id of the deployment
+        :type deployment_id: str
+        :param upstreams: Dictionary representing runtime upstreams info
+        :type upstreams: dict
+        :return: None
+        """
+        self.not_supported()
+
+    def update_runtime_units(self, deployment_id, units):
+        """
+        Updates the runtime units information in the store for given deployment
+
+        :param deployment_id: Id of the deployment
+        :type deployment_id: str
+        :param units: Dictionary representing units for given deployment
+        :type units: array
+        :return: None
+        """
+        self.not_supported()
+
     def find_apps(self):
         """
         Looks up all applications names
@@ -118,16 +142,21 @@ class AbstractStore:
         """
         self.not_supported()
 
-    def filter_deployments(self, name, version=None, only_running=True):
+    def filter_deployments(self, name=None, version=None, only_running=True,
+                           only_ids=False):
         """
-        Filter deployments for a given application
-        :param name: Application name
+        Filter deployments
+        :keyword name: Optional Application name
         :type name: str
         :keyword version: Application version
         :type version: str
         :keyword only_running: If True, gets the list of running deployments
             else gets all deployments
         :type only_running: bool
+        :keyword only_ids:  If True , only ids are included and rest of the
+            fields are excluded. (The structure of document however does not
+            change)
+        :type only_ids: bool
         :return: List of deployments
         :rtype list
         """
