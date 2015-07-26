@@ -912,9 +912,9 @@ def recover_cluster(self, recovery_params):
 
     :param recovery_params: Parameters for recovering cluster
     :type recovery_params: dict
-    :return: None
+    :return: GroupResult
     """
     deployments = get_store().filter_deployments(
         state=DEPLOYMENT_STATE_PROMOTED)
-    for deployment in deployments:
-        deployment['runtime'] = {}
+    return group(
+        create.si(deployment) for deployment in deployments).delay()
