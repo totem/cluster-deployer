@@ -98,9 +98,6 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
                 'ref': 'testref',
                 'commit': 'testcommit',
                 'type': 'github'
-            },
-            'deployer': {
-                'cluster': CLUSTER_NAME
             }
         },
         'deployment': {
@@ -136,7 +133,7 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
                 'name': 'yoda-register'
             }
         },
-        'id': 'testowner-testrepo-testref-101',
+        'id': 'local-testowner-testrepo-testref-101',
         'proxy': {
             'hosts': {},
             'listeners': {},
@@ -147,7 +144,8 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
         'security': {
             'profile': 'default'
         },
-        'notifications': NOTIFICATIONS_DEFAULTS
+        'notifications': NOTIFICATIONS_DEFAULTS,
+        'cluster': CLUSTER_NAME
     })
 
 
@@ -203,9 +201,6 @@ def test_deployment_defaults_with_proxy(mock_time):
                 'ref': 'testref',
                 'commit': 'testcommit',
                 'type': 'github'
-            },
-            'deployer': {
-                'cluster': CLUSTER_NAME
             }
         },
         'deployment': {
@@ -243,7 +238,7 @@ def test_deployment_defaults_with_proxy(mock_time):
                 'name': 'yoda-register'
             }
         },
-        'id': 'testowner-testrepo-testref-101',
+        'id': 'local-testowner-testrepo-testref-101',
         'proxy': {
             'hosts': {
                 'host1': {
@@ -293,7 +288,8 @@ def test_deployment_defaults_with_proxy(mock_time):
         'security': {
             'profile': 'default'
         },
-        'notifications': NOTIFICATIONS_DEFAULTS
+        'notifications': NOTIFICATIONS_DEFAULTS,
+        'cluster': CLUSTER_NAME
     })
 
 
@@ -327,9 +323,6 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
                 'ref': 'testref',
                 'commit': 'testcommit',
                 'type': 'github'
-            },
-            'deployer': {
-                'cluster': CLUSTER_NAME
             }
         },
         'deployment': {
@@ -370,7 +363,7 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
                 'name': 'default-logger'
             }
         },
-        'id': 'testowner-testrepo-testref-1000',
+        'id': 'local-testowner-testrepo-testref-1000',
         'proxy': {
             'hosts': {},
             'listeners': {},
@@ -381,7 +374,8 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
         'security': {
             'profile': 'default'
         },
-        'notifications': NOTIFICATIONS_DEFAULTS
+        'notifications': NOTIFICATIONS_DEFAULTS,
+        'cluster': CLUSTER_NAME
     })
 
 
@@ -430,9 +424,6 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
                 'ref': 'testref',
                 'commit': 'testcommit',
                 'type': 'github'
-            },
-            'deployer': {
-                'cluster': CLUSTER_NAME
             }
         },
         'deployment': {
@@ -469,7 +460,7 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
                 'name': 'custom-logger'
             }
         },
-        'id': 'testdeployment-1000',
+        'id': 'local-testdeployment-1000',
         'proxy': {
             'hosts': {},
             'listeners': {},
@@ -480,7 +471,8 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
         'security': {
             'profile': 'default'
         },
-        'notifications': NOTIFICATIONS_DEFAULTS
+        'notifications': NOTIFICATIONS_DEFAULTS,
+        'cluster': CLUSTER_NAME
     })
 
 

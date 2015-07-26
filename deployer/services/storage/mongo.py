@@ -4,7 +4,7 @@ import pymongo
 import pytz
 from conf.appconfig import MONGODB_URL, MONGODB_DEPLOYMENT_COLLECTION, \
     MONGODB_DB, DEPLOYMENT_EXPIRY_SECONDS, MONGODB_EVENT_COLLECTION, \
-    DEPLOYMENT_STATE_PROMOTED, RUNNING_DEPLOYMENT_STATES
+    DEPLOYMENT_STATE_PROMOTED, RUNNING_DEPLOYMENT_STATES, CLUSTER_NAME
 from deployer.services.storage.base import AbstractStore
 
 __author__ = 'sukrit'
@@ -48,20 +48,26 @@ class MongoStore(AbstractStore):
         self._deployments.drop_indexes()
         if 'created_idx' not in idxs:
             self._deployments.create_index(
-                [('date', pymongo.DESCENDING)], name='created_idx')
+                [('cluster', pymongo.ASCENDING),
+                 ('date', pymongo.DESCENDING)],
+                name='created_idx')
 
         if 'identity_idx' not in idxs:
             self._deployments.create_index(
                 'id', name='identity_idx', unique=True)
 
-        if 'modified_idx' not in idxs:
-            self._deployments.create_index(
-                [('modified', pymongo.DESCENDING)], name='modified_idx')
-
         if 'expiry_idx' not in idxs:
             self._deployments.create_index(
                 [('_expiry', pymongo.DESCENDING)], name='expiry_idx',
                 background=True, expireAfterSeconds=DEPLOYMENT_EXPIRY_SECONDS)
+
+        if 'app_idx' not in idxs:
+            self._deployments.create_index([
+                ('cluster', pymongo.ASCENDING),
+                ('deployment.name', pymongo.ASCENDING),
+                ('deployment.version', pymongo.ASCENDING)
+
+            ], name='app_idx')
 
     @property
     def _db(self):
@@ -148,6 +154,7 @@ class MongoStore(AbstractStore):
     def update_state_bulk(self, name, new_state, existing_state=None,
                           version=None):
         u_filter = {
+            'cluster': CLUSTER_NAME,
             'deployment.name': name
         }
         if existing_state:
@@ -168,6 +175,7 @@ class MongoStore(AbstractStore):
         return [
             app['_id'] for app in
             self._deployments.aggregate([
+                {'$match': {'cluster': CLUSTER_NAME}},
                 {'$group': {'_id': '$deployment.name'}},
                 {'$sort':  {'_id':  1}}
             ]) or []
@@ -175,7 +183,9 @@ class MongoStore(AbstractStore):
 
     def filter_deployments(self, name=None, version=None, only_running=True,
                            only_ids=False):
-        u_filter = {}
+        u_filter = {
+            'cluster': CLUSTER_NAME
+        }
         if name:
             u_filter['deployment.name'] = name
         projection = {

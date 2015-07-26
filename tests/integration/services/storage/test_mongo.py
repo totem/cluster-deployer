@@ -3,7 +3,7 @@ import datetime
 from freezegun import freeze_time
 import pymongo
 from conf.appconfig import DEPLOYMENT_STATE_DECOMMISSIONED, \
-    DEPLOYMENT_STATE_NEW, DEPLOYMENT_STATE_PROMOTED
+    DEPLOYMENT_STATE_NEW, DEPLOYMENT_STATE_PROMOTED, CLUSTER_NAME
 from deployer.services.storage.mongo import create
 from nose.tools import ok_, eq_
 from deployer.util import dict_merge
@@ -27,7 +27,8 @@ EXISTING_DEPLOYMENTS = {
             'version': 'v0'
         },
         'state': DEPLOYMENT_STATE_DECOMMISSIONED,
-        '_expiry': NOW
+        '_expiry': NOW,
+        'cluster': CLUSTER_NAME
     },
     'test-deployment1-v1': {
         'id': 'test-deployment1-v1',
@@ -36,7 +37,8 @@ EXISTING_DEPLOYMENTS = {
             'version': 'v1'
         },
         'state': DEPLOYMENT_STATE_PROMOTED,
-        '_expiry': NOW
+        '_expiry': NOW,
+        'cluster': CLUSTER_NAME
     },
     'test-deployment1-v2': {
         'id': 'test-deployment1-v2',
@@ -45,7 +47,8 @@ EXISTING_DEPLOYMENTS = {
             'version': 'v2'
         },
         'state': DEPLOYMENT_STATE_NEW,
-        '_expiry': NOW
+        '_expiry': NOW,
+        'cluster': CLUSTER_NAME
     },
     'test-deployment2-v1': {
         'id': 'test-deployment2-v1',
@@ -54,7 +57,8 @@ EXISTING_DEPLOYMENTS = {
             'version': 'v2'
         },
         'state': DEPLOYMENT_STATE_DECOMMISSIONED,
-        '_expiry': NOW
+        '_expiry': NOW,
+        'cluster': CLUSTER_NAME
     }
 }
 
@@ -96,7 +100,7 @@ class TestMongoStore():
         indexes = self.store._deployments.index_information()
 
         # Indexes are created as expected
-        for idx in ('created_idx', 'identity_idx', 'modified_idx',
+        for idx in ('created_idx', 'identity_idx', 'app_idx',
                     'expiry_idx'):
             ok_(idx in indexes, '{} was not created'.format(idx))
 

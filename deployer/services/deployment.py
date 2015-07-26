@@ -1,5 +1,6 @@
 import logging
 from fleet.deploy.deployer import filter_units
+from conf.appconfig import CLUSTER_NAME
 from deployer.fleet import get_fleet_provider
 from deployer.services.proxy import get_discovered_nodes
 from deployer.services.storage.factory import get_store
@@ -88,3 +89,17 @@ def sync_units(deployment_id):
         units = fetch_runtime_units(deployment['deployment']['name'],
                                     deployment['deployment']['version'])
         store.update_runtime_units(deployment_id, units)
+
+
+def generate_deployment_id(app_name, app_version):
+    """
+    Generated deployment id for given application name and version
+
+    :param app_name: Application name
+    :type app_name: str
+    :param app_version: Application version
+    :type app_version: str
+    :return: Deployment id
+    :rtype: str
+    """
+    return '{}-{}-{}'.format(CLUSTER_NAME, app_name, app_version)

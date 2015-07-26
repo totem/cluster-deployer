@@ -19,7 +19,7 @@ from deployer.services.security import decrypt_config
 from deployer.services.storage.factory import get_store
 from deployer.services.util import create_notify_ctx
 from deployer.services.deployment import fetch_runtime_units, get_exposed_ports, \
-    sync_upstreams, sync_units
+    sync_upstreams, sync_units, generate_deployment_id
 from deployer.tasks import notification
 from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning, \
     NodeCheckFailed, MinNodesNotDiscovered
@@ -74,7 +74,13 @@ def create_search_parameters(deployment, defaults=None):
         'meta-info': {}
     })
     return {
-        'meta-info': copy.deepcopy(deployment['meta-info']),
+        'meta-info': dict_merge(
+            {
+                'deployer': {
+                    'cluster': CLUSTER_NAME
+                }
+            },
+            copy.deepcopy(deployment['meta-info'])),
         'deployment': {
             'name': deployment['deployment']['name'],
             'version': deployment['deployment']['version'],
@@ -227,8 +233,7 @@ def delete(name, version=None):
     search_params = {
         'deployment': {
             'name': name,
-            'version': version or 'all',
-            'id': '%s-%s' % (name, version) if version else 'all'
+            'version': version or 'all'
         }
     }
     return _using_lock.si(
@@ -428,9 +433,9 @@ def _deployment_defaults(deployment):
     # Set the deployment identifier.  We will use deployment name and version
     # as unique identifier as there can only be one deployment with same name
     # and version
-
-    deployment_upd['id'] = '%s-%s' % (deployment_upd['deployment']['name'],
-                                      deployment_upd['deployment']['version'])
+    app_name = deployment_upd['deployment']['name']
+    app_version = deployment_upd['deployment']['version']
+    deployment_upd['id'] = generate_deployment_id(app_name, app_version)
     deployment_upd['state'] = DEPLOYMENT_STATE_STARTED
     deployment_upd['started-at'] = datetime.datetime.utcnow()
 
@@ -459,11 +464,7 @@ def _deployment_defaults(deployment):
             _create_discover_check(deployment_upd))
 
     # Override/Set Clustername in meta-info
-    deployment_upd['meta-info'] = dict_merge({
-        'deployer': {
-            'cluster': CLUSTER_NAME
-        }
-    }, deployment_upd['meta-info'])
+    deployment_upd['cluster'] = CLUSTER_NAME
     return deployment_upd
 
 

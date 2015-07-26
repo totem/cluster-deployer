@@ -42,6 +42,9 @@ DEFAULT_HIPCHAT_TOKEN = os.getenv('HIPCHAT_TOKEN', '')
 DEFAULT_GITHUB_TOKEN = os.getenv('GITHUB_TOKEN', '')
 BASE_URL = os.getenv('BASE_URL', 'http://localhost:{0}'.format(API_PORT))
 
+TOTEM_ENV = os.getenv('TOTEM_ENV', 'local')
+CLUSTER_NAME = os.getenv('CLUSTER_NAME', TOTEM_ENV)
+
 NOTIFICATIONS_DEFAULTS = {
     'hipchat': {
         'enabled': os.getenv('HIPCHAT_ENABLED', 'false').strip()
@@ -188,8 +191,6 @@ TOTEM_ETCD_SETTINGS = {
     'yoda_base': os.getenv('ETCD_YODA_BASE', '/yoda'),
 }
 
-TOTEM_ENV = os.getenv('TOTEM_ENV', 'local')
-CLUSTER_NAME = os.getenv('CLUSTER_NAME', TOTEM_ENV)
 SEARCH_INDEX = os.getenv('SEARCH_INDEX', 'totem-{0}'.format(TOTEM_ENV))
 
 SEARCH_SETTINGS = {
