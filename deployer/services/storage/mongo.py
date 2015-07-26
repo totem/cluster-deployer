@@ -117,7 +117,8 @@ class MongoStore(AbstractStore):
                 '$set': {
                     'state': state,
                     'modified': datetime.datetime.now(tz=pytz.UTC),
-                    '_expiry': self._generate_expiry(state)
+                    '_expiry': self._generate_expiry(state),
+                    'runtime': {}  # Reset runtime info during state change
                 }
             }
         )
@@ -167,7 +168,8 @@ class MongoStore(AbstractStore):
             '$set': {
                 'state': new_state,
                 'modified': datetime.datetime.now(tz=pytz.UTC),
-                '_expiry': self._generate_expiry(new_state)
+                '_expiry': self._generate_expiry(new_state),
+                'runtime': {}  # Reset runtime info during state change
             }
         })
 

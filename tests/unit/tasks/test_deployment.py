@@ -145,7 +145,8 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
             'profile': 'default'
         },
         'notifications': NOTIFICATIONS_DEFAULTS,
-        'cluster': CLUSTER_NAME
+        'cluster': CLUSTER_NAME,
+        'runtime': {}
     })
 
 
@@ -289,7 +290,8 @@ def test_deployment_defaults_with_proxy(mock_time):
             'profile': 'default'
         },
         'notifications': NOTIFICATIONS_DEFAULTS,
-        'cluster': CLUSTER_NAME
+        'cluster': CLUSTER_NAME,
+        'runtime': {}
     })
 
 
@@ -375,7 +377,8 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
             'profile': 'default'
         },
         'notifications': NOTIFICATIONS_DEFAULTS,
-        'cluster': CLUSTER_NAME
+        'cluster': CLUSTER_NAME,
+        'runtime': {}
     })
 
 
@@ -472,7 +475,8 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
             'profile': 'default'
         },
         'notifications': NOTIFICATIONS_DEFAULTS,
-        'cluster': CLUSTER_NAME
+        'cluster': CLUSTER_NAME,
+        'runtime': {}
     })
 
 

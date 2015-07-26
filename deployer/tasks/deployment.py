@@ -463,8 +463,11 @@ def _deployment_defaults(deployment):
         env['DISCOVER_HEALTH'] = json.dumps(
             _create_discover_check(deployment_upd))
 
-    # Override/Set Clustername in meta-info
+    # Override/Set Clustername
     deployment_upd['cluster'] = CLUSTER_NAME
+
+    # Reset runtime if it exists
+    deployment_upd['runtime'] = {}
     return deployment_upd
 
 
@@ -831,12 +834,15 @@ def _check_node(self, node, path, attempts, timeout):
             countdown=TASK_SETTINGS['CHECK_NODE_RETRY_DELAY'])
 
 
-def _get_job_lock(job_name):
+def _get_job_lock(job_name, raise_error=False):
     try:
         return LockService(lock_base=LOCK_JOB_BASE).apply_lock(job_name)
     except ResourceLockedException as lock_error:
-        logger.info('Job:{} already running. Skipping...'.format(
-            lock_error.name))
+        if raise_error:
+            raise
+        else:
+            logger.info('Job:{} already running. Skipping...'.format(
+                lock_error.name))
 
 
 @app.task
@@ -888,7 +894,7 @@ def sync_promoted_units(self):
 
     try:
         deployments = get_store().filter_deployments(
-            state=DEPLOYMENT_STATE_PROMOTED)
+            state=DEPLOYMENT_STATE_PROMOTED, only_ids=True)
     except:
         _release_lock.si(lock).delay()
         raise
@@ -897,3 +903,18 @@ def sync_promoted_units(self):
               for deployment in deployments),
         _release_lock.si(lock)
     ).delay()
+
+
+@app.task(bind=True)
+def recover_cluster(self, recovery_params):
+    """
+    Recovers the cluster by re-scheduling promoted deployments
+
+    :param recovery_params: Parameters for recovering cluster
+    :type recovery_params: dict
+    :return: None
+    """
+    deployments = get_store().filter_deployments(
+        state=DEPLOYMENT_STATE_PROMOTED)
+    for deployment in deployments:
+        deployment['runtime'] = {}
