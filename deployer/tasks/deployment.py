@@ -915,6 +915,10 @@ def recover_cluster(self, recovery_params):
     :return: GroupResult
     """
     deployments = get_store().filter_deployments(
-        state=DEPLOYMENT_STATE_PROMOTED)
+        state=DEPLOYMENT_STATE_PROMOTED,
+        name=recovery_params.get('name'),
+        version=recovery_params.get('version'),
+        exclude_names=recovery_params.get('exclude-names')
+    )
     return group(
         create.si(deployment) for deployment in deployments).delay()

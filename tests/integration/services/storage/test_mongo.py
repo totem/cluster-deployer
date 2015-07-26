@@ -3,7 +3,8 @@ import datetime
 from freezegun import freeze_time
 import pymongo
 from conf.appconfig import DEPLOYMENT_STATE_DECOMMISSIONED, \
-    DEPLOYMENT_STATE_NEW, DEPLOYMENT_STATE_PROMOTED, CLUSTER_NAME
+    DEPLOYMENT_STATE_NEW, DEPLOYMENT_STATE_PROMOTED, CLUSTER_NAME, \
+    DEPLOYMENT_STATE_STARTED
 from deployer.services.storage.mongo import create
 from nose.tools import ok_, eq_
 from deployer.util import dict_merge
@@ -54,11 +55,31 @@ EXISTING_DEPLOYMENTS = {
         'id': 'test-deployment2-v1',
         'deployment': {
             'name': 'test-deployment2',
-            'version': 'v2'
+            'version': 'v1'
         },
         'state': DEPLOYMENT_STATE_DECOMMISSIONED,
         '_expiry': NOW,
         'cluster': CLUSTER_NAME
+    },
+    'test-deployment2-v2': {
+        'id': 'test-deployment2-v2',
+        'deployment': {
+            'name': 'test-deployment2',
+            'version': 'v2'
+        },
+        'state': DEPLOYMENT_STATE_STARTED,
+        '_expiry': NOW,
+        'cluster': CLUSTER_NAME
+    },
+    'test-deployment3-v1': {
+        'id': 'test-deployment3-v1',
+        'deployment': {
+            'name': 'test-deployment2',
+            'version': 'v1'
+        },
+        'state': DEPLOYMENT_STATE_STARTED,
+        '_expiry': NOW,
+        'cluster': 'DIFFERENT-CLUSTER'
     }
 }
 
@@ -242,11 +263,13 @@ class TestMongoStore():
         deployments = self.store.filter_deployments()
 
         # Then:Running deployments are returned
-        eq_(len(deployments), 2)
+        eq_(len(deployments), 3)
         dict_compare(deployments[0],
                      EXISTING_DEPLOYMENTS['test-deployment1-v1'])
         dict_compare(deployments[1],
                      EXISTING_DEPLOYMENTS['test-deployment1-v2'])
+        dict_compare(deployments[2],
+                     EXISTING_DEPLOYMENTS['test-deployment2-v2'])
 
     def test_filter_deployments_by_name(self):
         # When: I filter deployments from the store
@@ -268,6 +291,25 @@ class TestMongoStore():
         eq_(len(deployments), 1)
         dict_compare(deployments[0],
                      EXISTING_DEPLOYMENTS['test-deployment1-v1'])
+
+    def test_filter_deployments_with_state(self):
+        # When: I filter deployments from the store with given state
+        deployments = self.store.filter_deployments(state=DEPLOYMENT_STATE_NEW)
+
+        # Then: Expected deployments are returned
+        eq_(len(deployments), 1)
+        dict_compare(deployments[0],
+                     EXISTING_DEPLOYMENTS['test-deployment1-v2'])
+
+    def test_filter_deployments_with_excluded_names(self):
+        # When: I filter deployments from the store with given state
+        deployments = self.store.filter_deployments(
+            exclude_names=('test-deployment1',))
+
+        # Then: Expected deployments are returned
+        eq_(len(deployments), 1)
+        dict_compare(deployments[0],
+                     EXISTING_DEPLOYMENTS['test-deployment2-v2'])
 
     def test_filter_deployment_ids(self):
         # When: I filter deployments from the store for ids only
