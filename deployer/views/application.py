@@ -7,10 +7,12 @@ from conf.appconfig import MIME_JSON, MIME_TASK_V1, \
     SCHEMA_APP_VERSION_V1, MIME_APP_VERSION_V1, MIME_APP_DELETE_V1, \
     SCHEMA_APP_LIST_V1, MIME_APP_LIST_V1, SCHEMA_APP_VERSION_LIST_V1, \
     MIME_APP_VERSION_LIST_V1, MIME_APP_VERSION_DELETE_V1, \
-    SCHEMA_APP_VERSION_UNIT_LIST_V1, MIME_APP_VERSION_UNIT_LIST_V1
+    SCHEMA_APP_VERSION_UNIT_LIST_V1, MIME_APP_VERSION_UNIT_LIST_V1, \
+    SCHEMA_RECOVERY_V1, MIME_RECOVERY_V1
 from deployer.services.storage.factory import get_store
 
-from deployer.tasks.deployment import create, delete, list_units
+from deployer.tasks.deployment import create, delete, list_units, \
+    recover_cluster
 from deployer.views import hypermedia, task_client
 from deployer.views.util import created_task, created, deleted, \
     build_response, use_paging
@@ -188,18 +190,43 @@ class UnitApi(MethodView):
             return created_task(result)
 
 
+class RecoveryApi(MethodView):
+    """
+    Provides API for deployment recovery
+    :param MethodView:
+    :return:
+    """
+
+    @hypermedia.consumes({
+        MIME_RECOVERY_V1: SCHEMA_RECOVERY_V1,
+        MIME_JSON: SCHEMA_APP_VERSION_CREATE_V1
+    })
+    @hypermedia.produces({
+        MIME_TASK_V1: SCHEMA_TASK_V1,
+        MIME_JSON: SCHEMA_TASK_V1
+    }, default=MIME_TASK_V1)
+    def post(self, request_data=None, accept_mimetype=None, **kwargs):
+        """
+        Allows creation of new application version.
+        :return:
+        """
+        result = recover_cluster.delay(request_data)
+        return created_task(result)
+
+
 def register(app, **kwargs):
     apps_func = ApplicationApi.as_view('apps')
     versions_func = VersionApi.as_view('versions')
     units_func = UnitApi.as_view('units')
+    recovery_func = RecoveryApi.as_view('recovery')
 
-    for uri in ['/apps', '/apps/']:
+    for uri in ('/apps', '/apps/'):
         app.add_url_rule(uri,  view_func=apps_func, methods=['GET', 'POST'])
 
     app.add_url_rule('/apps/<name>', view_func=apps_func,
                      methods=['DELETE', 'GET'])
 
-    for uri in ['/apps/<name>/versions', '/apps/<name>/versions/']:
+    for uri in ('/apps/<name>/versions', '/apps/<name>/versions/'):
         app.add_url_rule(uri, view_func=versions_func, methods=['GET'])
 
     version_uri = '/apps/<name>/versions/<version>'
@@ -207,5 +234,8 @@ def register(app, **kwargs):
                      view_func=versions_func,
                      methods=['DELETE', 'GET'])
 
-    for uri in ['%s/units' % (version_uri), '%s/units/' % (version_uri)]:
+    for uri in ('%s/units' % (version_uri), '%s/units/' % version_uri):
         app.add_url_rule(uri, view_func=units_func, methods=['GET'])
+
+    for uri in ('/recovery', '/recovery/'):
+        app.add_url_rule(uri, view_func=recovery_func, methods=['POST'])

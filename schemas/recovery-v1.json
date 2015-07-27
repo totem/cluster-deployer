@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "title": "Schema for recovering cluster",
+  "id": "#recovery-v1",
+  "properties": {
+    "name": {
+      "description": "Optional Application name that needs to be recovered. If not specified, all apps are recovered.",
+      "type": "string",
+      "maxLength": 512
+    },
+    "version": {
+      "description": "Optional Application version that needs to be recovered. If not specified all app versions are recovered",
+      "type": "string",
+      "maxLength": 100
+    },
+    "exclude-names":{
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false
+}
