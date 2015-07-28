@@ -792,7 +792,7 @@ def _check_deployment(nodes, path, attempts, timeout, search_params=None,
             _deployment_check_passed.si(search_params=search_params,
                                         next_task=next_task)
         ).delay()
-    else:
+    elif next_task:
         return next_task.delay()
 
 
