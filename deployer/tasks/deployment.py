@@ -689,13 +689,6 @@ def _fleet_check_deploy(self, name, version, service_cnt, min_nodes,
 
 
 @app.task
-def _processed_deployment(deployment):
-    deployment['state'] = DEPLOYMENT_STATE_PROMOTED
-    deployment['promoted-at'] = datetime.datetime.utcnow()
-    return deployment
-
-
-@app.task
 def _deployment_error_event(task_id, deployment, search_params):
     """
     Handles deployment creation error
@@ -722,8 +715,9 @@ def _deployment_error_event(task_id, deployment, search_params):
 @app.task
 def _promote_success(deployment, search_params=None):
     store = get_store()
-    deployment_id = deployment['deployment']['id']
+    deployment_id = deployment['id']
     notify_ctx = create_notify_ctx(deployment, 'create')
+
     store.add_event(EVENT_PROMOTED, search_params=search_params)
     store.update_state(deployment_id, DEPLOYMENT_STATE_PROMOTED)
     notification.notify.si(
@@ -731,7 +725,7 @@ def _promote_success(deployment, search_params=None):
         level=LEVEL_SUCCESS,
         notifications=deployment['notifications'],
         security_profile=deployment['security']['profile']),
-    _processed_deployment.si(deployment)
+    return store.get_deployment(deployment_id)
 
 
 @app.task
@@ -761,7 +755,7 @@ def _promote_deployment(deployment, search_params):
     if deployment['deployment']['mode'] == DEPLOYMENT_MODE_BLUEGREEN:
         tasks.append(
             _fleet_undeploy.subtask((name,), {'exclude_version': version},
-                                    countdown=120, immutable=True))
+                                    countdown=60, immutable=True))
 
     tasks.append(_promote_success.si(deployment, search_params=search_params))
 
@@ -798,6 +792,8 @@ def _check_deployment(nodes, path, attempts, timeout, search_params=None,
             _deployment_check_passed.si(search_params=search_params,
                                         next_task=next_task)
         ).delay()
+    elif next_task:
+        return next_task.delay()
 
 
 @app.task(bind=True)
@@ -899,7 +895,7 @@ def sync_promoted_units(self):
         _release_lock.si(lock).delay()
         raise
     return chord(
-        group(sync_upstreams_task.si(deployment['id'])
+        group(sync_units_task.si(deployment['id'])
               for deployment in deployments),
         _release_lock.si(lock)
     ).delay()
@@ -912,9 +908,18 @@ def recover_cluster(self, recovery_params):
 
     :param recovery_params: Parameters for recovering cluster
     :type recovery_params: dict
-    :return: None
+    :return: GroupResult
     """
+    logger.info('Begin Cluster recovery')
     deployments = get_store().filter_deployments(
-        state=DEPLOYMENT_STATE_PROMOTED)
-    for deployment in deployments:
-        deployment['runtime'] = {}
+        state=DEPLOYMENT_STATE_PROMOTED,
+        name=recovery_params.get('name'),
+        version=recovery_params.get('version'),
+        exclude_names=recovery_params.get('exclude-names')
+    )
+    return chord(
+        group(create.si(deployment) for deployment in deployments),
+        async_wait.s(
+            default_retry_delay=TASK_SETTINGS['DEPLOYMENT_WAIT_RETRY_DELAY'],
+            max_retries=TASK_SETTINGS['DEPLOYMENT_WAIT_RETRIES'])
+    ).delay()

@@ -107,6 +107,11 @@ CELERYBEAT_SCHEDULE = {
     },
     'deployer.tasks.deployment.sync_promoted_units': {
         'task': 'deployer.tasks.deployment.sync_promoted_units',
+        'schedule': crontab(minute='*/5'),
+        'args': ()
+    },
+    'deployer.tasks.deployment.sync_promoted_upstreams': {
+        'task': 'deployer.tasks.deployment.sync_promoted_upstreams',
         'schedule': crontab(minute='*/2'),
         'args': ()
     }

@@ -184,18 +184,25 @@ class MongoStore(AbstractStore):
         ]
 
     def filter_deployments(self, name=None, version=None, only_running=True,
-                           only_ids=False):
+                           only_ids=False, state=None, exclude_names=None):
         u_filter = {
             'cluster': CLUSTER_NAME
         }
         if name:
             u_filter['deployment.name'] = name
+        elif exclude_names:
+            u_filter['deployment.name'] = {
+                '$nin': list(exclude_names)
+            }
         projection = {
             '_id': False
         }
         if version:
             u_filter['deployment.version'] = version
-        if only_running:
+
+        if state:
+            u_filter['state'] = state
+        elif only_running:
             u_filter['state'] = {
                 '$in': RUNNING_DEPLOYMENT_STATES
             }

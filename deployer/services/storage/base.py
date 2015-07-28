@@ -143,7 +143,7 @@ class AbstractStore:
         self.not_supported()
 
     def filter_deployments(self, name=None, version=None, only_running=True,
-                           only_ids=False):
+                           only_ids=False, state=None):
         """
         Filter deployments
         :keyword name: Optional Application name
@@ -157,6 +157,8 @@ class AbstractStore:
             fields are excluded. (The structure of document however does not
             change)
         :type only_ids: bool
+        :keyword state: Filter based on deployment state
+        :type state: str
         :return: List of deployments
         :rtype list
         """

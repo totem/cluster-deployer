@@ -231,6 +231,7 @@ MIME_APP_VERSION_DELETE_V1 = \
     'application/vnd.deployer.app.version.delete.v1+json'
 MIME_APP_DELETE_V1 = 'application/vnd.deployer.app.delete.v1+json'
 MIME_HEALTH_V1 = 'application/vnd.deployer.health.v1+json'
+MIME_RECOVERY_V1 = 'application/vnd.deployer.recovery.v1+json'
 
 SCHEMA_TASK_V1 = 'task-v1'
 SCHEMA_ROOT_V1 = 'root-v1'
@@ -240,6 +241,7 @@ SCHEMA_APP_VERSION_V1 = 'app-version-v1'
 SCHEMA_APP_VERSION_LIST_V1 = 'app-version-list-v1'
 SCHEMA_APP_VERSION_UNIT_LIST_V1 = 'app-version-unit-list-v1'
 SCHEMA_HEALTH_V1 = 'health-v1'
+SCHEMA_RECOVERY_V1 = 'recovery-v1'
 
 API_MAX_PAGE_SIZE = 1000
 API_DEFAULT_PAGE_SIZE = 10
@@ -258,7 +260,7 @@ MONGODB_USERNAME = os.getenv('MONODB_USERNAME', '')
 MONGODB_PASSWORD = os.getenv('MONODB_PASSWORD', '')
 MONGODB_HOST = os.getenv('MONGODB_HOST', '127.0.0.1')
 MONGODB_PORT = int(os.getenv('MONGODB_PORT', '27017'))
-MONGODB_DB = os.getenv('MONGODB_DB', 'totem')
+MONGODB_DB = os.getenv('MONGODB_DB', 'totem-{}'.format(TOTEM_ENV))
 MONGODB_AUTH = '{0}:{1}@'.format(MONGODB_USERNAME, MONGODB_PASSWORD) \
     if MONGODB_USERNAME else ''
 MONGODB_DEFAULT_URL = 'mongodb://{0}{1}:{2}/{3}'.format(
