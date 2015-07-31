@@ -1,9 +1,7 @@
 from functools import wraps
 import sys
 from etcd import client
-from conf.appconfig import HEALTH_OK, HEALTH_FAILED, TOTEM_ETCD_SETTINGS, \
-    SEARCH_SETTINGS
-from deployer.elasticsearch import get_search_client
+from conf.appconfig import HEALTH_OK, HEALTH_FAILED, TOTEM_ETCD_SETTINGS
 from deployer.services.storage.factory import get_store
 from deployer.tasks.common import ping
 from deployer.util import timeout
@@ -40,15 +38,6 @@ def _check(func):
                 'details': str(sys.exc_info()[1])
             }
     return inner
-
-
-@timeout(HEALTH_TIMEOUT_SECONDS)
-@_check
-def _check_elasticsearch():
-    """
-    Checks elasticsearch health by querying info.
-    """
-    return get_search_client().info()
 
 
 @timeout(HEALTH_TIMEOUT_SECONDS)
@@ -97,6 +86,4 @@ def get_health(check_celery=True):
     }
     if check_celery:
         health_status['celery'] = _check_celery()
-    if SEARCH_SETTINGS['enabled']:
-        health_status['elasticsearch'] = _check_elasticsearch()
     return health_status

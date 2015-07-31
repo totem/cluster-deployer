@@ -63,7 +63,7 @@ class ApplicationApi(MethodView):
     }, default=MIME_APP_LIST_V1)
     def list(self, **kwargs):
         """
-        Lists all applications. Require search to be enabled.
+        Lists all applications.
 
         :param kwargs:
         :return:
@@ -144,6 +144,36 @@ class VersionApi(MethodView):
         MIME_APP_VERSION_DELETE_V1: None
     }, default=MIME_TASK_V1)
     def delete(self, name, version, accept_mimetype=None, **kwargs):
+        """
+        Deletes applications with given name and version
+
+        :param name:  Name of the application
+        :type name: str
+        :param version: Version of the application
+        :type version: str
+        :return: Flask response code for 202.
+        """
+        result = delete.delay(name, version=version)
+
+        if accept_mimetype == MIME_APP_VERSION_DELETE_V1:
+            task_client.ready(result.id, wait=True, raise_error=True)
+            return deleted(mimetype=accept_mimetype)
+
+        else:
+            return created_task(result)
+
+
+class StateApi(MethodView):
+    """
+    API for managing state of a given deployment
+    """
+
+    @hypermedia.produces({
+        MIME_TASK_V1: SCHEMA_TASK_V1,
+        MIME_JSON: SCHEMA_TASK_V1,
+        MIME_APP_VERSION_DELETE_V1: None
+    }, default=MIME_TASK_V1)
+    def update_state(self, name, version, accept_mimetype=None, **kwargs):
         """
         Deletes applications with given name and version
 
