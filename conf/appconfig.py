@@ -186,19 +186,9 @@ TASK_SETTINGS = {
 
 TOTEM_ETCD_SETTINGS = {
     'base': os.getenv('ETCD_TOTEM_BASE', '/totem'),
-    'host': os.getenv('ETCD_HOST', '172.17.42.1'),
+    'host': os.getenv('ETCD_HOST', '127.0.0.1'),
     'port': int(os.getenv('ETCD_PORT', '4001')),
     'yoda_base': os.getenv('ETCD_YODA_BASE', '/yoda'),
-}
-
-SEARCH_INDEX = os.getenv('SEARCH_INDEX', 'totem-{0}'.format(TOTEM_ENV))
-
-SEARCH_SETTINGS = {
-    'enabled': os.getenv('SEARCH_ENABLED', 'false').strip().lower() in
-    BOOLEAN_TRUE_VALUES,
-    'host': os.getenv('ELASTICSEARCH_HOST', '172.17.42.1'),
-    'port': os.getenv('ELASTICSEARCH_PORT', '9200'),
-    'default-index': SEARCH_INDEX
 }
 
 CORS_SETTINGS = {
