@@ -1,4 +1,5 @@
 from functools import wraps
+import logging
 import sys
 from etcd import client
 from conf.appconfig import HEALTH_OK, HEALTH_FAILED, TOTEM_ETCD_SETTINGS
@@ -7,6 +8,8 @@ from deployer.tasks.common import ping
 from deployer.util import timeout
 
 HEALTH_TIMEOUT_SECONDS = 10
+
+log = logging.getLogger(__name__)
 
 
 def _check(func):
@@ -33,6 +36,7 @@ def _check(func):
                 'details': func(*args, **kwargs)
             }
         except:
+            log.exception('Health check failed')
             return {
                 'status': HEALTH_FAILED,
                 'details': str(sys.exc_info()[1])
