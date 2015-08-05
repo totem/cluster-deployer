@@ -103,7 +103,7 @@ sudo docker run -it --rm -h cluster-deployer-${USER} --name cluster-deployer -v 
 | MONGODB_AUTH_DB | Mongo db authentication database | admin | admin |
 | MONGODB_USERNAME | Mongo db username | | |
 | MONGODB_PASSWORD | Mongo db password | | |
- 
+| MONGODB_DB | Mongo db database | totem-{TOTEM_ENV} | totem-{TOTEM_ENV} |
 
 ## Coding Standards and Guidelines
 
