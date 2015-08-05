@@ -98,7 +98,11 @@ sudo docker run -it --rm -h cluster-deployer-${USER} --name cluster-deployer -v 
 | CLUSTER_NAME | Name of the cluster where orchestrator is deployed | local | local |
 | TOTEM_ENV | Name of totem environment (e.g. production, local, development) | local | local |
 | LOG_IDENTIFIER | Program name/tag used for syslog | N/A | yoda-proxy |
-
+| MONGODB_HOST | Mongo db host | 127.0.0.1 | HOST_IP |
+| MONGODB_PORT | Mongo db port | 27017 | 27017 |
+| MONGODB_AUTH_DB | Mongo db authentication database | admin | admin |
+| MONGODB_USERNAME | Mongo db username | | |
+| MONGODB_PASSWORD | Mongo db password | | |
  
 
 ## Coding Standards and Guidelines
