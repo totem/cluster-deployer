@@ -23,7 +23,7 @@ def build_response(output, status=200, mimetype=MIME_JSON,
     :return: Tuple consisting of Flask Response, Status Code and Http Headers
     """
     if isinstance(output, list):
-        resp = Response(json.dumps(output))
+        resp = Response(json.dumps(output, cls=DateTimeEncoder))
     else:
         resp = jsonify(output)
     resp.mimetype = mimetype
@@ -93,3 +93,11 @@ def use_paging(func):
         kwargs.setdefault('size', size)
         return func(*args,  **kwargs)
     return inner
+
+
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if hasattr(obj, 'isoformat'):
+            return obj.isoformat()
+        else:
+            return json.JSONEncoder.default(self, obj)

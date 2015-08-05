@@ -2,6 +2,7 @@ import copy
 import datetime
 from freezegun import freeze_time
 import pymongo
+import pytz
 from conf.appconfig import DEPLOYMENT_STATE_DECOMMISSIONED, \
     DEPLOYMENT_STATE_NEW, DEPLOYMENT_STATE_PROMOTED, CLUSTER_NAME, \
     DEPLOYMENT_STATE_STARTED
@@ -17,7 +18,7 @@ __author__ = 'sukrit'
 Integration test for mongo storage. These requires mongo instance running
 """
 
-NOW = datetime.datetime(2022, 01, 01)
+NOW = datetime.datetime(2022, 01, 01, tzinfo=pytz.UTC)
 
 
 EXISTING_DEPLOYMENTS = {
