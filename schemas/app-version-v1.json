@@ -56,7 +56,7 @@
           "maxLength": 100
         },
         "commit": {
-          "type": "string",
+          "type": ["string", "null"],
           "maxLength": 100
         }
       },
