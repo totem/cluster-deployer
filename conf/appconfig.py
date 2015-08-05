@@ -44,6 +44,7 @@ BASE_URL = os.getenv('BASE_URL', 'http://localhost:{0}'.format(API_PORT))
 
 TOTEM_ENV = os.getenv('TOTEM_ENV', 'local')
 CLUSTER_NAME = os.getenv('CLUSTER_NAME', TOTEM_ENV)
+GIT_COMMIT = os.getenv('GIT_COMMIT', 'na')
 
 NOTIFICATIONS_DEFAULTS = {
     'hipchat': {
