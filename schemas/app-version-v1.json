@@ -34,9 +34,12 @@
         "job-id": {
           "type": "string",
           "maxLength": 100
+        },
+        "deployer": {
+          "type": "object"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "git": {
       "properties": {
@@ -53,11 +56,11 @@
           "maxLength": 100
         },
         "commit": {
-          "type": "string",
+          "type": ["string", "null"],
           "maxLength": 100
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "deployment": {
       "properties": {
@@ -117,6 +120,7 @@
       "type": "object",
       "properties": {
         "hosts": {
+          "type": "object",
           "description": "Hosts associated with the proxy",
           "patternProperties": {
             ".*": {
@@ -155,6 +159,7 @@
         },
         "locations": {
           "description": "Locations for given proxy host.",
+          "type": "object",
           "patternProperties": {
             ".*": {
               "$ref": "#/definitions/location"

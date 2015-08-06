@@ -4,11 +4,13 @@ from ast import literal_eval
 
 from celery.schedules import crontab
 from kombu import Queue
+from conf.appconfig import MONGODB_DB, MONGODB_URL
 
 TOTEM_ENV = os.getenv('TOTEM_ENV', 'local')
 CLUSTER_NAME = os.getenv('CLUSTER_NAME', TOTEM_ENV)
 
 MESSAGES_TTL = 7200 * 1000
+
 
 # Broker and Queue Settings
 AMQP_USERNAME = os.getenv('AMQP_USERNAME', 'guest')
@@ -49,14 +51,21 @@ CELERY_ROUTES = {
     },
     'deployer.tasks.deployment._fleet_check_running': {
         'routing_key': 'prefork',
+    },
+    'deployer.tasks.deployment.sync_units_task': {
+        'routing_key': 'prefork',
     }
 }
 
-CELERY_RESULT_BACKEND = 'amqp'
-CELERY_RESULT_EXCHANGE = 'cluster-deployer-%s-results' % CLUSTER_NAME
+# Backend Settings
+CELERY_RESULT_BACKEND = MONGODB_URL
+CELERY_MONGODB_BACKEND_SETTINGS = {
+    'database': MONGODB_DB,
+    'taskmeta_collection': 'deployer-task-results',
+}
+CELERY_RESULT_EXCHANGE = 'cluster-deployer-results'
 CELERY_IMPORTS = ('deployer.tasks', 'deployer.tasks.deployment',
-                  'deployer.tasks.common', 'deployer.tasks.proxy',
-                  'celery.task')
+                  'deployer.tasks.common', 'celery.task')
 CELERY_ACCEPT_CONTENT = ['json', 'pickle']
 CELERY_TASK_SERIALIZER = 'pickle'
 CELERY_RESULT_SERIALIZER = 'pickle'
@@ -95,6 +104,16 @@ CELERYBEAT_SCHEDULE = {
         'task': 'deployer.tasks.backend_cleanup',
         'schedule': crontab(hour="*/2", minute=0),
         'args': (),
+    },
+    'deployer.tasks.deployment.sync_promoted_units': {
+        'task': 'deployer.tasks.deployment.sync_promoted_units',
+        'schedule': crontab(minute='*/5'),
+        'args': ()
+    },
+    'deployer.tasks.deployment.sync_promoted_upstreams': {
+        'task': 'deployer.tasks.deployment.sync_promoted_upstreams',
+        'schedule': crontab(minute='*/2'),
+        'args': ()
     }
 }
 

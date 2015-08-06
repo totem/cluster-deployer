@@ -2,7 +2,7 @@ import copy
 import functools
 import json
 
-from flask import jsonify, url_for, Response, request
+from flask import url_for, Response, request
 
 from conf.appconfig import MIME_JSON, API_DEFAULT_PAGE_SIZE
 
@@ -22,10 +22,7 @@ def build_response(output, status=200, mimetype=MIME_JSON,
     :type headers: dict
     :return: Tuple consisting of Flask Response, Status Code and Http Headers
     """
-    if isinstance(output, list):
-        resp = Response(json.dumps(output))
-    else:
-        resp = jsonify(output)
+    resp = Response(json.dumps(output, cls=DateTimeEncoder))
     resp.mimetype = mimetype
     return resp, status, headers
 
@@ -93,3 +90,11 @@ def use_paging(func):
         kwargs.setdefault('size', size)
         return func(*args,  **kwargs)
     return inner
+
+
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if hasattr(obj, 'isoformat'):
+            return obj.isoformat()
+        else:
+            return json.JSONEncoder.default(self, obj)

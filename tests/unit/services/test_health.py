@@ -15,22 +15,20 @@ from tests.helper import dict_compare
 __author__ = 'sukrit'
 
 
-@patch.dict('deployer.services.health.SEARCH_SETTINGS', {
-    'enabled': True
-})
 @patch('deployer.services.health.ping')
-@patch('deployer.services.health.get_search_client')
 @patch('deployer.services.health.client')
-def test_get_health_when_elasticsearch_is_enabled(client, get_es, ping):
+@patch('deployer.services.health.get_store')
+def test_get_health(
+        get_store, client, ping):
     """
     Should get the health status when elastic search is enabled
     """
 
     # Given: Operational external services"
     ping.delay().get.return_value = 'pong'
-    get_es().info.return_value = 'mock'
-    EtcdInfo = namedtuple('Info', ('machines', 'leader'))
-    client.Client.return_value = EtcdInfo(['machine1'], 'machine1')
+    EtcdInfo = namedtuple('Info', ('machines',))
+    client.Client.return_value = EtcdInfo(['machine1'])
+    get_store.return_value.health.return_value = {'type': 'mock'}
 
     # When: I get the health of external services
     health_status = health.get_health()
@@ -40,13 +38,14 @@ def test_get_health_when_elasticsearch_is_enabled(client, get_es, ping):
         'etcd': {
             'status': HEALTH_OK,
             'details': {
-                'machines': ['machine1'],
-                'leader': 'machine1'
+                'machines': ['machine1']
             }
         },
-        'elasticsearch': {
+        'store': {
             'status': HEALTH_OK,
-            'details': 'mock'
+            'details': {
+                'type': 'mock'
+            }
         },
         'celery': {
             'status': HEALTH_OK,
@@ -55,54 +54,19 @@ def test_get_health_when_elasticsearch_is_enabled(client, get_es, ping):
     })
 
 
-@patch.dict('deployer.services.health.SEARCH_SETTINGS', {
-    'enabled': False
-})
 @patch('deployer.services.health.ping')
 @patch('deployer.services.health.client')
-def test_get_health_when_elasticsearch_is_disabled(client, ping):
+@patch('deployer.services.health.get_store')
+def test_get_health_when_celery_is_enabled(get_store, client, ping):
     """
     Should get the health status when elastic search is enabled
     """
 
     # Given: Operational external services"
     ping.delay().get.return_value = 'pong'
-    EtcdInfo = namedtuple('Info', ('machines', 'leader'))
-    client.Client.return_value = EtcdInfo(['machine1'], 'machine1')
-
-    # When: I get the health of external services
-    health_status = health.get_health()
-
-    # Then: Expected health status is returned
-    dict_compare(health_status, {
-        'etcd': {
-            'status': HEALTH_OK,
-            'details': {
-                'machines': ['machine1'],
-                'leader': 'machine1'
-            }
-        },
-        'celery': {
-            'status': HEALTH_OK,
-            'details': 'Celery ping:pong'
-        },
-    })
-
-
-@patch.dict('deployer.services.health.SEARCH_SETTINGS', {
-    'enabled': False
-})
-@patch('deployer.services.health.ping')
-@patch('deployer.services.health.client')
-def test_get_health_when_celery_is_enabled(client, ping):
-    """
-    Should get the health status when elastic search is enabled
-    """
-
-    # Given: Operational external services"
-    ping.delay().get.return_value = 'pong'
-    EtcdInfo = namedtuple('Info', ('machines', 'leader'))
-    client.Client.return_value = EtcdInfo(['machine1'], 'machine1')
+    EtcdInfo = namedtuple('Info', ('machines',))
+    client.Client.return_value = EtcdInfo(['machine1'])
+    get_store.return_value.health.return_value = {'type': 'mock'}
 
     # When: I get the health of external services
     health_status = health.get_health(check_celery=True)
@@ -112,8 +76,13 @@ def test_get_health_when_celery_is_enabled(client, ping):
         'etcd': {
             'status': HEALTH_OK,
             'details': {
-                'machines': ['machine1'],
-                'leader': 'machine1'
+                'machines': ['machine1']
+            }
+        },
+        'store': {
+            'status': HEALTH_OK,
+            'details': {
+                'type': 'mock'
             }
         },
         'celery': {
