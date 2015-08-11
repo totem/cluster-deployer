@@ -1,6 +1,6 @@
 from nose.tools import eq_
-from deployer.tasks.exceptions import MinNodesNotRunning, MinNodesNotDiscovered, \
-    NodeCheckFailed
+from deployer.tasks.exceptions import MinNodesNotRunning, \
+    MinNodesNotDiscovered, NodeCheckFailed
 from tests.helper import dict_compare
 
 

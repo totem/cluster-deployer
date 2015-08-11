@@ -18,8 +18,8 @@ from deployer.services.distributed_lock import LockService, \
 from deployer.services.security import decrypt_config
 from deployer.services.storage.factory import get_store
 from deployer.services.util import create_notify_ctx
-from deployer.services.deployment import fetch_runtime_units, get_exposed_ports, \
-    sync_upstreams, sync_units, generate_deployment_id
+from deployer.services.deployment import fetch_runtime_units, \
+    get_exposed_ports, sync_upstreams, sync_units, generate_deployment_id
 from deployer.tasks import notification
 from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning, \
     NodeCheckFailed, MinNodesNotDiscovered
