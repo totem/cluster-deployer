@@ -7,8 +7,8 @@ import nose
 from nose.tools import raises, eq_, assert_raises
 from paramiko import SSHException
 
-from conf.appconfig import DEPLOYMENT_MODE_BLUEGREEN, DEPLOYMENT_MODE_REDGREEN, \
-    DEPLOYMENT_STATE_STARTED, NOTIFICATIONS_DEFAULTS
+from conf.appconfig import DEPLOYMENT_MODE_BLUEGREEN, \
+    DEPLOYMENT_MODE_REDGREEN, DEPLOYMENT_STATE_STARTED, NOTIFICATIONS_DEFAULTS
 from conf.celeryconfig import CLUSTER_NAME
 from deployer.celery import app
 from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning, \
@@ -16,13 +16,13 @@ from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning, \
 from deployer.util import dict_merge
 from tests.helper import dict_compare
 
-
-__author__ = 'sukrit'
-
 from deployer.tasks.deployment import _deployment_defaults, \
     _pre_create_undeploy, _wait_for_undeploy, \
     _fleet_check_deploy, _check_node, _check_deployment, \
     _check_discover
+
+__author__ = 'sukrit'
+
 
 NOW = datetime.datetime(2014, 01, 01)
 

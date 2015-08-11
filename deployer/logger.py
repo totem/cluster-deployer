@@ -24,7 +24,7 @@ def init_logging(name=None):
             address='/dev/log',
             facility=SysLogHandler.LOG_DAEMON)
         handler.setFormatter(formatter)
-        handler.setLevel(logging.INFO)
+        handler.setLevel(LOG_ROOT_LEVEL)
         app_logger.addHandler(handler)
         app_logger.info('Logger initialized')
     return app_logger

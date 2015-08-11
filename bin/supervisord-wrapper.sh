@@ -42,8 +42,17 @@ export HIPCHAT_ROOM='${HIPCHAT_ROOM:-not-set}'
 export GITHUB_NOTIFICATION_ENABLED='${GITHUB_NOTIFICATION_ENABLED:-false}'
 export BASE_URL='${BASE_URL:-http://$HOST_IP:9000}'
 export LOG_IDENTIFIER='${LOG_IDENTIFIER:-cluster-deployer}'
+export LOG_ROOT_LEVEL='${LOG_ROOT_LEVEL}'
 END
 
+echo "Registering shutdown hook prior to shutdown"
+function shutdown() {
+    set +e;
+    echo Stopping supervisor;
+    kill -s SIGTERM "$(cat /var/run/supervisord.pid)";
+    exit 0
+}
+trap 'shutdown' EXIT
 
 /bin/bash -le -c " envsubst  < /etc/supervisor/conf.d/supervisord.conf.template  > /etc/supervisor/conf.d/supervisord.conf; \
                     /usr/local/bin/supervisord -c /etc/supervisor/supervisord.conf"

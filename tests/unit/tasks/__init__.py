@@ -1,6 +1,6 @@
-__author__ = 'sukrit'
-
 from deployer.celery import app
+
+__author__ = 'sukrit'
 
 
 def setup_package():
