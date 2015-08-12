@@ -46,6 +46,25 @@ TOTEM_ENV = os.getenv('TOTEM_ENV', 'local')
 CLUSTER_NAME = os.getenv('CLUSTER_NAME', TOTEM_ENV)
 GIT_COMMIT = os.getenv('GIT_COMMIT', 'latest')
 
+TASK_SETTINGS = {
+    'DEFAULT_GET_TIMEOUT': 600,
+    'DEFAULT_RETRIES': 5,
+    'DEFAULT_RETRY_DELAY': 10,
+    'SSH_RETRY_DELAY': 10,
+    'SSH_RETRIES': 10,
+    'CHECK_RUNNING_RETRIES': 30,
+    'CHECK_RUNNING_RETRY_DELAY': 30,
+    'CHECK_DISCOVERY_RETRIES': 20,
+    'CHECK_DISCOVERY_RETRY_DELAY': 30,
+    'LOCK_RETRIES': 64,
+    'LOCK_RETRY_DELAY': 60,
+    'DEPLOYMENT_WAIT_RETRIES': 60,
+    'DEPLOYMENT_WAIT_RETRY_DELAY': 60,
+    'CHECK_NODE_RETRY_DELAY': 10,
+    'DEPLOYMENT_STOP_MIN_CHECK_RETRY_DELAY': 2,
+    'DEFAULT_DEPLOYMENT_STOP_CHECK_RETRIES': 10
+}
+
 NOTIFICATIONS_DEFAULTS = {
     'hipchat': {
         'enabled': os.getenv('HIPCHAT_ENABLED', 'false').strip()
@@ -113,6 +132,11 @@ DEPLOYMENT_DEFAULTS = {
                 'port': None,
                 'attempts': 10,
                 'timeout': '10s'
+            },
+            'stop': {
+                'timeout': '30s',
+                'check-retries':
+                TASK_SETTINGS['DEFAULT_DEPLOYMENT_STOP_CHECK_RETRIES']
             }
         },
         'templates': {
@@ -167,23 +191,6 @@ LOCK_JOB_TTL = 120
 LOCK_JOB_BASE = '/cluster-deployer/locks/jobs'
 LOCK_JOB_SYNC_PROMOTED_UPSTREAMS = 'sync-promoted-upstreams'
 LOCK_JOB_SYNC_PROMOTED_UNITS = 'sync-promoted-units'
-
-TASK_SETTINGS = {
-    'DEFAULT_GET_TIMEOUT': 600,
-    'DEFAULT_RETRIES': 5,
-    'DEFAULT_RETRY_DELAY': 10,
-    'SSH_RETRY_DELAY': 10,
-    'SSH_RETRIES': 10,
-    'CHECK_RUNNING_RETRIES': 30,
-    'CHECK_RUNNING_RETRY_DELAY': 30,
-    'CHECK_DISCOVERY_RETRIES': 20,
-    'CHECK_DISCOVERY_RETRY_DELAY': 30,
-    'LOCK_RETRIES': 64,
-    'LOCK_RETRY_DELAY': 60,
-    'DEPLOYMENT_WAIT_RETRIES': 60,
-    'DEPLOYMENT_WAIT_RETRY_DELAY': 60,
-    'CHECK_NODE_RETRY_DELAY': 10,
-}
 
 TOTEM_ETCD_SETTINGS = {
     'base': os.getenv('ETCD_TOTEM_BASE', '/totem'),

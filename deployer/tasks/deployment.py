@@ -22,7 +22,7 @@ from deployer.services.deployment import fetch_runtime_units, \
     get_exposed_ports, sync_upstreams, sync_units, generate_deployment_id
 from deployer.tasks import notification
 from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning, \
-    NodeCheckFailed, MinNodesNotDiscovered
+    NodeCheckFailed, MinNodesNotDiscovered, NodeNotStopped
 from deployer.tasks import util
 
 from deployer.services.storage.base import EVENT_NEW_DEPLOYMENT, \
@@ -34,7 +34,7 @@ from deployer.services.storage.base import EVENT_NEW_DEPLOYMENT, \
 from celery.canvas import group, chord, chain
 
 from deployer.fleet import get_fleet_provider, jinja_env
-from fleet.deploy.deployer import Deployment, undeploy
+from fleet.deploy.deployer import Deployment, undeploy, stop
 
 from deployer.celery import app
 from conf.appconfig import DEPLOYMENT_DEFAULTS, DEPLOYMENT_TYPE_GIT_QUAY, \
@@ -42,7 +42,7 @@ from conf.appconfig import DEPLOYMENT_DEFAULTS, DEPLOYMENT_TYPE_GIT_QUAY, \
     DEPLOYMENT_MODE_REDGREEN, DEPLOYMENT_STATE_STARTED, \
     DEPLOYMENT_STATE_FAILED, DEPLOYMENT_STATE_PROMOTED, UPSTREAM_DEFAULTS, \
     LEVEL_STARTED, LEVEL_FAILED, LEVEL_SUCCESS, CLUSTER_NAME, \
-    DEPLOYMENT_STATE_DECOMMISSIONED, LOCK_JOB_BASE
+    DEPLOYMENT_STATE_DECOMMISSIONED, LOCK_JOB_BASE, DEPLOYMENT_TYPE_DEFAULT
 
 from deployer.tasks.common import async_wait
 from deployer.services.proxy import wire_proxy, register_upstreams, \
@@ -633,6 +633,29 @@ def _fleet_undeploy(self, name, version=None, exclude_version=None,
     return ret_value
 
 
+@app.task(bind=True)
+def _fleet_stop(self, name, version=None, exclude_version=None,
+                ignore_error=False):
+    """
+   Stops fleet units with matching name and version
+
+    :param name: Name of application
+    :keyword version: Version of application
+    :keyword exclude_version: Version of deployment to be excluded
+    :keyword ret_value: Value to be returned after successful deployment
+    :return: ret_value
+    """
+    try:
+        stop(get_fleet_provider(), name, version,
+             exclude_version=exclude_version)
+    except RETRYABLE_FLEET_EXCEPTIONS as exc:
+        raise self.retry(exc=exc, max_retries=TASK_SETTINGS['SSH_RETRIES'],
+                         countdown=TASK_SETTINGS['SSH_RETRY_DELAY'])
+    except:
+        if not ignore_error:
+            raise
+
+
 @app.task(bind=True, default_retry_delay=5, max_retries=5)
 def _wait_for_undeploy(self, name, version, ret_value=None,
                        search_params=None):
@@ -661,6 +684,42 @@ def _wait_for_undeploy(self, name, version, ret_value=None,
         }
     )
     return ret_value
+
+
+@app.task(bind=True, default_retry_delay=5, max_retries=5)
+def _wait_for_stop(self, name, version=None, exclude_version=None,
+                   timeout=None, check_retries=None):
+    """
+    Wait for deployment to be stopped
+
+    :param name: Name of application
+    :type name: str
+    :param version: Version of application.
+    :type version: str
+    :keyword ret_value: Value to be returned on successful call.
+    :return: ret_value
+    """
+    timeout = timeout or DEPLOYMENT_DEFAULTS[DEPLOYMENT_TYPE_DEFAULT]
+    ['deployment']['stop']['timeout']
+    timout_seconds = to_milliseconds(timeout) / 1000
+    check_retries = check_retries or \
+        TASK_SETTINGS['DEFAULT_DEPLOYMENT_STOP_CHECK_RETRIES']
+    check_interval = max(
+        timout_seconds / check_retries,
+        TASK_SETTINGS['DEPLOYMENT_STOP_MIN_CHECK_RETRY_DELAY']
+    )
+    try:
+        deployed_units = fetch_runtime_units(
+            name, version=version, exclude_version=exclude_version)
+    except RETRYABLE_FLEET_EXCEPTIONS as exc:
+        raise self.retry(exc=exc, max_retries=TASK_SETTINGS['SSH_RETRIES'],
+                         countdown=TASK_SETTINGS['SSH_RETRY_DELAY'])
+    active_units = [unit for unit in deployed_units if unit['active']
+                    not in ('inactive', 'loaded', 'failed')]
+    if active_units:
+        raise self.retry(exc=NodeNotStopped(name, version, active_units),
+                         max_retries=check_retries,
+                         countdown=check_interval)
 
 
 @app.task(bind=True,
@@ -753,9 +812,19 @@ def _promote_deployment(deployment, search_params):
     tasks = []
 
     if deployment['deployment']['mode'] == DEPLOYMENT_MODE_BLUEGREEN:
+        timeout = deployment['deployment']['stop']['timeout']
+        check_retries = deployment['deployment']['stop']['check-retries']
+        # Wait for a while before starting decommissioning the process
+        # To given enough time for traffic to be moved to new deployment.
+        # In future we can make this configurable
+        tasks.append(_fleet_stop.subtask(
+            (name,), {'exclude_version': version}, countdown=60,
+            immutable=True))
+        tasks.append(_wait_for_stop.si(
+            name, exclude_version=version, timeout=timeout,
+            check_retries=check_retries))
         tasks.append(
-            _fleet_undeploy.subtask((name,), {'exclude_version': version},
-                                    countdown=60, immutable=True))
+            _fleet_undeploy.si(name, exclude_version=version))
 
     tasks.append(_promote_success.si(deployment, search_params=search_params))
 
