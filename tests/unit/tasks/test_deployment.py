@@ -8,8 +8,8 @@ from nose.tools import raises, eq_, assert_raises
 from paramiko import SSHException
 
 from conf.appconfig import DEPLOYMENT_MODE_BLUEGREEN, \
-    DEPLOYMENT_MODE_REDGREEN, DEPLOYMENT_STATE_STARTED, NOTIFICATIONS_DEFAULTS, \
-    TASK_SETTINGS
+    DEPLOYMENT_MODE_REDGREEN, DEPLOYMENT_STATE_STARTED, \
+    NOTIFICATIONS_DEFAULTS, TASK_SETTINGS
 from conf.celeryconfig import CLUSTER_NAME
 from deployer.celery import app
 from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning, \
