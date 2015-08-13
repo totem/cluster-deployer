@@ -124,7 +124,7 @@ class NodeNotStopped(Exception):
         self.deployed_units = active_units
         self.message = 'Nodes for application:%s version:%s did not get ' \
                        'stopped' % (self.name, self.version)
-        super(NodeNotUndeployed, self).__init__(
+        super(NodeNotStopped, self).__init__(
             name, version, active_units)
 
     def to_dict(self):
