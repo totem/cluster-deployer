@@ -50,14 +50,15 @@ def fetch_runtime_upstreams(deployment):
     }
 
 
-def fetch_runtime_units(app_name, version):
+def fetch_runtime_units(app_name, version=None, exclude_version=None):
     """
     Returns provide specific units runtime info
     :param deployment:
     :return:
     """
 
-    return filter_units(get_fleet_provider(), app_name, version)
+    return filter_units(get_fleet_provider(), app_name, version,
+                        exclude_version)
 
 
 def sync_upstreams(deployment_id):

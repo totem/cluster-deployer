@@ -113,6 +113,34 @@ class NodeNotUndeployed(Exception):
         return self.message
 
 
+class NodeNotStopped(Exception):
+    """
+    Exception corresponding to node has not yet been stopped.
+    """
+
+    def __init__(self, name, version, active_units):
+        self.name = name
+        self.version = version
+        self.deployed_units = active_units
+        self.message = 'Nodes for application:%s version:%s did not get ' \
+                       'stopped' % (self.name, self.version)
+        super(NodeNotUndeployed, self).__init__(
+            name, version, active_units)
+
+    def to_dict(self):
+        return {
+            'message': self.message,
+            'code': 'NODE_NOT_STOPPED',
+            'details': {
+                'name': self.name,
+                'version': self.version
+            }
+        }
+
+    def __str__(self):
+        return self.message
+
+
 class TaskExecutionException(Exception):
     """
     Exception wrapping the final exception returned.
