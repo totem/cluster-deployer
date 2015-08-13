@@ -330,27 +330,10 @@ def _deploy_all(deployment, search_params, next_task=None):
 
     security_profile = deployment.get('security', {})\
         .get('profile', 'default')
-    templates = copy.deepcopy(deployment['templates'])
-    app_template = templates['app']
+    app_template = deployment['templates']['app']
     if not app_template['enabled']:
         return []
 
-    sidekicks = [service_type for service_type, template in
-                 deployment['templates'].iteritems()
-                 if template['enabled'] and service_type != 'app']
-
-    app_template['args']['sidekicks'] = sidekicks
-    timeout_stop = deployment['deployment']['stop']['timeout'] or \
-        DEPLOYMENT_DEFAULTS[DEPLOYMENT_TYPE_DEFAULT]['deployment']['stop'][
-            'timeout']
-
-    timeout_stop_sec = to_milliseconds(timeout_stop) / 1000
-    app_template['args']['service'] = dict_merge(
-        app_template['args'].get('service') or {},
-        {
-            'timeout-stop-sec': timeout_stop_sec
-        }
-    )
     name, version, nodes = deployment['deployment']['name'], \
         deployment['deployment']['version'], \
         deployment['deployment']['nodes']
@@ -358,7 +341,7 @@ def _deploy_all(deployment, search_params, next_task=None):
         group(
             _fleet_deploy.si(search_params, name, version, nodes, service_type,
                              template, security_profile)
-            for service_type, template in templates.iteritems()
+            for service_type, template in deployment['templates'].iteritems()
             if template['enabled']
         ),
         _fleet_start_and_wait.si(deployment, search_params,
@@ -473,6 +456,21 @@ def _deployment_defaults(deployment):
         env['DISCOVER_MODE'] = deployment_upd['deployment']['mode']
         env['DISCOVER_HEALTH'] = json.dumps(
             _create_discover_check(deployment_upd))
+
+        sidekicks = [service_type for service_type, template in
+                     deployment_upd['templates'].iteritems()
+                     if template['enabled'] and service_type != 'app']
+        app_template['args']['sidekicks'] = sidekicks
+        timeout_stop = deployment_upd['deployment']['stop']['timeout'] or \
+            DEPLOYMENT_DEFAULTS[DEPLOYMENT_TYPE_DEFAULT]['deployment']['stop'][
+                'timeout']
+        timeout_stop_sec = to_milliseconds(timeout_stop) / 1000
+        app_template['args']['service'] = dict_merge(
+            app_template['args'].get('service') or {},
+            {
+                'container-stop-sec': timeout_stop_sec
+            }
+        )
 
     # Override/Set Clustername
     deployment_upd['cluster'] = CLUSTER_NAME

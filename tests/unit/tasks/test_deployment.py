@@ -128,7 +128,11 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
                         'DISCOVER_HEALTH': '{}'
                     },
                     'docker-args': '',
-                    'image': 'quay.io/totem/testowner-testrepo:testcommit'
+                    'image': 'quay.io/totem/testowner-testrepo:testcommit',
+                    'sidekicks': ['yoda-register'],
+                    'service': {
+                        'container-stop-sec': 30
+                    }
                 },
                 'enabled': True,
                 'name': 'default-app'
@@ -239,7 +243,11 @@ def test_deployment_defaults_with_proxy(mock_time):
                                            ' "8082": {"timeout": "5s"}}'
                     },
                     'docker-args': '',
-                    'image': 'quay.io/totem/testowner-testrepo:testcommit'
+                    'image': 'quay.io/totem/testowner-testrepo:testcommit',
+                    'sidekicks': ['yoda-register'],
+                    'service': {
+                        'container-stop-sec': 30
+                    }
                 },
                 'enabled': True,
                 'name': 'default-app'
@@ -365,7 +373,11 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
                         'DISCOVER_HEALTH': '{}'
                     },
                     'docker-args': '',
-                    'image': 'quay.io/totem/testowner-testrepo:testcommit'
+                    'image': 'quay.io/totem/testowner-testrepo:testcommit',
+                    'sidekicks': ['yoda-register'],
+                    'service': {
+                        'container-stop-sec': 30
+                    }
                 },
                 'enabled': True,
                 'name': 'default-app'
@@ -471,7 +483,11 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
                         'DISCOVER_PORTS': '',
                         'DISCOVER_MODE': DEPLOYMENT_MODE_BLUEGREEN,
                         'DISCOVER_HEALTH': '{}'
-                    }
+                    },
+                    'service': {
+                        'container-stop-sec': 30
+                    },
+                    'sidekicks': []
                 },
                 'enabled': True,
                 'name': 'custom-app'
