@@ -341,8 +341,8 @@ def _deploy_all(deployment, search_params, next_task=None):
 
     app_template['args']['sidekicks'] = sidekicks
     timeout_stop = deployment['deployment']['stop']['timeout'] or \
-        DEPLOYMENT_DEFAULTS[DEPLOYMENT_TYPE_DEFAULT]['deployment']['stop']
-    ['timeout']
+        DEPLOYMENT_DEFAULTS[DEPLOYMENT_TYPE_DEFAULT]['deployment']['stop'][
+            'timeout']
 
     timeout_stop_sec = to_milliseconds(timeout_stop) / 1000
     app_template['args']['service'] = dict_merge(
@@ -710,8 +710,8 @@ def _wait_for_stop(self, name, version=None, exclude_version=None,
     :keyword ret_value: Value to be returned on successful call.
     :return: ret_value
     """
-    timeout = timeout or DEPLOYMENT_DEFAULTS[DEPLOYMENT_TYPE_DEFAULT]
-    ['deployment']['stop']['timeout']
+    timeout = timeout or DEPLOYMENT_DEFAULTS[DEPLOYMENT_TYPE_DEFAULT][
+        'deployment']['stop']['timeout']
     timout_seconds = to_milliseconds(timeout) / 1000
     check_retries = check_retries or \
         TASK_SETTINGS['DEFAULT_DEPLOYMENT_STOP_CHECK_RETRIES']
