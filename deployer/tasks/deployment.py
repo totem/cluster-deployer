@@ -26,10 +26,11 @@ from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning, \
 from deployer.tasks import util
 
 from deployer.services.storage.base import EVENT_NEW_DEPLOYMENT, \
-    EVENT_ACQUIRED_LOCK, EVENT_UNDEPLOYED_EXISTING, EVENT_UNITS_DEPLOYED, \
+    EVENT_ACQUIRED_LOCK, EVENT_UNITS_DEPLOYED, \
     EVENT_PROMOTED, EVENT_DEPLOYMENT_FAILED, EVENT_DEPLOYMENT_CHECK_PASSED, \
     EVENT_UNITS_ADDED, EVENT_UNITS_STARTED, \
-    EVENT_WIRED, EVENT_UPSTREAMS_REGISTERED, EVENT_NODES_DISCOVERED
+    EVENT_WIRED, EVENT_UPSTREAMS_REGISTERED, EVENT_NODES_DISCOVERED, \
+    EVENT_DEPLOYMENTS_STOPPED, EVENT_DEPLOYMENTS_UNDEPLOYED
 
 from celery.canvas import group, chord, chain
 
@@ -666,8 +667,8 @@ def _fleet_stop(self, name, version=None, exclude_version=None,
 
 
 @app.task(bind=True, default_retry_delay=5, max_retries=5)
-def _wait_for_undeploy(self, name, version, ret_value=None,
-                       search_params=None):
+def _wait_for_undeploy(self, name, version=None, ret_value=None,
+                       search_params=None, exclude_version=None):
     """
     Wait for undeploy to finish.
 
@@ -678,18 +679,22 @@ def _wait_for_undeploy(self, name, version, ret_value=None,
     :return: ret_value
     """
     try:
-        deployed_units = fetch_runtime_units(name, version)
+        deployed_units = fetch_runtime_units(
+            name, version=version, exclude_version=exclude_version)
     except RETRYABLE_FLEET_EXCEPTIONS as exc:
         raise self.retry(exc=exc, max_retries=TASK_SETTINGS['SSH_RETRIES'],
                          countdown=TASK_SETTINGS['SSH_RETRY_DELAY'])
     if deployed_units:
         raise self.retry(exc=NodeNotUndeployed(name, version, deployed_units))
     get_store().add_event(
-        EVENT_UNDEPLOYED_EXISTING,
+        EVENT_DEPLOYMENTS_UNDEPLOYED,
         search_params=search_params,
         details={
-            'name': name,
-            'version': version
+            'deployment': {
+                'name': name,
+                'version': version,
+                'exclude-version': exclude_version
+            }
         }
     )
     return ret_value
@@ -697,7 +702,7 @@ def _wait_for_undeploy(self, name, version, ret_value=None,
 
 @app.task(bind=True, default_retry_delay=5, max_retries=5)
 def _wait_for_stop(self, name, version=None, exclude_version=None,
-                   timeout=None, check_retries=None):
+                   timeout=None, check_retries=None, search_params=None):
     """
     Wait for deployment to be stopped
 
@@ -729,6 +734,17 @@ def _wait_for_stop(self, name, version=None, exclude_version=None,
         raise self.retry(exc=NodeNotStopped(name, version, active_units),
                          max_retries=check_retries,
                          countdown=check_interval)
+    get_store().add_event(
+        EVENT_DEPLOYMENTS_STOPPED,
+        search_params=search_params,
+        details={
+            'deployment': {
+                'name': name,
+                'version': version,
+                'exclude-version': exclude_version
+            }
+        }
+    )
 
 
 @app.task(bind=True,
@@ -831,9 +847,12 @@ def _promote_deployment(deployment, search_params):
             immutable=True))
         tasks.append(_wait_for_stop.si(
             name, exclude_version=version, timeout=timeout,
-            check_retries=check_retries))
+            check_retries=check_retries, search_params=search_params))
         tasks.append(
             _fleet_undeploy.si(name, exclude_version=version))
+        tasks.append(_wait_for_undeploy.si(
+            name, exclude_version=version, search_params=search_params
+        ))
 
     tasks.append(_promote_success.si(deployment, search_params=search_params))
 
