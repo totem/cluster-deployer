@@ -741,7 +741,9 @@ def _wait_for_stop(self, name, version=None, exclude_version=None,
             'deployment': {
                 'name': name,
                 'version': version,
-                'exclude-version': exclude_version
+                'exclude-version': exclude_version,
+                'matching-units': deployed_units,
+                'active-units': active_units
             }
         }
     )
