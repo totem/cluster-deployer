@@ -340,6 +340,17 @@ def _deploy_all(deployment, search_params, next_task=None):
                  if template['enabled'] and service_type != 'app']
 
     app_template['args']['sidekicks'] = sidekicks
+    timeout_stop = deployment['deployment']['stop']['timeout'] or \
+        DEPLOYMENT_DEFAULTS[DEPLOYMENT_TYPE_DEFAULT]['deployment']['stop']
+    ['timeout']
+
+    timeout_stop_sec = to_milliseconds(timeout_stop) / 1000
+    app_template['args']['service'] = dict_merge(
+        app_template['args'].get('service') or {},
+        {
+            'timeout-stop-sec': timeout_stop_sec
+        }
+    )
     name, version, nodes = deployment['deployment']['name'], \
         deployment['deployment']['version'], \
         deployment['deployment']['nodes']
