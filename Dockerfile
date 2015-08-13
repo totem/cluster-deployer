@@ -25,7 +25,7 @@ RUN curl -L https://github.com/coreos/etcd/releases/download/$ETCDCTL_VERSION/et
 # Supervisor and App dependencies
 RUN pip install supervisor==3.1.2 supervisor-stdout
 ADD requirements.txt /opt/requirements.txt
-RUN pip install -r /opt/requirements.txt
+RUN pip install --upgrade -r /opt/requirements.txt
 
 #Supervisor Config
 RUN mkdir -p /var/log/supervisor
@@ -45,7 +45,7 @@ RUN chmod +x /usr/local/bin/decrypt-ssh-keys.sh
 ADD etc /etc
 
 ADD . /opt/cluster-deployer
-RUN pip install -r /opt/cluster-deployer/requirements.txt
+RUN pip install --upgrade -r /opt/cluster-deployer/requirements.txt
 
 EXPOSE 9000
 
