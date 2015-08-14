@@ -26,7 +26,7 @@ __author__ = 'sukrit'
 
 
 NOW = datetime.datetime(2014, 01, 01)
-DEFAULT_STOP_TIMEOUT_SECONDS = 120
+DEFAULT_STOP_TIMEOUT_SECONDS = 30
 
 
 def test_create():
