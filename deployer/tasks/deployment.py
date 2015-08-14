@@ -724,7 +724,7 @@ def _wait_for_stop(self, name, version=None, exclude_version=None,
     check_retries = check_retries or \
         TASK_SETTINGS['DEFAULT_DEPLOYMENT_STOP_CHECK_RETRIES']
     check_interval = max(
-        timout_seconds / check_retries,
+        (timout_seconds / check_retries)+1,
         TASK_SETTINGS['DEPLOYMENT_STOP_MIN_CHECK_RETRY_DELAY']
     )
     try:
