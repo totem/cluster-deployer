@@ -8,7 +8,8 @@ from nose.tools import raises, eq_, assert_raises
 from paramiko import SSHException
 
 from conf.appconfig import DEPLOYMENT_MODE_BLUEGREEN, \
-    DEPLOYMENT_MODE_REDGREEN, DEPLOYMENT_STATE_STARTED, NOTIFICATIONS_DEFAULTS
+    DEPLOYMENT_MODE_REDGREEN, DEPLOYMENT_STATE_STARTED, \
+    NOTIFICATIONS_DEFAULTS, TASK_SETTINGS
 from conf.celeryconfig import CLUSTER_NAME
 from deployer.celery import app
 from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning, \
@@ -111,6 +112,11 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
                 'port': None,
                 'attempts': 10,
                 'timeout': '10s'
+            },
+            'stop': {
+                'timeout': '30s',
+                'check-retries':
+                TASK_SETTINGS['DEFAULT_DEPLOYMENT_STOP_CHECK_RETRIES']
             }
         },
         'templates': {
@@ -122,7 +128,11 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
                         'DISCOVER_HEALTH': '{}'
                     },
                     'docker-args': '',
-                    'image': 'quay.io/totem/testowner-testrepo:testcommit'
+                    'image': 'quay.io/totem/testowner-testrepo:testcommit',
+                    'sidekicks': ['yoda-register'],
+                    'service': {
+                        'container-stop-sec': 30
+                    }
                 },
                 'enabled': True,
                 'name': 'default-app'
@@ -215,6 +225,11 @@ def test_deployment_defaults_with_proxy(mock_time):
                 'port': None,
                 'attempts': 10,
                 'timeout': '10s'
+            },
+            'stop': {
+                'timeout': '30s',
+                'check-retries':
+                TASK_SETTINGS['DEFAULT_DEPLOYMENT_STOP_CHECK_RETRIES']
             }
         },
         'templates': {
@@ -228,7 +243,11 @@ def test_deployment_defaults_with_proxy(mock_time):
                                            ' "8082": {"timeout": "5s"}}'
                     },
                     'docker-args': '',
-                    'image': 'quay.io/totem/testowner-testrepo:testcommit'
+                    'image': 'quay.io/totem/testowner-testrepo:testcommit',
+                    'sidekicks': ['yoda-register'],
+                    'service': {
+                        'container-stop-sec': 30
+                    }
                 },
                 'enabled': True,
                 'name': 'default-app'
@@ -338,6 +357,11 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
                 'port': None,
                 'attempts': 10,
                 'timeout': '10s'
+            },
+            'stop': {
+                'timeout': '30s',
+                'check-retries':
+                TASK_SETTINGS['DEFAULT_DEPLOYMENT_STOP_CHECK_RETRIES']
             }
         },
         'templates': {
@@ -349,7 +373,11 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
                         'DISCOVER_HEALTH': '{}'
                     },
                     'docker-args': '',
-                    'image': 'quay.io/totem/testowner-testrepo:testcommit'
+                    'image': 'quay.io/totem/testowner-testrepo:testcommit',
+                    'sidekicks': ['yoda-register'],
+                    'service': {
+                        'container-stop-sec': 30
+                    }
                 },
                 'enabled': True,
                 'name': 'default-app'
@@ -440,6 +468,11 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
                 'port': None,
                 'attempts': 10,
                 'timeout': '10s'
+            },
+            'stop': {
+                'timeout': '30s',
+                'check-retries':
+                TASK_SETTINGS['DEFAULT_DEPLOYMENT_STOP_CHECK_RETRIES']
             }
         },
         'templates': {
@@ -450,7 +483,11 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
                         'DISCOVER_PORTS': '',
                         'DISCOVER_MODE': DEPLOYMENT_MODE_BLUEGREEN,
                         'DISCOVER_HEALTH': '{}'
-                    }
+                    },
+                    'service': {
+                        'container-stop-sec': 30
+                    },
+                    'sidekicks': []
                 },
                 'enabled': True,
                 'name': 'custom-app'
