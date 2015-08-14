@@ -90,6 +90,8 @@ NOTIFICATIONS_DEFAULTS = {
     }
 }
 
+DEFAULT_STOP_TIMEOUT = '120s'
+
 DEPLOYMENT_DEFAULTS = {
     DEPLOYMENT_TYPE_GIT_QUAY: {
         'deployment': {
@@ -134,7 +136,7 @@ DEPLOYMENT_DEFAULTS = {
                 'timeout': '10s'
             },
             'stop': {
-                'timeout': '120s',
+                'timeout': DEFAULT_STOP_TIMEOUT,
                 'check-retries':
                 TASK_SETTINGS['DEFAULT_DEPLOYMENT_STOP_CHECK_RETRIES']
             }
