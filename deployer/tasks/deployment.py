@@ -240,6 +240,9 @@ def delete(name, version=None):
     return _using_lock.si(
         search_params, name,
         do_task=(
+            _fleet_stop.si(name, version=version) |
+            _wait_for_stop.si(name, version=version,
+                              search_params=search_params) |
             _fleet_undeploy.si(name, version) |
             _wait_for_undeploy.si(name, version, search_params=search_params)
         )
@@ -607,6 +610,8 @@ def _pre_create_undeploy(deployment, search_params, next_task=None):
         return next_task.delay() if next_task else None
     name = deployment['deployment']['name']
     undeploy_chain = [
+        _fleet_stop.si(name, version=version) |
+        _wait_for_stop.si(name, version=version, search_params=search_params) |
         _fleet_undeploy.si(name, version, ignore_error=False),
         _wait_for_undeploy.si(name, version, search_params=search_params)
     ]
@@ -656,7 +661,7 @@ def _fleet_stop(self, name, version=None, exclude_version=None,
     :return: ret_value
     """
     try:
-        stop(get_fleet_provider(), name, version,
+        stop(get_fleet_provider(), name, version=version,
              exclude_version=exclude_version)
     except RETRYABLE_FLEET_EXCEPTIONS as exc:
         raise self.retry(exc=exc, max_retries=TASK_SETTINGS['SSH_RETRIES'],

@@ -125,7 +125,7 @@
         "timeout": {
           "type": "string",
           "description": "Deployment stop timeout represented in terms of seconds or minutes. e.g: 30s for timeout of 30 seconds. The application will be sent SIGTERM signal and will have this time for its cleanup.",
-          "default": "30s"
+          "default": "120s"
         },
         "check-retries": {
           "type": "number",

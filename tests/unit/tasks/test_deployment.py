@@ -9,7 +9,7 @@ from paramiko import SSHException
 
 from conf.appconfig import DEPLOYMENT_MODE_BLUEGREEN, \
     DEPLOYMENT_MODE_REDGREEN, DEPLOYMENT_STATE_STARTED, \
-    NOTIFICATIONS_DEFAULTS, TASK_SETTINGS
+    NOTIFICATIONS_DEFAULTS, TASK_SETTINGS, DEFAULT_STOP_TIMEOUT
 from conf.celeryconfig import CLUSTER_NAME
 from deployer.celery import app
 from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning, \
@@ -26,6 +26,7 @@ __author__ = 'sukrit'
 
 
 NOW = datetime.datetime(2014, 01, 01)
+DEFAULT_STOP_TIMEOUT_SECONDS = 30
 
 
 def test_create():
@@ -114,7 +115,7 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
                 'timeout': '10s'
             },
             'stop': {
-                'timeout': '30s',
+                'timeout': DEFAULT_STOP_TIMEOUT,
                 'check-retries':
                 TASK_SETTINGS['DEFAULT_DEPLOYMENT_STOP_CHECK_RETRIES']
             }
@@ -131,7 +132,7 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
                     'image': 'quay.io/totem/testowner-testrepo:testcommit',
                     'sidekicks': ['yoda-register'],
                     'service': {
-                        'container-stop-sec': 30
+                        'container-stop-sec': DEFAULT_STOP_TIMEOUT_SECONDS
                     }
                 },
                 'enabled': True,
@@ -227,7 +228,7 @@ def test_deployment_defaults_with_proxy(mock_time):
                 'timeout': '10s'
             },
             'stop': {
-                'timeout': '30s',
+                'timeout': DEFAULT_STOP_TIMEOUT,
                 'check-retries':
                 TASK_SETTINGS['DEFAULT_DEPLOYMENT_STOP_CHECK_RETRIES']
             }
@@ -246,7 +247,7 @@ def test_deployment_defaults_with_proxy(mock_time):
                     'image': 'quay.io/totem/testowner-testrepo:testcommit',
                     'sidekicks': ['yoda-register'],
                     'service': {
-                        'container-stop-sec': 30
+                        'container-stop-sec': DEFAULT_STOP_TIMEOUT_SECONDS
                     }
                 },
                 'enabled': True,
@@ -359,7 +360,7 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
                 'timeout': '10s'
             },
             'stop': {
-                'timeout': '30s',
+                'timeout': DEFAULT_STOP_TIMEOUT,
                 'check-retries':
                 TASK_SETTINGS['DEFAULT_DEPLOYMENT_STOP_CHECK_RETRIES']
             }
@@ -376,7 +377,7 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
                     'image': 'quay.io/totem/testowner-testrepo:testcommit',
                     'sidekicks': ['yoda-register'],
                     'service': {
-                        'container-stop-sec': 30
+                        'container-stop-sec': DEFAULT_STOP_TIMEOUT_SECONDS
                     }
                 },
                 'enabled': True,
@@ -470,7 +471,7 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
                 'timeout': '10s'
             },
             'stop': {
-                'timeout': '30s',
+                'timeout': DEFAULT_STOP_TIMEOUT,
                 'check-retries':
                 TASK_SETTINGS['DEFAULT_DEPLOYMENT_STOP_CHECK_RETRIES']
             }
@@ -485,7 +486,7 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
                         'DISCOVER_HEALTH': '{}'
                     },
                     'service': {
-                        'container-stop-sec': 30
+                        'container-stop-sec': DEFAULT_STOP_TIMEOUT_SECONDS
                     },
                     'sidekicks': []
                 },
@@ -524,7 +525,9 @@ def mock_callback():  # pragma: no cover
 
 @patch('deployer.tasks.deployment.undeploy')
 @patch('deployer.tasks.deployment.fetch_runtime_units')
-def test_pre_create_undeploy_for_red_green(mock_filter_units, mock_undeploy):
+@patch('deployer.tasks.deployment.stop')
+def test_pre_create_undeploy_for_red_green(m_stop, mock_filter_units,
+                                           mock_undeploy):
     """
     Should un-deploy all versions for mode: red-green
     """
@@ -544,11 +547,15 @@ def test_pre_create_undeploy_for_red_green(mock_filter_units, mock_undeploy):
     # Then: All versions of application are un-deployed.
     mock_undeploy.assert_called_with(ANY, deployment['deployment']['name'],
                                      None, exclude_version=None)
+    m_stop.assert_called_with(ANY, deployment['deployment']['name'],
+                              version=None, exclude_version=None)
 
 
 @patch('deployer.tasks.deployment.undeploy')
 @patch('deployer.tasks.deployment.fetch_runtime_units')
-def test_pre_create_undeploy_for_blue_green(mock_filter_units, mock_undeploy):
+@patch('deployer.tasks.deployment.stop')
+def test_pre_create_undeploy_for_blue_green(m_stop, mock_filter_units,
+                                            mock_undeploy):
     """
     Should undeploy all versions for mode: red-green
     """
@@ -569,11 +576,15 @@ def test_pre_create_undeploy_for_blue_green(mock_filter_units, mock_undeploy):
     mock_undeploy.assert_called_with(ANY, deployment['deployment']['name'],
                                      deployment['deployment']['version'],
                                      exclude_version=None)
+    m_stop.assert_called_with(
+        ANY, deployment['deployment']['name'],
+        version=deployment['deployment']['version'], exclude_version=None)
 
 
 @patch('deployer.tasks.deployment.undeploy')
 @patch('deployer.tasks.deployment.fetch_runtime_units')
-def test_pre_create_undeploy_for_ab(mock_filter_units, mock_undeploy):
+@patch('deployer.tasks.deployment.stop')
+def test_pre_create_undeploy_for_ab(m_stop, mock_filter_units, mock_undeploy):
     """
     Should undeploy all versions for mode: red-green
     """
@@ -592,6 +603,7 @@ def test_pre_create_undeploy_for_ab(mock_filter_units, mock_undeploy):
 
     # Then: All versions of application are un-deployed.
     mock_undeploy.assert_not_called()
+    m_stop.assert_not_called()
 
 
 @raises(NodeNotUndeployed)
