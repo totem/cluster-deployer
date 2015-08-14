@@ -524,7 +524,9 @@ def mock_callback():  # pragma: no cover
 
 @patch('deployer.tasks.deployment.undeploy')
 @patch('deployer.tasks.deployment.fetch_runtime_units')
-def test_pre_create_undeploy_for_red_green(mock_filter_units, mock_undeploy):
+@patch('deployer.tasks.deployment.stop')
+def test_pre_create_undeploy_for_red_green(m_stop, mock_filter_units,
+                                           mock_undeploy):
     """
     Should un-deploy all versions for mode: red-green
     """
@@ -544,11 +546,15 @@ def test_pre_create_undeploy_for_red_green(mock_filter_units, mock_undeploy):
     # Then: All versions of application are un-deployed.
     mock_undeploy.assert_called_with(ANY, deployment['deployment']['name'],
                                      None, exclude_version=None)
+    m_stop.assert_called_with(ANY, deployment['deployment']['name'],
+                              version=None, exclude_version=None)
 
 
 @patch('deployer.tasks.deployment.undeploy')
 @patch('deployer.tasks.deployment.fetch_runtime_units')
-def test_pre_create_undeploy_for_blue_green(mock_filter_units, mock_undeploy):
+@patch('deployer.tasks.deployment.stop')
+def test_pre_create_undeploy_for_blue_green(m_stop, mock_filter_units,
+                                            mock_undeploy):
     """
     Should undeploy all versions for mode: red-green
     """
@@ -569,11 +575,15 @@ def test_pre_create_undeploy_for_blue_green(mock_filter_units, mock_undeploy):
     mock_undeploy.assert_called_with(ANY, deployment['deployment']['name'],
                                      deployment['deployment']['version'],
                                      exclude_version=None)
+    m_stop.assert_called_with(
+        ANY, deployment['deployment']['name'],
+        version=deployment['deployment']['version'], exclude_version=None)
 
 
 @patch('deployer.tasks.deployment.undeploy')
 @patch('deployer.tasks.deployment.fetch_runtime_units')
-def test_pre_create_undeploy_for_ab(mock_filter_units, mock_undeploy):
+@patch('deployer.tasks.deployment.stop')
+def test_pre_create_undeploy_for_ab(m_stop, mock_filter_units, mock_undeploy):
     """
     Should undeploy all versions for mode: red-green
     """
@@ -592,6 +602,7 @@ def test_pre_create_undeploy_for_ab(mock_filter_units, mock_undeploy):
 
     # Then: All versions of application are un-deployed.
     mock_undeploy.assert_not_called()
+    m_stop.assert_not_called()
 
 
 @raises(NodeNotUndeployed)

@@ -661,7 +661,7 @@ def _fleet_stop(self, name, version=None, exclude_version=None,
     :return: ret_value
     """
     try:
-        stop(get_fleet_provider(), name, version,
+        stop(get_fleet_provider(), name, version=version,
              exclude_version=exclude_version)
     except RETRYABLE_FLEET_EXCEPTIONS as exc:
         raise self.retry(exc=exc, max_retries=TASK_SETTINGS['SSH_RETRIES'],
