@@ -737,7 +737,7 @@ def _wait_for_stop(self, name, version=None, exclude_version=None,
                     not in ('inactive', 'loaded', 'failed')]
     if active_units:
         raise self.retry(exc=NodeNotStopped(name, version, active_units),
-                         max_retries=check_retries,
+                         max_retries=check_retries+1,
                          countdown=check_interval)
     get_store().add_event(
         EVENT_DEPLOYMENTS_STOPPED,
