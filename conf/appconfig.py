@@ -134,7 +134,7 @@ DEPLOYMENT_DEFAULTS = {
                 'timeout': '10s'
             },
             'stop': {
-                'timeout': '30s',
+                'timeout': '120s',
                 'check-retries':
                 TASK_SETTINGS['DEFAULT_DEPLOYMENT_STOP_CHECK_RETRIES']
             }
