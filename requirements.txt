@@ -11,7 +11,6 @@ future==0.15.0
 pytz==2015.4
 requests[security]==2.7.0
 urllib3==1.11
-
 https://github.com/totem/fleet-py/archive/master.tar.gz
 https://github.com/sukrit007/celery/archive/3.1.tar.gz
 https://github.com/totem/yoda-py/archive/develop.tar.gz
