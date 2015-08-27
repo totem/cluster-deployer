@@ -222,7 +222,7 @@ class MongoStore(AbstractStore):
                 },
             {
                 '$set': {
-                    'runtime.upstreams': upstreams,
+                    'runtime.upstreams-v2': upstreams,
                     'modified': datetime.datetime.now(tz=pytz.UTC)
                 }
             }
