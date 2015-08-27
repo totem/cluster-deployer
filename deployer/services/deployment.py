@@ -4,6 +4,7 @@ from conf.appconfig import CLUSTER_NAME
 from deployer.fleet import get_fleet_provider
 from deployer.services.proxy import get_discovered_nodes
 from deployer.services.storage.factory import get_store
+from deployer.util import dict_merge
 
 __author__ = 'sukrit'
 
@@ -74,7 +75,8 @@ def sync_upstreams(deployment_id):
     store = get_store()
     deployment = store.get_deployment(deployment_id)
     if deployment:
-        upstreams = fetch_runtime_upstreams(deployment)
+        upstreams = [dict_merge({'name': name}, upstream) for name, upstream in
+                     fetch_runtime_upstreams(deployment).items()]
         store.update_runtime_upstreams(deployment_id, upstreams)
 
 
