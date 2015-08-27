@@ -36,7 +36,8 @@ def get_exposed_ports(deployment):
 
 def fetch_runtime_upstreams(deployment):
     """
-    Fetches runtime upstream information for a givend eployment
+    Fetches runtime upstream information for a given deployment
+    (includes meta-information about the upstream)
 
     :return:
     """
@@ -45,7 +46,8 @@ def fetch_runtime_upstreams(deployment):
     mode = deployment['deployment'].get('mode')
     ports = get_exposed_ports(deployment)
     return {
-        str(port): get_discovered_nodes(app_name, version, port, mode)
+        str(port): get_discovered_nodes(app_name, version, port, mode,
+                                        with_meta=True)
         for port in ports
     }
 

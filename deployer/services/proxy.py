@@ -149,7 +149,8 @@ def register_upstreams(
         )
 
 
-def get_discovered_nodes(app_name, app_version, check_port, deployment_mode):
+def get_discovered_nodes(app_name, app_version, check_port, deployment_mode,
+                         with_meta=False):
     """
     Gets the discovered nodes for given application
     :param app_name: Application name
@@ -170,4 +171,6 @@ def get_discovered_nodes(app_name, app_version, check_port, deployment_mode):
     use_version = app_version \
         if deployment_mode == DEPLOYMENT_MODE_BLUEGREEN else None
     upstream = as_upstream(app_name, check_port, app_version=use_version)
-    return yoda_cl.get_nodes_with_meta(upstream)
+    if with_meta:
+        return yoda_cl.get_nodes_with_meta(upstream)
+    return yoda_cl.get_nodes(upstream)
