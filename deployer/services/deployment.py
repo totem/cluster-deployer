@@ -47,8 +47,9 @@ def fetch_runtime_upstreams(deployment):
     mode = deployment['deployment'].get('mode')
     ports = get_exposed_ports(deployment)
     return {
-        str(port): get_discovered_nodes(app_name, version, port, mode,
-                                        with_meta=True)
+        str(port): [dict_merge({'name': name}, upstream) for name, upstream in
+                    get_discovered_nodes(
+                        app_name, version, port, mode, with_meta=True).items()]
         for port in ports
     }
 
@@ -75,8 +76,7 @@ def sync_upstreams(deployment_id):
     store = get_store()
     deployment = store.get_deployment(deployment_id)
     if deployment:
-        upstreams = [dict_merge({'name': name}, upstream) for name, upstream in
-                     fetch_runtime_upstreams(deployment).items()]
+        upstreams = fetch_runtime_upstreams(deployment)
         store.update_runtime_upstreams(deployment_id, upstreams)
 
 

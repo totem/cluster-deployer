@@ -341,7 +341,7 @@ class TestMongoStore():
             'test-deployment1-v1')
         expected_deployment = dict_merge(deployment, {
             'runtime': {
-                'upstreams-v2': upstreams
+                'proxy-upstreams': upstreams
             },
             'modified': NOW,
         })
