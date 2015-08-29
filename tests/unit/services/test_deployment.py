@@ -101,8 +101,14 @@ def test_fetch_runtime_upstreams(m_get_discovered_nodes):
 
     # And: Registered nodes for given deployment
     m_get_discovered_nodes.side_effect = [{
-        'endpoint1': 'host1:40001',
-        'endpoint2': 'host2:40001'
+        'endpoint1': {
+            'endpoint': 'host1:40001',
+            'node-num': '1'
+        },
+        'endpoint2': {
+            'endpoint': 'host2:40001',
+            'node-num': '2'
+        }
     }]
 
     # When: I fetch upstreams for given deployment
@@ -110,8 +116,16 @@ def test_fetch_runtime_upstreams(m_get_discovered_nodes):
 
     # Then: Expected upstreams are returned
     dict_compare(upstreams, {
-        '8080': {
-            'endpoint1': 'host1:40001',
-            'endpoint2': 'host2:40001'
-        }
+        '8080': [
+            {
+                'endpoint': 'host1:40001',
+                'name': 'endpoint1',
+                'node-num': '1'
+            },
+            {
+                'endpoint': 'host2:40001',
+                'name': 'endpoint2',
+                'node-num': '2'
+            }
+        ]
     })

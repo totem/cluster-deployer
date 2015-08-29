@@ -3,7 +3,7 @@ import deployer.logger
 from celery.signals import setup_logging
 
 
-__version__ = '0.3.7'
+__version__ = '0.3.8'
 __author__ = 'sukrit'
 
 deployer.logger.init_logging()

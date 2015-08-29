@@ -815,7 +815,7 @@ def _promote_success(deployment, search_params=None):
         {'message': 'Promoted'}, ctx=notify_ctx,
         level=LEVEL_SUCCESS,
         notifications=deployment['notifications'],
-        security_profile=deployment['security']['profile']),
+        security_profile=deployment['security']['profile']).delay()
     return store.get_deployment(deployment_id)
 
 

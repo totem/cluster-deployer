@@ -4,6 +4,7 @@ from conf.appconfig import CLUSTER_NAME
 from deployer.fleet import get_fleet_provider
 from deployer.services.proxy import get_discovered_nodes
 from deployer.services.storage.factory import get_store
+from deployer.util import dict_merge
 
 __author__ = 'sukrit'
 
@@ -36,7 +37,8 @@ def get_exposed_ports(deployment):
 
 def fetch_runtime_upstreams(deployment):
     """
-    Fetches runtime upstream information for a givend eployment
+    Fetches runtime upstream information for a given deployment
+    (includes meta-information about the upstream)
 
     :return:
     """
@@ -45,7 +47,9 @@ def fetch_runtime_upstreams(deployment):
     mode = deployment['deployment'].get('mode')
     ports = get_exposed_ports(deployment)
     return {
-        str(port): get_discovered_nodes(app_name, version, port, mode)
+        str(port): [dict_merge({'name': name}, upstream) for name, upstream in
+                    get_discovered_nodes(
+                        app_name, version, port, mode, with_meta=True).items()]
         for port in ports
     }
 
