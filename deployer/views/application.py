@@ -229,7 +229,7 @@ class RecoveryApi(MethodView):
 
     @hypermedia.consumes({
         MIME_RECOVERY_V1: SCHEMA_RECOVERY_V1,
-        MIME_JSON: SCHEMA_APP_VERSION_CREATE_V1
+        MIME_JSON: SCHEMA_RECOVERY_V1
     })
     @hypermedia.produces({
         MIME_TASK_V1: SCHEMA_TASK_V1,
