@@ -157,6 +157,7 @@ class TestMongoStore():
         expected_deployment = dict_merge(deployment, {
             '_expiry': NOW,
             'modified': NOW,
+            'state-updated': NOW
         })
 
         dict_compare(created_deployment, expected_deployment)
@@ -172,6 +173,7 @@ class TestMongoStore():
             'test-deployment1-v1')
         expected_deployment = dict_merge(deployment, {
             '_expiry': datetime.datetime.max,
+            'state-updated': NOW,
             'modified': NOW,
         })
         dict_compare(deployment, expected_deployment)
