@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-04/hyper-schema#",
   "type": "object",
-  "title": "Schema for creating deployment",
+  "title": "Schema for deployment",
   "id": "#app-version-v1",
   "properties": {
     "meta-info": {
@@ -21,6 +21,9 @@
     },
     "notifications": {
       "$ref": "#/definitions/notifications"
+    },
+    "state": {
+      "enum": ["NEW", "STARTED", "PROMOTED", "DECOMMISSIONED", "FAILED"]
     }
   },
   "required": ["meta-info"],

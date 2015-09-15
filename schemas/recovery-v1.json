@@ -6,19 +6,20 @@
   "properties": {
     "name": {
       "description": "Optional Application name that needs to be recovered. If not specified, all apps are recovered.",
-      "type": "string",
-      "maxLength": 512
+      "$ref": "/schemas/app-version-v1#/properties/deployment/state"
     },
     "version": {
       "description": "Optional Application version that needs to be recovered. If not specified all app versions are recovered",
-      "type": "string",
-      "maxLength": 100
+       "$ref": "/schemas/app-version-v1#/properties/deployment/version"
     },
     "exclude-names":{
       "type": "array",
       "items": {
         "type": "string"
       }
+    },
+    "state": {
+      "$ref": "/schemas/app-version-v1#/properties/state"
     }
   },
   "additionalProperties": false
