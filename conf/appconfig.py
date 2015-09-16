@@ -201,13 +201,13 @@ TOTEM_ETCD_SETTINGS = {
     'yoda_base': os.getenv('ETCD_YODA_BASE', '/yoda'),
 }
 
+CORS_ENABLED = os.getenv('CORS_ENABLED', 'true').strip().lower() in \
+    BOOLEAN_TRUE_VALUES
 CORS_SETTINGS = {
-    'enabled': os.getenv('CORS_ENABLED', 'true').strip().lower() in
-    BOOLEAN_TRUE_VALUES,
     'origins': os.getenv('CORS_ORIGINS', '*'),
     'headers': ['Content-Type', 'Authorization'],
     'expose_headers': ['Content-Type', 'Link', 'Location', 'E-Tag',
-                       'If-Modified-Since'],
+                       'If-Modified-Since', 'Content-Length'],
     'supports_credentials': True,
 
 }
