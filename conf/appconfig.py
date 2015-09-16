@@ -204,7 +204,12 @@ TOTEM_ETCD_SETTINGS = {
 CORS_SETTINGS = {
     'enabled': os.getenv('CORS_ENABLED', 'true').strip().lower() in
     BOOLEAN_TRUE_VALUES,
-    'origins': os.getenv('CORS_ORIGINS', '*')
+    'origins': os.getenv('CORS_ORIGINS', '*'),
+    'headers': ['Content-Type', 'Authorization'],
+    'expose_headers': ['Content-Type', 'Link', 'Location', 'E-Tag',
+                       'If-Modified-Since'],
+    'supports_credentials': True,
+
 }
 
 ENCRYPTION = {
