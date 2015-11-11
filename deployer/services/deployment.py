@@ -21,7 +21,7 @@ def get_exposed_ports(deployment):
 
     :param deployment: Dictionary representing deployment
     :type deployment: dict
-    :return: Sorteed list of unique exposed ports
+    :return: Sorted list of unique exposed ports
     :rtype: list
     """
     return sorted(

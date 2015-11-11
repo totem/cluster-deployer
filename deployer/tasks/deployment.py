@@ -1008,15 +1008,17 @@ def sync_promoted_units(self):
 @app.task(bind=True)
 def recover_cluster(self, recovery_params):
     """
-    Recovers the cluster by re-scheduling promoted deployments
+    Recovers the cluster by re-scheduling deployments
 
     :param recovery_params: Parameters for recovering cluster
     :type recovery_params: dict
     :return: GroupResult
     """
-    logger.info('Begin Cluster recovery')
+    logger.info('Begin Cluster recovery for: {}'.format(recovery_params))
+    state = recovery_params.get('state', DEPLOYMENT_STATE_PROMOTED)
+
     deployments = get_store().filter_deployments(
-        state=DEPLOYMENT_STATE_PROMOTED,
+        state=state,
         name=recovery_params.get('name'),
         version=recovery_params.get('version'),
         exclude_names=recovery_params.get('exclude-names')

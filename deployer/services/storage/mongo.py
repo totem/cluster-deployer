@@ -94,9 +94,10 @@ class MongoStore(AbstractStore):
     def create_deployment(self, deployment):
         deployment_upd = self.apply_modified_ts(deployment)
         deployment_upd['_expiry'] = datetime.datetime.now(tz=pytz.UTC)
+        deployment_upd['state-updated'] = datetime.datetime.now(tz=pytz.UTC)
         self._deployments.replace_one(
             {
-                'id': deployment_upd['id']
+                'id': deployment_upd['id'],
             },
             self.apply_modified_ts(deployment_upd),
             upsert=True
@@ -117,6 +118,7 @@ class MongoStore(AbstractStore):
                 '$set': {
                     'state': state,
                     'modified': datetime.datetime.now(tz=pytz.UTC),
+                    'state-updated': datetime.datetime.now(tz=pytz.UTC),
                     '_expiry': self._generate_expiry(state),
                     'runtime': {}  # Reset runtime info during state change
                 }
@@ -168,6 +170,7 @@ class MongoStore(AbstractStore):
             '$set': {
                 'state': new_state,
                 'modified': datetime.datetime.now(tz=pytz.UTC),
+                'state-updated': datetime.datetime.now(tz=pytz.UTC),
                 '_expiry': self._generate_expiry(new_state),
                 'runtime': {}  # Reset runtime info during state change
             }
