@@ -3,6 +3,7 @@ Defines celery tasks for deployment (e.g.: create, undeploy, wire, unwire)
 """
 import copy
 import datetime
+from httplib import HTTPException
 import json
 import socket
 import logging
@@ -919,10 +920,10 @@ def _check_node(self, node, path, attempts, timeout):
     timeout_ms = to_milliseconds(timeout)
     try:
         urllib2.urlopen(check_url, None, timeout_ms/1000)
-    except IOError as exc:
+    except (IOError, HTTPException) as exc:
         # Clear the current exception so that celery does not raise original
         # exception
-        reason = exc.reason if hasattr(exc, 'reason') else str(exc)
+        reason = exc.reason if hasattr(exc, 'reason') else repr(exc)
         kwargs = {}
         if hasattr(exc, 'read'):
             kwargs.update(response={'raw': exc.read()}, status=exc.code)

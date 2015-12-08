@@ -1,4 +1,5 @@
 import datetime
+import httplib
 import urllib2
 
 from freezegun import freeze_time
@@ -744,6 +745,33 @@ def test_check_node_for_unhealthy_node(m_urlopen):
     eq_(cm.exception, NodeCheckFailed(
         'http://localhost:8080/mock', 'MockError', status=500,
         response={'raw': 'MockResponse'}))
+
+
+@patch('urllib2.urlopen')
+def test_check_node_for_unhealthy_node_returning_bad_status_line(m_urlopen):
+    """
+    Should fail node check for unhealthy node.
+    """
+
+    # Given: Unhealthy node
+    m_urlopen.side_effect = httplib.BadStatusLine('')
+
+    # And: Mock Implementation for retry
+    _check_node.retry = MagicMock()
+
+    def retry(*args, **kwargs):
+        raise kwargs.get('exc')
+
+    _check_node.retry.side_effect = retry
+
+    # When: I call check node with a given path
+    with nose.tools.assert_raises(NodeCheckFailed) as cm:
+        _check_node('localhost:8080', 'mock', 5, '5s')
+
+    # Then: NodeCheckFailed exception is raised
+    eq_(cm.exception, NodeCheckFailed(
+        'http://localhost:8080/mock', 'BadStatusLine("\'\'",)', status=None,
+        response=None))
 
 
 @patch('deployer.tasks.deployment._check_node')
