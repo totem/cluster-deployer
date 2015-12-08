@@ -924,7 +924,7 @@ def _check_node(self, node, path, attempts, timeout):
         # Clear the current exception so that celery does not raise original
         # exception
         reason = exc.reason if hasattr(exc, 'reason') else repr(exc)
-        kwargs = {}
+        kwargs = {'attempts': attempts}
         if hasattr(exc, 'read'):
             kwargs.update(response={'raw': exc.read()}, status=exc.code)
 

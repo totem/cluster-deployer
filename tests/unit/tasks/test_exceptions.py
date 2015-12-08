@@ -48,17 +48,19 @@ def test_dict_repr_for_node_check_failed():
 
     # When: I call to_dict for NodeCheckFailed exception
     result = NodeCheckFailed('http://localhost:8080', 'MockReason',
-                             status=500, response={'raw': 'Mock'}).to_dict()
+                             status=500, response={'raw': 'Mock'},
+                             attempts=2).to_dict()
 
     # Then: Expected result is returned
     dict_compare(result, {
         'message': 'Deployment check failed for url: http://localhost:8080 '
-                   'due to: MockReason',
+                   'due to: MockReason after 2 attempt(s).',
         'code': 'NODE_CHECK_FAILED',
         'details': {
             'url': 'http://localhost:8080',
             'status': 500,
-            'response': {'raw': 'Mock'}
+            'response': {'raw': 'Mock'},
+            'attempts': 2
         }
     })
 
@@ -66,8 +68,9 @@ def test_dict_repr_for_node_check_failed():
 def test_str_repr_for_node_check_failed():
 
     # When: I call str representation for NodeCheckFailed exception
-    result = str(NodeCheckFailed('http://localhost:8080', 'MockReason'))
+    result = str(NodeCheckFailed('http://localhost:8080', 'MockReason',
+                                 attempts=2))
 
     # Then: Expected result is returned
     eq_(result, 'Deployment check failed for url: http://localhost:8080 due '
-                'to: MockReason')
+                'to: MockReason after 2 attempt(s).')

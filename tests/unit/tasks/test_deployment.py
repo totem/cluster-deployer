@@ -744,7 +744,7 @@ def test_check_node_for_unhealthy_node(m_urlopen):
     # Then: NodeCheckFailed exception is raised
     eq_(cm.exception, NodeCheckFailed(
         'http://localhost:8080/mock', 'MockError', status=500,
-        response={'raw': 'MockResponse'}))
+        response={'raw': 'MockResponse'}, attempts=5))
 
 
 @patch('urllib2.urlopen')
@@ -771,7 +771,7 @@ def test_check_node_for_unhealthy_node_returning_bad_status_line(m_urlopen):
     # Then: NodeCheckFailed exception is raised
     eq_(cm.exception, NodeCheckFailed(
         'http://localhost:8080/mock', 'BadStatusLine("\'\'",)', status=None,
-        response=None))
+        response=None, attempts=5))
 
 
 @patch('deployer.tasks.deployment._check_node')

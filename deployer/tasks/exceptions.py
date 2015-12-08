@@ -175,13 +175,15 @@ class NodeCheckFailed(Exception):
     Exception corresponding to failed deployment check for a given node.
     """
 
-    def __init__(self, url, reason, status=None, response=None):
+    def __init__(self, url, reason, status=None, response=None, attempts=None):
         self.url = url
-        self.message = 'Deployment check failed for url: {0} due to: {1}'\
-            .format(url, reason)
+        self.message = 'Deployment check failed for url: {0} due to: {1} ' \
+                       'after {2} attempt(s).'.format(url, reason, attempts)
         self.status = status
         self.response = response
-        super(NodeCheckFailed, self).__init__(url, reason, status, response)
+        self.attempts = attempts
+        super(NodeCheckFailed, self).__init__(url, reason, status, response,
+                                              attempts)
 
     def to_dict(self):
         return {
@@ -189,6 +191,7 @@ class NodeCheckFailed(Exception):
             'code': 'NODE_CHECK_FAILED',
             'details': {
                 'url': self.url,
+                'attempts': self.attempts,
                 'status': self.status,
                 'response': self.response
             }
@@ -201,4 +204,5 @@ class NodeCheckFailed(Exception):
         return self.status == other.status and \
             self.message == other.message and \
             self.response == other.response and \
+            self.attempts == other.attempts and \
             self.url == other.url
