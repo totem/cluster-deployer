@@ -24,6 +24,10 @@
     },
     "state": {
       "enum": ["NEW", "STARTED", "PROMOTED", "DECOMMISSIONED", "FAILED"]
+    },
+    "environment": {
+      "$ref": "#/definitions/environment",
+      "description": "Defines top level environment (key, value) support"
     }
   },
   "required": ["meta-info"],
