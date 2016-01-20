@@ -156,7 +156,8 @@ DEPLOYMENT_DEFAULTS = {
         'security': {
             'profile': 'default'
         },
-        'notifications': NOTIFICATIONS_DEFAULTS
+        'notifications': NOTIFICATIONS_DEFAULTS,
+        'environment': {}
     }
 }
 

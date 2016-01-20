@@ -1,13 +1,21 @@
+import datetime
+from freezegun import freeze_time
 from mock import patch
 from nose.tools import eq_
+from conf.appconfig import DEPLOYMENT_MODE_BLUEGREEN, DEFAULT_STOP_TIMEOUT, \
+    TASK_SETTINGS, DEPLOYMENT_STATE_STARTED, NOTIFICATIONS_DEFAULTS, \
+    CLUSTER_NAME
 from deployer.services.deployment import get_exposed_ports, \
-    fetch_runtime_upstreams
+    fetch_runtime_upstreams, apply_defaults
 from deployer.util import dict_merge
 from tests.helper import dict_compare
 
+NOW = datetime.datetime(2014, 01, 01)
+DEFAULT_STOP_TIMEOUT_SECONDS = 30
 
-def _create_test_deployment():
-    return {
+
+def _create_test_deployment(additional_params=None):
+    return dict_merge(additional_params, {
         'meta-info': {
             'job-id': 'test-job',
             'git': {
@@ -19,11 +27,9 @@ def _create_test_deployment():
             }
         },
         'deployment': {
-            'type': 'git-quay',
-            'name': 'testowner-testrepo-v1',
-            'version': 'v1'
+            'type': 'git-quay'
         }
-    }
+    })
 
 
 def test_get_exposed_ports_with_no_proxy():
@@ -85,7 +91,11 @@ def test_get_exposed_ports_with_hosts_and_listeners():
 @patch('deployer.services.deployment.get_discovered_nodes')
 def test_fetch_runtime_upstreams(m_get_discovered_nodes):
     # Given: Deployment parameters (w/o proxy)
-    deployment = dict_merge(_create_test_deployment(), {
+    deployment = _create_test_deployment({
+        'deployment': {
+            'name': 'test',
+            'version': 'v1'
+        },
         'proxy': {
             'hosts': {
                 'host1': {
@@ -128,4 +138,465 @@ def test_fetch_runtime_upstreams(m_get_discovered_nodes):
                 'node-num': '2'
             }
         ]
+    })
+
+
+@freeze_time(NOW)
+@patch('time.time')
+def test_deployment_defaults_for_type_git_quay(mock_time):
+    """Should get defaults for deployment of type git-quay"""
+
+    # Given: Deployment dictionary
+    deployment = _create_test_deployment()
+
+    # Mock Time call for creating version
+    mock_time.return_value = 0.1006
+
+    # When: I apply defaults for deployment
+    depl_with_defaults = apply_defaults(deployment)
+
+    # Then: Defaults for deployment are applied
+    dict_compare(depl_with_defaults, {
+        'meta-info': {
+            'job-id': 'test-job',
+            'git': {
+                'owner': 'testowner',
+                'repo': 'testrepo',
+                'ref': 'testref',
+                'commit': 'testcommit',
+                'type': 'github'
+            }
+        },
+        'deployment': {
+            'name': 'testowner-testrepo-testref',
+            'type': 'git-quay',
+            'version': '101',
+            'nodes': 1,
+            'mode': DEPLOYMENT_MODE_BLUEGREEN,
+            'check': {
+                'min-nodes': 1,
+                'port': None,
+                'attempts': 10,
+                'timeout': '10s'
+            },
+            'stop': {
+                'timeout': DEFAULT_STOP_TIMEOUT,
+                'check-retries':
+                    TASK_SETTINGS['DEFAULT_DEPLOYMENT_STOP_CHECK_RETRIES']
+            }
+        },
+        'templates': {
+            'app': {
+                'args': {
+                    'environment': {
+                        'DISCOVER_PORTS': '',
+                        'DISCOVER_MODE': DEPLOYMENT_MODE_BLUEGREEN,
+                        'DISCOVER_HEALTH': '{}'
+                    },
+                    'docker-args': '',
+                    'image': 'quay.io/totem/testowner-testrepo:testcommit',
+                    'sidekicks': ['yoda-register'],
+                    'service': {
+                        'container-stop-sec': DEFAULT_STOP_TIMEOUT_SECONDS
+                    }
+                },
+                'enabled': True,
+                'name': 'default-app'
+            },
+            'yoda-register': {
+                'args': {},
+                'enabled': True,
+                'name': 'yoda-register'
+            }
+        },
+        'id': 'local-testowner-testrepo-testref-101',
+        'proxy': {
+            'hosts': {},
+            'listeners': {},
+            'upstreams': {}
+        },
+        'state': DEPLOYMENT_STATE_STARTED,
+        'started-at': NOW,
+        'security': {
+            'profile': 'default'
+        },
+        'notifications': NOTIFICATIONS_DEFAULTS,
+        'cluster': CLUSTER_NAME,
+        'runtime': {},
+        'environment': {}
+    })
+
+
+@freeze_time(NOW)
+@patch('time.time')
+def test_deployment_defaults_with_proxy(mock_time):
+    """Should get defaults for deployment with proxy"""
+
+    # Given: Deployment dictionary
+    deployment = _create_test_deployment()
+    deployment = dict_merge(deployment, {
+        'proxy': {
+            'hosts': {
+                'host1': {
+                    'locations': {
+                        'loc1': {
+                            'port': 8080,
+                            'path': '/loc1'
+                        },
+                        'loc2': {
+                            'port': 8081,
+                            'path': '/loc2'
+                        },
+                        'loc3': {
+                            'port': 8082,
+                            'path': '/loc3'
+                        }
+                    }
+                }
+            },
+            'upstreams': {
+                '8080': {},
+                '8081': {
+                    'mode': 'tcp'
+                }
+            }
+        }
+    })
+
+    # Mock Time call for creating version
+    mock_time.return_value = 0.1006
+
+    # When: I apply defaults for deployment
+    depl_with_defaults = apply_defaults(deployment)
+
+    # Then: Defaults for deployment are applied
+    dict_compare(depl_with_defaults, {
+        'meta-info': {
+            'job-id': 'test-job',
+            'git': {
+                'owner': 'testowner',
+                'repo': 'testrepo',
+                'ref': 'testref',
+                'commit': 'testcommit',
+                'type': 'github'
+            }
+        },
+        'deployment': {
+            'name': 'testowner-testrepo-testref',
+            'type': 'git-quay',
+            'version': '101',
+            'nodes': 1,
+            'mode': DEPLOYMENT_MODE_BLUEGREEN,
+            'check': {
+                'min-nodes': 1,
+                'port': None,
+                'attempts': 10,
+                'timeout': '10s'
+            },
+            'stop': {
+                'timeout': DEFAULT_STOP_TIMEOUT,
+                'check-retries':
+                    TASK_SETTINGS['DEFAULT_DEPLOYMENT_STOP_CHECK_RETRIES']
+            }
+        },
+        'templates': {
+            'app': {
+                'args': {
+                    'environment': {
+                        'DISCOVER_PORTS': '8080,8081,8082',
+                        'DISCOVER_MODE': DEPLOYMENT_MODE_BLUEGREEN,
+                        'DISCOVER_HEALTH': '{"8080": {"timeout": "5s"},'
+                                           ' "8081": {"timeout": "5s"},'
+                                           ' "8082": {"timeout": "5s"}}'
+                    },
+                    'docker-args': '',
+                    'image': 'quay.io/totem/testowner-testrepo:testcommit',
+                    'sidekicks': ['yoda-register'],
+                    'service': {
+                        'container-stop-sec': DEFAULT_STOP_TIMEOUT_SECONDS
+                    }
+                },
+                'enabled': True,
+                'name': 'default-app'
+            },
+            'yoda-register': {
+                'args': {},
+                'enabled': True,
+                'name': 'yoda-register'
+            }
+        },
+        'id': 'local-testowner-testrepo-testref-101',
+        'proxy': {
+            'hosts': {
+                'host1': {
+                    'locations': {
+                        'loc1': {
+                            'port': 8080,
+                            'path': '/loc1'
+                        },
+                        'loc2': {
+                            'port': 8081,
+                            'path': '/loc2'
+                        },
+                        'loc3': {
+                            'port': 8082,
+                            'path': '/loc3'
+                        }
+                    }
+                }
+            },
+            'upstreams': {
+                '8080': {
+                    'mode': 'http',
+                    'health': {
+                        'timeout': '5s'
+                    },
+                    'ttl': '1w'
+                },
+                '8081': {
+                    'mode': 'tcp',
+                    'health': {
+                        'timeout': '5s'
+                    },
+                    'ttl': '1w'
+                },
+                '8082': {
+                    'mode': 'http',
+                    'health': {
+                        'timeout': '5s'
+                    },
+                    'ttl': '1w'
+                }
+            },
+            'listeners': {}
+        },
+        'state': DEPLOYMENT_STATE_STARTED,
+        'started-at': NOW,
+        'security': {
+            'profile': 'default'
+        },
+        'notifications': NOTIFICATIONS_DEFAULTS,
+        'cluster': CLUSTER_NAME,
+        'runtime': {},
+        'environment': {}
+    })
+
+
+@freeze_time(NOW)
+@patch('time.time')
+def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
+    """Should get defaults for deployment of type git-quay"""
+
+    # Given: Deployment dictionary
+    deployment = _create_test_deployment({
+        'templates': {
+            'logger': {
+                'name': 'default-logger',
+                'enabled': False,
+            },
+            'app': {
+                'args': {
+                    'environment': {
+                        'MOCK_ENV1': 'MOCK_VAL1_OVERRIDE'
+                    }
+                }
+
+            }
+        },
+        'environment': {
+            'MOCK_ENV1': 'MOCK_VAL1',
+            'MOCK_ENV2': 'MOCK_VAL2'
+        }
+    })
+
+    # Mock Time call for creating version
+    mock_time.return_value = 1
+
+    # When: I apply defaults for deployment
+    depl_with_defaults = apply_defaults(deployment)
+
+    # Then: Defaults for deployment are applied
+    dict_compare(depl_with_defaults, {
+        'meta-info': {
+            'job-id': 'test-job',
+            'git': {
+                'owner': 'testowner',
+                'repo': 'testrepo',
+                'ref': 'testref',
+                'commit': 'testcommit',
+                'type': 'github'
+            }
+        },
+        'deployment': {
+            'name': 'testowner-testrepo-testref',
+            'type': 'git-quay',
+            'version': '1000',
+            'nodes': 1,
+            'mode': DEPLOYMENT_MODE_BLUEGREEN,
+            'check': {
+                'min-nodes': 1,
+                'port': None,
+                'attempts': 10,
+                'timeout': '10s'
+            },
+            'stop': {
+                'timeout': DEFAULT_STOP_TIMEOUT,
+                'check-retries':
+                    TASK_SETTINGS['DEFAULT_DEPLOYMENT_STOP_CHECK_RETRIES']
+            }
+        },
+        'templates': {
+            'app': {
+                'args': {
+                    'environment': {
+                        'DISCOVER_PORTS': '',
+                        'DISCOVER_MODE': DEPLOYMENT_MODE_BLUEGREEN,
+                        'DISCOVER_HEALTH': '{}',
+                        'MOCK_ENV1': 'MOCK_VAL1_OVERRIDE',
+                        'MOCK_ENV2': 'MOCK_VAL2'
+                    },
+                    'docker-args': '',
+                    'image': 'quay.io/totem/testowner-testrepo:testcommit',
+                    'sidekicks': ['yoda-register'],
+                    'service': {
+                        'container-stop-sec': DEFAULT_STOP_TIMEOUT_SECONDS
+                    }
+                },
+                'enabled': True,
+                'name': 'default-app'
+            },
+            'yoda-register': {
+                'args': {},
+                'enabled': True,
+                'name': 'yoda-register'
+            },
+            'logger': {
+                'args': {},
+                'enabled': False,
+                'name': 'default-logger'
+            }
+        },
+        'id': 'local-testowner-testrepo-testref-1000',
+        'proxy': {
+            'hosts': {},
+            'listeners': {},
+            'upstreams': {}
+        },
+        'state': DEPLOYMENT_STATE_STARTED,
+        'started-at': NOW,
+        'security': {
+            'profile': 'default'
+        },
+        'notifications': NOTIFICATIONS_DEFAULTS,
+        'cluster': CLUSTER_NAME,
+        'runtime': {},
+        'environment': deployment['environment']
+    })
+
+
+@freeze_time(NOW)
+@patch('time.time')
+def test_deployment_defaults_for_custom_deployment(mock_time):
+    """Should get defaults for deployment of type git-quay"""
+
+    # Given: Deployment dictionary
+    deployment = _create_test_deployment()
+    deployment['deployment'] = {
+        'name': 'testdeployment',
+        'type': 'custom',
+        'nodes': 3
+    }
+
+    deployment['templates'] = {
+        'app': {
+            'args': {
+                'arg1': 'value1'
+            },
+            'name': 'custom-app'
+        },
+        'logger': {
+            'args': {
+                'arg1': 'value1'
+            },
+            'name': 'custom-logger',
+            'enabled': False
+        }
+    }
+
+    # Mock Time call for creating version
+    mock_time.return_value = 1
+
+    # When: I apply defaults for deployment
+    depl_with_defaults = apply_defaults(deployment)
+
+    # Then: Defaults for deployment are applied
+    dict_compare(depl_with_defaults, {
+        'meta-info': {
+            'job-id': 'test-job',
+            'git': {
+                'owner': 'testowner',
+                'repo': 'testrepo',
+                'ref': 'testref',
+                'commit': 'testcommit',
+                'type': 'github'
+            }
+        },
+        'deployment': {
+            'name': 'testdeployment',
+            'type': 'custom',
+            'version': '1000',
+            'nodes': 3,
+            'mode': DEPLOYMENT_MODE_BLUEGREEN,
+            'check': {
+                'min-nodes': 1,
+                'port': None,
+                'attempts': 10,
+                'timeout': '10s'
+            },
+            'stop': {
+                'timeout': DEFAULT_STOP_TIMEOUT,
+                'check-retries':
+                    TASK_SETTINGS['DEFAULT_DEPLOYMENT_STOP_CHECK_RETRIES']
+            }
+        },
+        'templates': {
+            'app': {
+                'args': {
+                    'arg1': 'value1',
+                    'environment': {
+                        'DISCOVER_PORTS': '',
+                        'DISCOVER_MODE': DEPLOYMENT_MODE_BLUEGREEN,
+                        'DISCOVER_HEALTH': '{}'
+                    },
+                    'service': {
+                        'container-stop-sec': DEFAULT_STOP_TIMEOUT_SECONDS
+                    },
+                    'sidekicks': []
+                },
+                'enabled': True,
+                'name': 'custom-app'
+            },
+            'logger': {
+                'args': {
+                    'arg1': 'value1'
+                },
+                'enabled': False,
+                'name': 'custom-logger'
+            }
+        },
+        'id': 'local-testdeployment-1000',
+        'proxy': {
+            'hosts': {},
+            'listeners': {},
+            'upstreams': {}
+        },
+        'state': DEPLOYMENT_STATE_STARTED,
+        'started-at': NOW,
+        'security': {
+            'profile': 'default'
+        },
+        'notifications': NOTIFICATIONS_DEFAULTS,
+        'cluster': CLUSTER_NAME,
+        'runtime': {},
+        'environment': {}
     })
