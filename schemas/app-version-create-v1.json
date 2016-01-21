@@ -21,6 +21,9 @@
     },
     "notifications": {
       "$ref": "${base_url}/schemas/app-version-v1#/properties/notifications"
+    },
+    "environment": {
+      "$ref": "${base_url}/schemas/app-version-v1#/properties/environment"
     }
   },
   "required": ["meta-info"],
