@@ -813,16 +813,23 @@ def test_sync_units_without_ignoring_error(m_filter_units, m_get_store):
     # Then: Exception is raised
 
 
-def test_clone_deployment():
+@patch('uuid.uuid4')
+def test_clone_deployment(m_uuid):
     """
     Should clone exiting deployment and reset version
     """
+
+    # Given: New job id
+    m_uuid.return_value = 'new-job-id'
 
     # When: I clone existing deployment
     cloned = clone_deployment({
         'deployment': {
             'name': 'mock',
             'version': 'v1'
+        },
+        'meta-info': {
+            'job-id': 'old-job-id'
         }
     })
 
@@ -830,5 +837,8 @@ def test_clone_deployment():
     dict_compare(cloned, {
         'deployment': {
             'name': 'mock'
+        },
+        'meta-info': {
+            'job-id': 'new-job-id'
         }
     })

@@ -3,6 +3,8 @@ import json
 import logging
 import time
 import datetime
+import uuid
+
 from fleet.deploy.deployer import filter_units
 from conf.appconfig import CLUSTER_NAME, DEPLOYMENT_TYPE_GIT_QUAY, \
     DEPLOYMENT_DEFAULTS, TEMPLATE_DEFAULTS, \
@@ -301,4 +303,8 @@ def clone_deployment(deployment):
             deployment_upd.get('deployment').get('version')):
         # We want to create new deployment version
         del(deployment_upd['deployment']['version'])
+
+    # Reset job-id (As it is no longer linked to previous job)
+    deployment_upd.setdefault('meta-info', {})
+    deployment_upd['meta-info']['job-id'] = str(uuid.uuid4())
     return deployment_upd
