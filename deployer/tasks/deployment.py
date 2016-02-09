@@ -829,7 +829,7 @@ def sync_promoted_upstreams(self):
         deployments = get_store().filter_deployments(
             state=DEPLOYMENT_STATE_PROMOTED)
 
-        return (sync_upstreams(deployment['deployment_id'])
+        return list(sync_upstreams(deployment['deployment_id'])
                 for deployment in deployments)
     finally:
         _release_lock.si(lock).delay()
@@ -848,7 +848,7 @@ def sync_promoted_units(self):
         deployments = get_store().filter_deployments(
             state=DEPLOYMENT_STATE_PROMOTED, only_ids=True)
 
-        return (sync_units(deployment['deployment_id'])
+        return list(sync_units(deployment['deployment_id'])
                 for deployment in deployments)
     finally:
         _release_lock.si(lock).delay()
