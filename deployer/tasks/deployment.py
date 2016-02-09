@@ -852,7 +852,6 @@ def sync_promoted_units(self):
                     for deployment in deployments)
     finally:
         _release_lock.si(lock).delay()
-        raise
 
 
 @app.task(bind=True)
