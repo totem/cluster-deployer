@@ -17,7 +17,7 @@ from deployer.services.security import decrypt_config
 from deployer.services.storage.factory import get_store
 from deployer.services.util import create_notify_ctx
 from deployer.services.deployment import fetch_runtime_units, \
-    sync_upstreams, sync_units, apply_defaults
+    sync_upstreams, sync_units, apply_defaults, clone_deployment
 from deployer.tasks import notification
 from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning, \
     NodeCheckFailed, MinNodesNotDiscovered, NodeNotStopped
@@ -41,7 +41,8 @@ from conf.appconfig import DEPLOYMENT_DEFAULTS, \
     DEPLOYMENT_MODE_REDGREEN, \
     DEPLOYMENT_STATE_FAILED, DEPLOYMENT_STATE_PROMOTED, \
     LEVEL_STARTED, LEVEL_FAILED, LEVEL_SUCCESS, CLUSTER_NAME, \
-    DEPLOYMENT_STATE_DECOMMISSIONED, LOCK_JOB_BASE, DEPLOYMENT_TYPE_DEFAULT
+    DEPLOYMENT_STATE_DECOMMISSIONED, LOCK_JOB_BASE, DEPLOYMENT_TYPE_DEFAULT, \
+    DEFAULT_CHORD_OPTIONS
 
 from deployer.tasks.common import async_wait
 from deployer.services.proxy import wire_proxy, register_upstreams, \
@@ -134,7 +135,7 @@ def _check_discover(self, app_name, app_version, check_port, min_nodes,
     return discovered_nodes
 
 
-@app.task
+@app.task(rate_limit=TASK_SETTINGS['DEPLOYMENT_CREATE_LIMIT'])
 def create(deployment):
     """
     Task for creating deployment.
@@ -347,7 +348,8 @@ def _deploy_all(deployment, search_params, next_task=None):
             if template['enabled']
         ),
         _fleet_start_and_wait.si(deployment, search_params,
-                                 next_task=next_task)
+                                 next_task=next_task),
+        options=DEFAULT_CHORD_OPTIONS
     )()
 
 
@@ -451,7 +453,8 @@ def _fleet_start_and_wait(deployment, search_params, next_task=None):
             if template['enabled']
         ),
         _fleet_check_deploy.si(name, version, len(service_types), min_nodes,
-                               search_params, next_task=next_task)
+                               search_params, next_task=next_task),
+        options=DEFAULT_CHORD_OPTIONS
     )()
 
 
@@ -761,7 +764,8 @@ def _check_deployment(nodes, path, attempts, timeout, search_params=None,
             group(_check_node.si(node, path, attempts, timeout)
                   for _, node in nodes.iteritems()),
             _deployment_check_passed.si(search_params=search_params,
-                                        next_task=next_task)
+                                        next_task=next_task),
+            options=DEFAULT_CHORD_OPTIONS
         ).delay()
     elif next_task:
         return next_task.delay()
@@ -812,22 +816,6 @@ def _get_job_lock(job_name, raise_error=False):
                 lock_error.name))
 
 
-@app.task
-def sync_upstreams_task(deployment_id):
-    """
-    Synchronizes upstream for given deployment
-    """
-    sync_upstreams(deployment_id)
-
-
-@app.task
-def sync_units_task(deployment_id):
-    """
-    Synchronizes upstream for given deployment
-    """
-    sync_units(deployment_id)
-
-
 @app.task(bind=True)
 def sync_promoted_upstreams(self):
     """
@@ -840,14 +828,11 @@ def sync_promoted_upstreams(self):
     try:
         deployments = get_store().filter_deployments(
             state=DEPLOYMENT_STATE_PROMOTED)
-    except:
+
+        return (sync_upstreams(deployment['deployment_id'])
+                for deployment in deployments)
+    finally:
         _release_lock.si(lock).delay()
-        raise
-    return chord(
-        group(sync_upstreams_task.si(deployment['id'])
-              for deployment in deployments),
-        _release_lock.si(lock)
-    ).delay()
 
 
 @app.task(bind=True)
@@ -862,14 +847,12 @@ def sync_promoted_units(self):
     try:
         deployments = get_store().filter_deployments(
             state=DEPLOYMENT_STATE_PROMOTED, only_ids=True)
-    except:
+
+        return (sync_units(deployment['deployment_id'])
+                for deployment in deployments)
+    finally:
         _release_lock.si(lock).delay()
         raise
-    return chord(
-        group(sync_units_task.si(deployment['id'])
-              for deployment in deployments),
-        _release_lock.si(lock)
-    ).delay()
 
 
 @app.task(bind=True)
@@ -890,9 +873,12 @@ def recover_cluster(self, recovery_params):
         version=recovery_params.get('version'),
         exclude_names=recovery_params.get('exclude-names')
     )
+
     return chord(
-        group(create.si(deployment) for deployment in deployments),
+        group(create.si(clone_deployment(deployment))
+              for deployment in deployments),
         async_wait.s(
             default_retry_delay=TASK_SETTINGS['DEPLOYMENT_WAIT_RETRY_DELAY'],
-            max_retries=TASK_SETTINGS['DEPLOYMENT_WAIT_RETRIES'])
+            max_retries=TASK_SETTINGS['DEPLOYMENT_WAIT_RETRIES']),
+        options=DEFAULT_CHORD_OPTIONS
     ).delay()

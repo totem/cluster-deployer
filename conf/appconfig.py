@@ -50,6 +50,8 @@ TASK_SETTINGS = {
     'DEFAULT_GET_TIMEOUT': 600,
     'DEFAULT_RETRIES': 5,
     'DEFAULT_RETRY_DELAY': 10,
+    'DEFAULT_CHORD_RETRY_DELAY': 10,
+    'DEFAULT_CHORD_RETRIES': 30,
     'SSH_RETRY_DELAY': 10,
     'SSH_RETRIES': 10,
     'CHECK_RUNNING_RETRIES': 30,
@@ -62,7 +64,13 @@ TASK_SETTINGS = {
     'DEPLOYMENT_WAIT_RETRY_DELAY': 60,
     'CHECK_NODE_RETRY_DELAY': 10,
     'DEPLOYMENT_STOP_MIN_CHECK_RETRY_DELAY': 2,
-    'DEFAULT_DEPLOYMENT_STOP_CHECK_RETRIES': 10
+    'DEFAULT_DEPLOYMENT_STOP_CHECK_RETRIES': 10,
+    'DEPLOYMENT_CREATE_LIMIT': os.getenv('DEPLOYMENT_CREATE_LIMIT', '2/m'),
+}
+
+DEFAULT_CHORD_OPTIONS = {
+    'interval': TASK_SETTINGS['DEFAULT_CHORD_RETRY_DELAY'],
+    'max_retries': TASK_SETTINGS['DEFAULT_CHORD_RETRIES'],
 }
 
 NOTIFICATIONS_DEFAULTS = {
@@ -144,7 +152,9 @@ DEPLOYMENT_DEFAULTS = {
         'templates': {
             'app': {
                 'args': {
-                    'environment': {},
+                    'environment': {
+                        'DISCOVER_UPSTREAM_TTL': '86400'
+                    },
                 }
             }
         },
@@ -187,6 +197,8 @@ FLEET_TEMPLATE_SETTINGS = {
         'token': os.getenv('GITHUB_TOKEN')
     }
 }
+
+DISCOVER_UPSTREAM_TTL_DEFAULT = '86400'
 
 DEFAULT_LOCK_TTL = 3600
 

@@ -1,12 +1,13 @@
 import datetime
 from freezegun import freeze_time
 from mock import patch
-from nose.tools import eq_
+from nose.tools import eq_, raises
 from conf.appconfig import DEPLOYMENT_MODE_BLUEGREEN, DEFAULT_STOP_TIMEOUT, \
     TASK_SETTINGS, DEPLOYMENT_STATE_STARTED, NOTIFICATIONS_DEFAULTS, \
-    CLUSTER_NAME
+    CLUSTER_NAME, DISCOVER_UPSTREAM_TTL_DEFAULT
 from deployer.services.deployment import get_exposed_ports, \
-    fetch_runtime_upstreams, apply_defaults
+    fetch_runtime_upstreams, apply_defaults, sync_upstreams, sync_units, \
+    clone_deployment
 from deployer.util import dict_merge
 from tests.helper import dict_compare
 
@@ -191,7 +192,8 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
                     'environment': {
                         'DISCOVER_PORTS': '',
                         'DISCOVER_MODE': DEPLOYMENT_MODE_BLUEGREEN,
-                        'DISCOVER_HEALTH': '{}'
+                        'DISCOVER_HEALTH': '{}',
+                        'DISCOVER_UPSTREAM_TTL': DISCOVER_UPSTREAM_TTL_DEFAULT
                     },
                     'docker-args': '',
                     'image': 'quay.io/totem/testowner-testrepo:testcommit',
@@ -307,7 +309,8 @@ def test_deployment_defaults_with_proxy(mock_time):
                         'DISCOVER_MODE': DEPLOYMENT_MODE_BLUEGREEN,
                         'DISCOVER_HEALTH': '{"8080": {"timeout": "5s"},'
                                            ' "8081": {"timeout": "5s"},'
-                                           ' "8082": {"timeout": "5s"}}'
+                                           ' "8082": {"timeout": "5s"}}',
+                        'DISCOVER_UPSTREAM_TTL': DISCOVER_UPSTREAM_TTL_DEFAULT
                     },
                     'docker-args': '',
                     'image': 'quay.io/totem/testowner-testrepo:testcommit',
@@ -452,6 +455,7 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
                         'DISCOVER_PORTS': '',
                         'DISCOVER_MODE': DEPLOYMENT_MODE_BLUEGREEN,
                         'DISCOVER_HEALTH': '{}',
+                        'DISCOVER_UPSTREAM_TTL': DISCOVER_UPSTREAM_TTL_DEFAULT,
                         'MOCK_ENV1': 'MOCK_VAL1_OVERRIDE',
                         'MOCK_ENV2': 'MOCK_VAL2'
                     },
@@ -566,7 +570,8 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
                     'environment': {
                         'DISCOVER_PORTS': '',
                         'DISCOVER_MODE': DEPLOYMENT_MODE_BLUEGREEN,
-                        'DISCOVER_HEALTH': '{}'
+                        'DISCOVER_HEALTH': '{}',
+                        'DISCOVER_UPSTREAM_TTL': DISCOVER_UPSTREAM_TTL_DEFAULT
                     },
                     'service': {
                         'container-stop-sec': DEFAULT_STOP_TIMEOUT_SECONDS
@@ -599,4 +604,231 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
         'cluster': CLUSTER_NAME,
         'runtime': {},
         'environment': {}
+    })
+
+
+@patch('deployer.services.deployment.get_store')
+@patch('deployer.services.deployment.get_discovered_nodes')
+def test_sync_upstreams(m_get_discovered_nodes, m_get_store):
+
+    # Given: Existing deployment
+    m_get_store.return_value.get_deployment.return_value = {
+        'deployment': {
+            'name': 'test',
+            'version': 'v1',
+            'mode': DEPLOYMENT_MODE_BLUEGREEN
+        },
+        'proxy': {
+            'hosts': {
+                'mock-host': {
+                    'locations': {
+                        'home': {
+                            'port': 8090
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    # And: Discovered Nodes
+    m_get_discovered_nodes.return_value = {
+        'upstream1': {
+            'endpoints': {
+                'endpoint1': {
+                    'endpoint': 'host1:8091',
+                }
+            }
+        }
+    }
+
+    # When: I synchronize upstreams for existing deployment
+    ret_value = sync_upstreams('mock')
+
+    # Then: Upstreams are synchronized as expected:
+    dict_compare(ret_value, {
+        'deployment_id': 'mock',
+        'state': 'success',
+        'upstreams': {
+            '8090': [{
+                'endpoints': {
+                    'endpoint1': {
+                        'endpoint': 'host1:8091',
+                    }
+                },
+                'name': 'upstream1'
+            }]
+        }
+    })
+
+
+@patch('deployer.services.deployment.get_store')
+@patch('deployer.services.deployment.get_discovered_nodes')
+def test_sync_upstreams_with_error_fetching_nodes(
+        m_get_discovered_nodes, m_get_store):
+
+    # Given: Existing deployment
+    m_get_store.return_value.get_deployment.return_value = {
+        'deployment': {
+            'name': 'test',
+            'version': 'v1',
+            'mode': DEPLOYMENT_MODE_BLUEGREEN
+        },
+        'proxy': {
+            'hosts': {
+                'mock-host': {
+                    'locations': {
+                        'home': {
+                            'port': 8090
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    # And: Discovered Nodes
+    m_get_discovered_nodes.side_effect = Exception('Mock')
+
+    # When: I synchronize upstreams for existing deployment
+    ret_value = sync_upstreams('mock')
+
+    # Then: Upstreams are synchronized as expected:
+    dict_compare(ret_value, {
+        'deployment_id': 'mock',
+        'state': 'failed',
+        'error': 'Mock'
+    })
+
+
+@patch('deployer.services.deployment.get_store')
+@patch('deployer.services.deployment.get_discovered_nodes')
+@raises(Exception)
+def test_sync_upstreams_without_ignoring_errors(
+        m_get_discovered_nodes, m_get_store):
+
+    # Given: Existing deployment
+    m_get_store.return_value.get_deployment.return_value = {
+        'deployment': {
+            'name': 'test',
+            'version': 'v1',
+            'mode': DEPLOYMENT_MODE_BLUEGREEN
+        },
+        'proxy': {
+            'hosts': {
+                'mock-host': {
+                    'locations': {
+                        'home': {
+                            'port': 8090
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    # And: Discovered Nodes
+    m_get_discovered_nodes.side_effect = Exception('Mock')
+
+    # When: I synchronize upstreams for existing deployment
+    sync_upstreams('mock', ignore_error=False)
+
+
+@patch('deployer.services.deployment.get_store')
+@patch('deployer.services.deployment.filter_units')
+def test_sync_units(m_filter_units, m_get_store):
+
+    # Given: Existing deployment
+    m_get_store.return_value.get_deployment.return_value = {
+        'deployment': {
+            'name': 'test',
+            'version': 'v1',
+            'mode': DEPLOYMENT_MODE_BLUEGREEN
+        }
+    }
+
+    # And: Discovered Nodes
+    m_filter_units.return_value = [{
+        'name': 'app-unit'
+    }]
+
+    # When: I synchronize units for existing deployment
+    ret_value = sync_units('mock')
+
+    # Then: Upstreams are synchronized as expected:
+    dict_compare(ret_value, {
+        'deployment_id': 'mock',
+        'state': 'success',
+        'units': m_filter_units.return_value
+    })
+
+
+@patch('deployer.services.deployment.get_store')
+@patch('deployer.services.deployment.filter_units')
+def test_sync_units_with_error(m_filter_units, m_get_store):
+
+    # Given: Existing deployment
+    m_get_store.return_value.get_deployment.return_value = {
+        'deployment': {
+            'name': 'test',
+            'version': 'v1',
+            'mode': DEPLOYMENT_MODE_BLUEGREEN
+        }
+    }
+
+    # And: Discovered Nodes
+    m_filter_units.side_effect = Exception('MockException')
+
+    # When: I synchronize units for existing deployment
+    ret_value = sync_units('mock')
+
+    # Then: Upstreams are synchronized as expected:
+    dict_compare(ret_value, {
+        'deployment_id': 'mock',
+        'state': 'failed',
+        'error': 'MockException'
+    })
+
+
+@patch('deployer.services.deployment.get_store')
+@patch('deployer.services.deployment.filter_units')
+@raises(Exception)
+def test_sync_units_without_ignoring_error(m_filter_units, m_get_store):
+
+    # Given: Existing deployment
+    m_get_store.return_value.get_deployment.return_value = {
+        'deployment': {
+            'name': 'test',
+            'version': 'v1',
+            'mode': DEPLOYMENT_MODE_BLUEGREEN
+        }
+    }
+
+    # And: Discovered Nodes
+    m_filter_units.side_effect = Exception('MockException')
+
+    # When: I synchronize units for existing deployment
+    sync_units('mock', ignore_error=False)
+
+    # Then: Exception is raised
+
+
+def test_clone_deployment():
+    """
+    Should clone exiting deployment and reset version
+    """
+
+    # When: I clone existing deployment
+    cloned = clone_deployment({
+        'deployment': {
+            'name': 'mock',
+            'version': 'v1'
+        }
+    })
+
+    # Then: Expected cloned deployment is created
+    dict_compare(cloned, {
+        'deployment': {
+            'name': 'mock'
+        }
     })

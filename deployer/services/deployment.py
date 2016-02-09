@@ -6,7 +6,8 @@ import datetime
 from fleet.deploy.deployer import filter_units
 from conf.appconfig import CLUSTER_NAME, DEPLOYMENT_TYPE_GIT_QUAY, \
     DEPLOYMENT_DEFAULTS, TEMPLATE_DEFAULTS, \
-    DEPLOYMENT_STATE_STARTED, UPSTREAM_DEFAULTS, DEPLOYMENT_TYPE_DEFAULT
+    DEPLOYMENT_STATE_STARTED, UPSTREAM_DEFAULTS, DEPLOYMENT_TYPE_DEFAULT, \
+    DISCOVER_UPSTREAM_TTL_DEFAULT
 from deployer.fleet import get_fleet_provider
 from deployer.services.proxy import get_discovered_nodes
 from deployer.services.storage.factory import get_store
@@ -71,35 +72,68 @@ def fetch_runtime_units(app_name, version=None, exclude_version=None):
                         exclude_version)
 
 
-def sync_upstreams(deployment_id):
+def sync_upstreams(deployment_id, ignore_error=True):
     """
     Synchronizes runtime upstream information for given deployment
 
     :param deployment_id: Id of the deployment
     :type deployment_id: str
+    :keyword ignore_error: Ignore error during sync
+    :type ignore_error: bool
     :return: None
     """
     store = get_store()
+    output = {
+        'deployment_id': deployment_id,
+    }
     deployment = store.get_deployment(deployment_id)
     if deployment:
-        upstreams = fetch_runtime_upstreams(deployment)
-        store.update_runtime_upstreams(deployment_id, upstreams)
+        try:
+            upstreams = fetch_runtime_upstreams(deployment)
+            store.update_runtime_upstreams(deployment_id, upstreams)
+            output.update(upstreams=upstreams, state='success')
+        except Exception as exception:
+            logger.exception('Unknown error took place while trying to sync '
+                             'units for deployment: %s', deployment_id)
+            if not ignore_error:
+                raise
+            output.update(error=str(exception), state='failed')
+
+    return output
 
 
-def sync_units(deployment_id):
+def sync_units(deployment_id, ignore_error=True):
     """
     Synchronizes runtime units information for given deployment
 
     :param deployment_id: Id of the deployment
     :type deployment_id: str
+    :keyword ignore_error: Ignore error during sync
+    :type ignore_error: bool
     :return: None
     """
     store = get_store()
+    output = {
+        'deployment_id': deployment_id,
+    }
     deployment = store.get_deployment(deployment_id)
     if deployment:
-        units = fetch_runtime_units(deployment['deployment']['name'],
-                                    deployment['deployment']['version'])
-        store.update_runtime_units(deployment_id, units)
+        try:
+            units = fetch_runtime_units(deployment['deployment']['name'],
+                                        deployment['deployment']['version'])
+            store.update_runtime_units(deployment_id, units)
+            output.update(units=units, state='success')
+        except Exception as exception:
+            logger.exception('Unknown error took place while trying to sync '
+                             'units for deployment: %s', deployment_id)
+            if not ignore_error:
+                raise
+            return {
+                'deployment_id': deployment_id,
+                'state': 'failed',
+                'error': str(exception)
+            }
+    return output
 
 
 def generate_deployment_id(app_name, app_version):
@@ -153,14 +187,15 @@ def _create_discover_check(deployment):
 
 def _get_app_environment(deployment, exposed_ports):
     app_template = deployment.get('templates').get('app')
-    env = copy.deepcopy(app_template['args']['environment'])
-    env['DISCOVER_PORTS'] = ','.join(
-        [str(port) for port in exposed_ports])
-    env['DISCOVER_MODE'] = deployment['deployment']['mode']
-    env['DISCOVER_HEALTH'] = json.dumps(
-        _create_discover_check(deployment))
-    env = dict_merge(env, deployment.get('environment'))
-    return env
+    discover = {
+        'DISCOVER_PORTS': ','.join([str(port) for port in exposed_ports]),
+        'DISCOVER_MODE': deployment['deployment']['mode'],
+        'DISCOVER_HEALTH': json.dumps(
+                _create_discover_check(deployment)),
+        'DISCOVER_UPSTREAM_TTL': DISCOVER_UPSTREAM_TTL_DEFAULT
+    }
+    return dict_merge(app_template['args']['environment'],
+                      deployment.get('environment'), discover)
 
 
 def apply_defaults(deployment):
@@ -250,4 +285,20 @@ def apply_defaults(deployment):
 
     # Reset runtime if it exists
     deployment_upd['runtime'] = {}
+    return deployment_upd
+
+
+def clone_deployment(deployment):
+    """
+    Clones existing deployment and udpates settings for creating new deploy
+
+    :param deployment: Deployment parameters
+    :type deployment: dict
+    :return:
+    """
+    deployment_upd = copy.deepcopy(deployment)
+    if (deployment_upd and deployment_upd.get('deployment') and
+            deployment_upd.get('deployment').get('version')):
+        # We want to create new deployment version
+        del(deployment_upd['deployment']['version'])
     return deployment_upd
