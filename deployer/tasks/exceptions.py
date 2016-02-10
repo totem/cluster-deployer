@@ -206,3 +206,36 @@ class NodeCheckFailed(Exception):
             self.response == other.response and \
             self.attempts == other.attempts and \
             self.url == other.url
+
+
+class MaxStartConcurrencyReached(Exception):
+    """
+    Exception corresponding to maximum concurrency reached for
+    starting deployments
+    """
+
+    def __init__(self, allowed, current):
+        self.allowed = allowed
+        self.current = current
+        self.message = 'Maximum concurrency reached for starting deployment.' \
+                       'Allowed: {}  Current: {}'.format(allowed, current)
+
+        super(MaxStartConcurrencyReached, self).__init__(allowed, current)
+
+    def to_dict(self):
+        return {
+            'message': self.message,
+            'code': 'MAX_START_CONCURRENCY_REACHED',
+            'details': {
+                'allowed': self.allowed,
+                'current': self.current,
+            }
+        }
+
+    def __str__(self):
+        return self.message
+
+    def __eq__(self, other):
+        return self.allowed == other.allowed and \
+               self.message == other.message and \
+               self.current == other.current

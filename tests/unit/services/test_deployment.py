@@ -3,8 +3,8 @@ from freezegun import freeze_time
 from mock import patch
 from nose.tools import eq_, raises
 from conf.appconfig import DEPLOYMENT_MODE_BLUEGREEN, DEFAULT_STOP_TIMEOUT, \
-    TASK_SETTINGS, DEPLOYMENT_STATE_STARTED, NOTIFICATIONS_DEFAULTS, \
-    CLUSTER_NAME, DISCOVER_UPSTREAM_TTL_DEFAULT
+    TASK_SETTINGS, NOTIFICATIONS_DEFAULTS, \
+    CLUSTER_NAME, DISCOVER_UPSTREAM_TTL_DEFAULT, DEPLOYMENT_STATE_NEW
 from deployer.services.deployment import get_exposed_ports, \
     fetch_runtime_upstreams, apply_defaults, sync_upstreams, sync_units, \
     clone_deployment
@@ -217,7 +217,7 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
             'listeners': {},
             'upstreams': {}
         },
-        'state': DEPLOYMENT_STATE_STARTED,
+        'state': DEPLOYMENT_STATE_NEW,
         'started-at': NOW,
         'security': {
             'profile': 'default'
@@ -373,7 +373,7 @@ def test_deployment_defaults_with_proxy(mock_time):
             },
             'listeners': {}
         },
-        'state': DEPLOYMENT_STATE_STARTED,
+        'state': DEPLOYMENT_STATE_NEW,
         'started-at': NOW,
         'security': {
             'profile': 'default'
@@ -486,7 +486,7 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
             'listeners': {},
             'upstreams': {}
         },
-        'state': DEPLOYMENT_STATE_STARTED,
+        'state': DEPLOYMENT_STATE_NEW,
         'started-at': NOW,
         'security': {
             'profile': 'default'
@@ -595,7 +595,7 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
             'listeners': {},
             'upstreams': {}
         },
-        'state': DEPLOYMENT_STATE_STARTED,
+        'state': DEPLOYMENT_STATE_NEW,
         'started-at': NOW,
         'security': {
             'profile': 'default'
