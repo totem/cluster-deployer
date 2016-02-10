@@ -8,8 +8,8 @@ import uuid
 from fleet.deploy.deployer import filter_units
 from conf.appconfig import CLUSTER_NAME, DEPLOYMENT_TYPE_GIT_QUAY, \
     DEPLOYMENT_DEFAULTS, TEMPLATE_DEFAULTS, \
-    DEPLOYMENT_STATE_STARTED, UPSTREAM_DEFAULTS, DEPLOYMENT_TYPE_DEFAULT, \
-    DISCOVER_UPSTREAM_TTL_DEFAULT
+    UPSTREAM_DEFAULTS, DEPLOYMENT_TYPE_DEFAULT, \
+    DISCOVER_UPSTREAM_TTL_DEFAULT, DEPLOYMENT_STATE_NEW
 from deployer.fleet import get_fleet_provider
 from deployer.services.proxy import get_discovered_nodes
 from deployer.services.storage.factory import get_store
@@ -245,7 +245,7 @@ def apply_defaults(deployment):
     app_name = deployment_upd['deployment']['name']
     app_version = deployment_upd['deployment']['version']
     deployment_upd['id'] = generate_deployment_id(app_name, app_version)
-    deployment_upd['state'] = DEPLOYMENT_STATE_STARTED
+    deployment_upd['state'] = DEPLOYMENT_STATE_NEW
     deployment_upd['started-at'] = datetime.datetime.utcnow()
 
     app_template = deployment_upd.get('templates').get('app')

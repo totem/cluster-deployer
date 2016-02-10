@@ -20,7 +20,8 @@ from deployer.services.deployment import fetch_runtime_units, \
     sync_upstreams, sync_units, apply_defaults, clone_deployment
 from deployer.tasks import notification
 from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning, \
-    NodeCheckFailed, MinNodesNotDiscovered, NodeNotStopped
+    NodeCheckFailed, MinNodesNotDiscovered, NodeNotStopped, \
+    MaxStartConcurrencyReached
 from deployer.tasks import util
 
 from deployer.services.storage.base import EVENT_NEW_DEPLOYMENT, \
@@ -42,7 +43,7 @@ from conf.appconfig import DEPLOYMENT_DEFAULTS, \
     DEPLOYMENT_STATE_FAILED, DEPLOYMENT_STATE_PROMOTED, \
     LEVEL_STARTED, LEVEL_FAILED, LEVEL_SUCCESS, CLUSTER_NAME, \
     DEPLOYMENT_STATE_DECOMMISSIONED, LOCK_JOB_BASE, DEPLOYMENT_TYPE_DEFAULT, \
-    DEFAULT_CHORD_OPTIONS
+    DEFAULT_CHORD_OPTIONS, DEPLOYMENT_STATE_STARTED
 
 from deployer.tasks.common import async_wait
 from deployer.services.proxy import wire_proxy, register_upstreams, \
@@ -135,7 +136,7 @@ def _check_discover(self, app_name, app_version, check_port, min_nodes,
     return discovered_nodes
 
 
-@app.task(rate_limit=TASK_SETTINGS['DEPLOYMENT_CREATE_LIMIT'])
+@app.task
 def create(deployment):
     """
     Task for creating deployment.
@@ -190,7 +191,8 @@ def create(deployment):
         _using_lock.si(
             search_params,
             app_name,
-            do_task=_pre_create_undeploy.si(
+            do_task=_start_deployment.si(deployment['id'], TASK_SETTINGS) |
+            _pre_create_undeploy.si(
                 deployment,
                 search_params,
                 next_task=_register_upstreams.si(
@@ -881,3 +883,18 @@ def recover_cluster(self, recovery_params):
             max_retries=TASK_SETTINGS['DEPLOYMENT_WAIT_RETRIES']),
         options=DEFAULT_CHORD_OPTIONS
     ).delay()
+
+
+@app.task(bind=True)
+def _start_deployment(self, deployment_id, task_settings):
+    store = get_store()
+    concurrency = task_settings.get('START_CONCURRENCY')
+    if concurrency and concurrency > 0:
+        used_concurrency = len(store.filter_deployments(
+                only_ids=True, state=DEPLOYMENT_STATE_STARTED))
+        if used_concurrency >= concurrency:
+            raise self.retry(
+                exc=MaxStartConcurrencyReached(concurrency, used_concurrency),
+                max_retries=task_settings['START_CONCURRENCY_RETRIES'],
+                countdown=task_settings['START_CONCURRENCY_RETRY_DELAY'])
+    store.update_state(deployment_id, DEPLOYMENT_STATE_STARTED)

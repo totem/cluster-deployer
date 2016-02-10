@@ -7,21 +7,29 @@ import nose
 from nose.tools import raises, eq_, assert_raises
 from paramiko import SSHException
 
-from conf.appconfig import DEPLOYMENT_MODE_BLUEGREEN, DEPLOYMENT_MODE_REDGREEN
+from conf.appconfig import DEPLOYMENT_MODE_BLUEGREEN, \
+    DEPLOYMENT_MODE_REDGREEN, DEPLOYMENT_STATE_STARTED
 from deployer.celery import app
 from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning, \
-    NodeCheckFailed, MinNodesNotDiscovered
+    NodeCheckFailed, MinNodesNotDiscovered, MaxStartConcurrencyReached
+from deployer.util import dict_merge
 from tests.helper import dict_compare
 
 from deployer.tasks.deployment import _pre_create_undeploy, \
     _wait_for_undeploy, _fleet_check_deploy, _check_node, _check_deployment, \
-    _check_discover
+    _check_discover, _start_deployment
 
 __author__ = 'sukrit'
 
 
 NOW = datetime.datetime(2014, 01, 01)
 DEFAULT_STOP_TIMEOUT_SECONDS = 30
+MOCK_DEPLOYMENT_ID = 'mock-deployment-id'
+MOCK_TASK_SETTINGS = {
+    'START_CONCURRENCY': 4,
+    'START_CONCURRENCY_RETRIES': 60,
+    'START_CONCURRENCY_RETRY_DELAY': 60,
+}
 
 
 def test_create():
@@ -410,3 +418,69 @@ def test_check_discover_for_min_node_criteria_not_met(mock_yoda_cl):
     eq_(error.version, 'mockversion')
     eq_(error.min_nodes, 2)
     dict_compare(error.discovered_nodes, {'node1': 'mockhost1:48080'})
+
+
+@patch('deployer.tasks.deployment.get_store')
+def test_start_deployment(m_get_store):
+    # Given: Current task instance with mock retry
+    _start_deployment.retry = MagicMock()
+    _start_deployment.retry.side_effect = Exception('Mock')
+
+    # And: List of currently executing deployments
+    m_store = m_get_store.return_value
+    m_store.filter_deployments.return_value = [{'_id': 'id1'}]
+
+    # When: I start deployment for given task id and task settings
+    _start_deployment(MOCK_DEPLOYMENT_ID, MOCK_TASK_SETTINGS)
+
+    # Then: Deployment state gets updated as expected
+    m_store.update_state.assert_called_once_with(MOCK_DEPLOYMENT_ID,
+                                                 DEPLOYMENT_STATE_STARTED)
+
+
+@patch('deployer.tasks.deployment.get_store')
+@raises(MaxStartConcurrencyReached)
+def test_start_deployment_when_concurrency_has_exceeded(m_get_store):
+    # Given: Current task instance with mock retry
+    _start_deployment.retry = MagicMock()
+
+    def side_effect(**kwargs):
+        raise kwargs.get('exc')
+
+    _start_deployment.retry.side_effect = side_effect
+
+    # And: List of currently executing deployments
+    m_store = m_get_store.return_value
+    m_store.filter_deployments.return_value = [
+        {'_id': cnt} for cnt in range(1, 5)]
+
+    # When: I start deployment for given task id and task settings
+    _start_deployment(MOCK_DEPLOYMENT_ID, MOCK_TASK_SETTINGS)
+
+    # Then: Deployment state gets updated as expected
+    eq_(m_store.update_state.call_count, 0,
+        'update_state should not be called')
+
+
+@patch('deployer.tasks.deployment.get_store')
+def test_start_deployment_with_unlimited_concurrency(m_get_store):
+    # Given: Current task instance with mock retry
+    _start_deployment.retry = MagicMock()
+
+    def side_effect(**kwargs):
+        raise kwargs.get('exc')
+
+    _start_deployment.retry.side_effect = side_effect
+
+    # And: List of currently executing deployments
+    m_store = m_get_store.return_value
+    m_store.filter_deployments.return_value = [
+        {'_id': cnt} for cnt in range(1, 5)]
+
+    # When: I start deployment for given task id and task settings
+    _start_deployment(MOCK_DEPLOYMENT_ID,
+                      dict_merge({'START_CONCURRENCY': 0}, MOCK_TASK_SETTINGS))
+
+    # Then: Deployment state gets updated as expected
+    m_store.update_state.assert_called_once_with(MOCK_DEPLOYMENT_ID,
+                                                 DEPLOYMENT_STATE_STARTED)
