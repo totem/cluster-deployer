@@ -195,9 +195,49 @@ def _get_app_environment(deployment, exposed_ports):
         'DISCOVER_HEALTH': json.dumps(
                 _create_discover_check(deployment)),
         'DISCOVER_UPSTREAM_TTL': DISCOVER_UPSTREAM_TTL_DEFAULT
-    }
+    } if not deployment['schedule'] else {}
     return dict_merge(app_template['args']['environment'],
                       deployment.get('environment'), discover)
+
+
+def check_and_apply_schedule(deployment):
+    deployment_upd = dict_merge(deployment, {
+        'schedule': None
+    })
+    if deployment_upd['schedule']:
+        deployment_upd['proxy'].update({
+            'upstreams': {},
+            'hosts': {},
+            'listeners': {}
+        })
+        deployment_upd['deployment']['check'].update({
+            'port': None,
+            'path': ''
+        })
+        app_template = deployment_upd.get('templates').get('app')
+        timer_template = dict_merge(
+            deployment_upd.get('templates').get('timer'), {
+                'name': app_template['name'],
+                'args': {}
+            })
+        deployment_upd['templates'] = {}
+        if app_template and app_template['enabled']:
+            deployment_upd['templates']['app'] = app_template
+            deployment_upd['templates']['timer'] = timer_template
+            service_params = {
+                'service': {
+                    'schedule': deployment_upd['schedule']
+                }
+            }
+            app_template['args'] = dict_merge(service_params,
+                                              app_template['args'])
+            timer_template['args'] = dict_merge(service_params,
+                                                timer_template['args'])
+            timer_template.update({
+                'enabled': True,
+            })
+
+    return deployment_upd
 
 
 def apply_defaults(deployment):
@@ -228,9 +268,11 @@ def apply_defaults(deployment):
     if deployment_type == DEPLOYMENT_TYPE_GIT_QUAY:
         deployment_upd = _git_quay_defaults(deployment_upd)
 
-    for template_name, template in deployment_upd['templates'].iteritems():
+    for template_name, template in deployment_upd['templates'].items():
         deployment_upd['templates'][template_name] = \
             dict_merge(template, TEMPLATE_DEFAULTS)
+
+    deployment_upd = check_and_apply_schedule(deployment_upd)
 
     deployment_upd['deployment']['version'] = \
         deployment_upd['deployment']['version'] or \
@@ -268,8 +310,9 @@ def apply_defaults(deployment):
         app_template['args']['environment'] = _get_app_environment(
             deployment_upd, exposed_ports)
         sidekicks = [service_type for service_type, template in
-                     deployment_upd['templates'].iteritems()
-                     if template['enabled'] and service_type != 'app']
+                     deployment_upd['templates'].items()
+                     if template['enabled'] and service_type
+                     not in ('app', 'timer')]
         app_template['args']['sidekicks'] = sidekicks
         timeout_stop = deployment_upd['deployment']['stop']['timeout'] or \
             DEPLOYMENT_DEFAULTS[DEPLOYMENT_TYPE_DEFAULT]['deployment']['stop']

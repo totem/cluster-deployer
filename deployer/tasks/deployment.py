@@ -43,7 +43,7 @@ from conf.appconfig import DEPLOYMENT_DEFAULTS, \
     DEPLOYMENT_STATE_FAILED, DEPLOYMENT_STATE_PROMOTED, \
     LEVEL_STARTED, LEVEL_FAILED, LEVEL_SUCCESS, CLUSTER_NAME, \
     DEPLOYMENT_STATE_DECOMMISSIONED, LOCK_JOB_BASE, DEPLOYMENT_TYPE_DEFAULT, \
-    DEFAULT_CHORD_OPTIONS, DEPLOYMENT_STATE_STARTED
+    DEFAULT_CHORD_OPTIONS, DEPLOYMENT_STATE_STARTED, FLEET_STARTED_STATES
 
 from deployer.tasks.common import async_wait
 from deployer.services.proxy import wire_proxy, register_upstreams, \
@@ -346,7 +346,7 @@ def _deploy_all(deployment, search_params, next_task=None):
         group(
             _fleet_deploy.si(search_params, name, version, nodes, service_type,
                              template, security_profile)
-            for service_type, template in deployment['templates'].iteritems()
+            for service_type, template in deployment['templates'].items()
             if template['enabled']
         ),
         _fleet_start_and_wait.si(deployment, search_params,
@@ -373,10 +373,12 @@ def _fleet_deploy(self, search_params, name, version, nodes, service_type,
                 nodes, template)
     template_args = decrypt_config(template.get('args', {}),
                                    profile=security_profile)
+    is_timer = (service_type == 'timer')
     fleet_deployment = Deployment(
         fleet_provider=get_fleet_provider(), jinja_env=jinja_env, name=name,
-        version=version, template=template['name'] + '.service', nodes=nodes,
-        template_args=template_args, service_type=service_type)
+        version=version, template=template['name'], nodes=nodes,
+        template_args=template_args, service_type=service_type,
+        timer=is_timer)
     try:
         fleet_deployment.deploy(start=False)
     except RETRYABLE_FLEET_EXCEPTIONS as exc:
@@ -407,10 +409,12 @@ def _fleet_start(self, search_params, name, version, nodes, service_type,
     """
     logger.info('Starting %s:%s:%s nodes:%d %r', name, version, service_type,
                 nodes, template)
+    is_timer = (service_type == 'timer')
     fleet_deployment = Deployment(
         fleet_provider=get_fleet_provider(), jinja_env=jinja_env, name=name,
-        version=version, template=template['name'] + '.service', nodes=nodes,
-        template_args=template['args'], service_type=service_type)
+        version=version, template=template['name'], nodes=nodes,
+        template_args=template['args'], service_type=service_type,
+        timer=is_timer)
     try:
         fleet_deployment.start_units()
     except RETRYABLE_FLEET_EXCEPTIONS as exc:
@@ -442,17 +446,20 @@ def _fleet_start_and_wait(deployment, search_params, next_task=None):
     name, version, nodes = deployment['deployment']['name'], \
         deployment['deployment']['version'], \
         deployment['deployment']['nodes']
-    service_types = {service_type for service_type, template in
-                     deployment['templates'].iteritems()
-                     if template['enabled']}
+    if not deployment['schedule']:
+        service_types = {service_type for service_type, template in
+                         deployment['templates'].items()
+                         if template['enabled']}
+    else:
+        service_types = {'timer'}
     min_nodes = deployment['deployment'].get('check', {}).get(
         'min-nodes', nodes)
+    templates = deployment['templates']
     return chord(
         group(
             _fleet_start.si(search_params, name, version, nodes, service_type,
-                            template)
-            for service_type, template in deployment['templates'].iteritems()
-            if template['enabled']
+                            templates[service_type])
+            for service_type in service_types
         ),
         _fleet_check_deploy.si(name, version, len(service_types), min_nodes,
                                search_params, next_task=next_task),
@@ -639,7 +646,7 @@ def _fleet_check_deploy(self, name, version, service_cnt, min_nodes,
                          countdown=TASK_SETTINGS['SSH_RETRY_DELAY'])
 
     running_units = [unit for unit in units
-                     if unit['sub'].lower() == 'running']
+                     if unit['sub'].lower() in FLEET_STARTED_STATES]
     if len(running_units) < expected_cnt:
         raise self.retry(exc=MinNodesNotRunning(
             name, version, expected_cnt, units))

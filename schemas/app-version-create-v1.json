@@ -24,6 +24,9 @@
     },
     "environment": {
       "$ref": "${base_url}/schemas/app-version-v1#/properties/environment"
+    },
+    "schedule": {
+      "$ref": "${base_url}/schemas/app-version-v1#/properties/schedule"
     }
   },
   "required": ["meta-info"],
