@@ -10,12 +10,12 @@ RUN mkdir /root/.ssh && \
     chown -R root:root /root/.ssh
 
 #Confd
-ENV CONFD_VERSION 0.6.2
+ENV CONFD_VERSION 0.11.0
 RUN curl -L https://github.com/kelseyhightower/confd/releases/download/v$CONFD_VERSION/confd-${CONFD_VERSION}-linux-amd64 -o /usr/local/bin/confd && \
     chmod 555 /usr/local/bin/confd
 
 #Etcdctl
-ENV ETCDCTL_VERSION v0.4.6
+ENV ETCDCTL_VERSION v2.2.5
 RUN curl -L https://github.com/coreos/etcd/releases/download/$ETCDCTL_VERSION/etcd-$ETCDCTL_VERSION-linux-amd64.tar.gz -o /tmp/etcd-$ETCDCTL_VERSION-linux-amd64.tar.gz && \
     cd /tmp && gzip -dc etcd-$ETCDCTL_VERSION-linux-amd64.tar.gz | tar -xof - && \
     cp -f /tmp/etcd-$ETCDCTL_VERSION-linux-amd64/etcdctl /usr/local/bin && \

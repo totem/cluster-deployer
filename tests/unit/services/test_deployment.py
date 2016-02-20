@@ -225,7 +225,127 @@ def test_deployment_defaults_for_type_git_quay(mock_time):
         'notifications': NOTIFICATIONS_DEFAULTS,
         'cluster': CLUSTER_NAME,
         'runtime': {},
-        'environment': {}
+        'environment': {},
+        'schedule': None
+    })
+
+
+@freeze_time(NOW)
+@patch('time.time')
+def test_deployment_defaults_with_schedule(mock_time):
+    """Should get defaults for deployment of type git-quay"""
+
+    # Given: Deployment dictionary
+    deployment = _create_test_deployment({
+        'schedule': '*:0/15',
+        'proxy': {
+            'hosts': {
+                'host1': {
+                    'locations': {
+                        'loc1': {
+                            'port': 8080,
+                            'path': '/loc1'
+                        },
+                        'loc2': {
+                            'port': 8081,
+                            'path': '/loc2'
+                        },
+                        'loc3': {
+                            'port': 8082,
+                            'path': '/loc3'
+                        }
+                    }
+                }
+            },
+            'upstreams': {
+                '8080': {},
+                '8081': {
+                    'mode': 'tcp'
+                }
+            }
+        }
+    })
+
+    # Mock Time call for creating version
+    mock_time.return_value = 0.1006
+
+    # When: I apply defaults for deployment
+    depl_with_defaults = apply_defaults(deployment)
+
+    # Then: Defaults for deployment are applied
+    dict_compare(depl_with_defaults, {
+        'meta-info': {
+            'job-id': 'test-job',
+            'git': {
+                'owner': 'testowner',
+                'repo': 'testrepo',
+                'ref': 'testref',
+                'commit': 'testcommit',
+                'type': 'github'
+            }
+        },
+        'deployment': {
+            'name': 'testowner-testrepo-testref',
+            'type': 'git-quay',
+            'version': '101',
+            'nodes': 1,
+            'mode': DEPLOYMENT_MODE_BLUEGREEN,
+            'check': {
+                'port': None,
+                'path': '',
+                'attempts': 10,
+                'timeout': '10s',
+                'min-nodes': 1
+            },
+            'stop': {
+                'timeout': DEFAULT_STOP_TIMEOUT,
+                'check-retries':
+                    TASK_SETTINGS['DEFAULT_DEPLOYMENT_STOP_CHECK_RETRIES']
+            }
+        },
+        'templates': {
+            'app': {
+                'args': {
+                    'environment': {
+                        'DISCOVER_UPSTREAM_TTL': DISCOVER_UPSTREAM_TTL_DEFAULT
+                    },
+                    'docker-args': '',
+                    'image': 'quay.io/totem/testowner-testrepo:testcommit',
+                    'sidekicks': [],
+                    'service': {
+                        'container-stop-sec': DEFAULT_STOP_TIMEOUT_SECONDS,
+                        'schedule': '*:0/15'
+                    }
+                },
+                'enabled': True,
+                'name': 'default-app'
+            },
+            'timer': {
+                'args': {
+                    'service': {
+                        'schedule': '*:0/15'
+                    }
+                },
+                'enabled': True,
+                'name': 'default-app'
+            }
+        },
+        'id': 'local-testowner-testrepo-testref-101',
+        'proxy': {
+            'hosts': {},
+            'listeners': {},
+            'upstreams': {}
+        },
+        'state': DEPLOYMENT_STATE_NEW,
+        'started-at': NOW,
+        'security': {
+            'profile': 'default'
+        },
+        'notifications': NOTIFICATIONS_DEFAULTS,
+        'cluster': CLUSTER_NAME,
+        'runtime': {},
+        'environment': {},
+        'schedule': '*:0/15'
     })
 
 
@@ -381,7 +501,8 @@ def test_deployment_defaults_with_proxy(mock_time):
         'notifications': NOTIFICATIONS_DEFAULTS,
         'cluster': CLUSTER_NAME,
         'runtime': {},
-        'environment': {}
+        'environment': {},
+        'schedule': None
     })
 
 
@@ -494,7 +615,8 @@ def test_deployment_defaults_for_type_git_quay_with_overrides(mock_time):
         'notifications': NOTIFICATIONS_DEFAULTS,
         'cluster': CLUSTER_NAME,
         'runtime': {},
-        'environment': deployment['environment']
+        'environment': deployment['environment'],
+        'schedule': None
     })
 
 
@@ -603,7 +725,8 @@ def test_deployment_defaults_for_custom_deployment(mock_time):
         'notifications': NOTIFICATIONS_DEFAULTS,
         'cluster': CLUSTER_NAME,
         'runtime': {},
-        'environment': {}
+        'environment': {},
+        'schedule': None
     })
 
 
