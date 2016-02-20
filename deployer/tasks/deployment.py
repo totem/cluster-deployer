@@ -409,10 +409,12 @@ def _fleet_start(self, search_params, name, version, nodes, service_type,
     """
     logger.info('Starting %s:%s:%s nodes:%d %r', name, version, service_type,
                 nodes, template)
+    is_timer = (service_type == 'timer')
     fleet_deployment = Deployment(
         fleet_provider=get_fleet_provider(), jinja_env=jinja_env, name=name,
-        version=version, template=template['name'] + '.service', nodes=nodes,
-        template_args=template['args'], service_type=service_type)
+        version=version, template=template['name'], nodes=nodes,
+        template_args=template['args'], service_type=service_type,
+        timer=is_timer)
     try:
         fleet_deployment.start_units()
     except RETRYABLE_FLEET_EXCEPTIONS as exc:

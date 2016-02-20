@@ -13,7 +13,7 @@ requests[security]==2.7.0
 urllib3==1.11
 celery[mongodb]==3.1.20
 
-https://github.com/totem/fleet-py/archive/master.tar.gz
+https://github.com/totem/fleet-py/archive/0.1.6.tar.gz
 https://github.com/totem/yoda-py/archive/v0.1.8b2.tar.gz
 https://github.com/totem/flask-hyperschema/archive/v0.1.1.tar.gz
 https://github.com/totem/totem-encrypt/archive/master.tar.gz
