@@ -45,7 +45,7 @@ def test_get_exposed_ports_with_no_proxy():
     eq_(ports, [])
 
 
-def test_get_exposed_ports_with_hosts_and_listeners():
+def test_get_exposed_ports_with_hosts_listeners_and_upstreams():
 
     # Given: Deployment parameters
     deployment = _create_test_deployment()
@@ -77,6 +77,11 @@ def test_get_exposed_ports_with_hosts_and_listeners():
                 'ssh': {
                     'upstream-port': 22
                 }
+            },
+            'upstreams': {
+                '8080': {},
+                '8022': {},
+                '8122': {}
             }
         }
 
@@ -85,8 +90,8 @@ def test_get_exposed_ports_with_hosts_and_listeners():
     # When: I get exposed ports for deployment
     ports = get_exposed_ports(deployment)
 
-    # Then: Empty set is returned
-    eq_(ports, [22, 8080, 8081, 8082])
+    # Then: Exposed ports are returned
+    eq_(ports, [22, 8022, 8080, 8081, 8082, 8122])
 
 
 @patch('deployer.services.deployment.get_discovered_nodes')
