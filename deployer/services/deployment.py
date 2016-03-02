@@ -40,7 +40,9 @@ def get_exposed_ports(deployment):
         {listener.get('upstream-port')
          for listener in deployment.get('proxy', {}).get('listeners', {})
             .values()
-         }
+         } |
+        {int(port) for port in deployment.get('proxy', {}).get(
+                'upstreams', {})}
     )
 
 
