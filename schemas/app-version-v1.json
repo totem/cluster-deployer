@@ -110,8 +110,8 @@
         },
         "port": {
           "type": "number",
-          "description": "Application internal Port to be used for discover check",
-          "minimum": 1
+          "description": "Application internal Port to be used for discover check (Use 0 to disable discover check)",
+          "minimum": 0
         },
         "path": {
           "type": "string",

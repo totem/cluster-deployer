@@ -120,8 +120,8 @@ def _check_discover(self, app_name, app_version, check_port, min_nodes,
     :return: discovered nodes
     :rtype: dict
     """
-    if check_port is None:
-        # Skip discover if port is not passed
+    if not check_port:
+        # Skip discover if port is empty, 0 , None
         return {}
 
     discovered_nodes = get_discovered_nodes(app_name, app_version, check_port,
