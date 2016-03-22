@@ -97,6 +97,9 @@
         "stop": {
           "type": "object",
           "$ref": "#/definitions/deployment-stop"
+        },
+        "mode": {
+          "enum": ["blue-green", "red-green", "a/b", "custom"]
         }
       },
       "additionalProperties": false
