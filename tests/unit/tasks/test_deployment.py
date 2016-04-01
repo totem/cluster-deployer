@@ -8,7 +8,7 @@ from nose.tools import raises, eq_, assert_raises
 from paramiko import SSHException
 
 from conf.appconfig import DEPLOYMENT_MODE_BLUEGREEN, \
-    DEPLOYMENT_MODE_REDGREEN, DEPLOYMENT_STATE_STARTED
+    DEPLOYMENT_MODE_REDGREEN, DEPLOYMENT_STATE_STARTED, CLUSTER_NAME
 from deployer.celery import app
 from deployer.tasks.exceptions import NodeNotUndeployed, MinNodesNotRunning, \
     NodeCheckFailed, MinNodesNotDiscovered, MaxStartConcurrencyReached
@@ -17,7 +17,7 @@ from tests.helper import dict_compare
 
 from deployer.tasks.deployment import _pre_create_undeploy, \
     _wait_for_undeploy, _fleet_check_deploy, _check_node, _check_deployment, \
-    _check_discover, _start_deployment
+    _check_discover, _start_deployment, create_search_parameters
 
 __author__ = 'sukrit'
 
@@ -484,3 +484,29 @@ def test_start_deployment_with_unlimited_concurrency(m_get_store):
     # Then: Deployment state gets updated as expected
     m_store.update_state.assert_called_once_with(MOCK_DEPLOYMENT_ID,
                                                  DEPLOYMENT_STATE_STARTED)
+
+
+def test_create_search_parameters():
+    # Given: Minimal deployment for which search parameters needs to be created
+    dep = {
+        'deployment': {
+            'name': 'dummy-deployment'
+        }
+    }
+
+    # When: I create search parameters for the given deployment
+    search_params = create_search_parameters(dep)
+
+    # Then: Expected Search parameters are returned
+    dict_compare(search_params, {
+        'deployment': {
+            'name': 'dummy-deployment',
+            'version': '',
+            'id': ''
+        },
+        'meta-info': {
+            'deployer': {
+                'cluster': CLUSTER_NAME
+            }
+        }
+    })

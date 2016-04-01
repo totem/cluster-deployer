@@ -72,7 +72,12 @@ def create_search_parameters(deployment, defaults=None):
     """
 
     deployment = dict_merge(deployment or {}, defaults or {}, {
-        'meta-info': {}
+        'meta-info': {},
+        'deployment': {
+            'name': '',
+            'version': ''
+        },
+        'id': ''
     })
     return {
         'meta-info': dict_merge(
@@ -232,12 +237,12 @@ def delete(name, version=None):
         versions are undeployed.
     :return:
     """
-    search_params = {
+    search_params = create_search_parameters({
         'deployment': {
             'name': name,
             'version': version or 'all'
         }
-    }
+    })
     return _using_lock.si(
         search_params, name,
         do_task=(
@@ -247,7 +252,7 @@ def delete(name, version=None):
             _fleet_undeploy.si(name, version) |
             _wait_for_undeploy.si(name, version, search_params=search_params)
         )
-    )()
+    ).apply_async()
 
 
 @app.task
@@ -280,7 +285,7 @@ def _using_lock(self, search_params, name, do_task, cleanup_tasks=None,
     try:
         lock = LockService().apply_lock(name)
     except ResourceLockedException as lock_error:
-        self.retry(exc=lock_error)
+        raise self.retry(exc=lock_error)
 
     _release_lock_s = _release_lock.si(lock)
     cleanup_tasks = cleanup_tasks or []
