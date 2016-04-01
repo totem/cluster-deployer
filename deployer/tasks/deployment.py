@@ -72,7 +72,12 @@ def create_search_parameters(deployment, defaults=None):
     """
 
     deployment = dict_merge(deployment or {}, defaults or {}, {
-        'meta-info': {}
+        'meta-info': {},
+        'deployment': {
+            'name': '',
+            'version': ''
+        },
+        'id': ''
     })
     return {
         'meta-info': dict_merge(
@@ -235,8 +240,7 @@ def delete(name, version=None):
     search_params = create_search_parameters({
         'deployment': {
             'name': name,
-            'version': version or 'all',
-            'id': ''
+            'version': version or 'all'
         }
     })
     return _using_lock.si(
