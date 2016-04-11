@@ -1,17 +1,14 @@
 Flask==0.10.1
-Flask-Cors==1.9.0
-pymongo==3.0.3
-flower==0.7.2
-gevent==1.0.2
+Flask-Cors==2.1.2
+pymongo==3.2.2
+gevent==1.1.1
 uWSGI==2.0.12
-supervisor==3.1.2
 python-etcd==0.3.2
-elasticsearch==1.2.0
-future==0.15.0
-pytz==2015.4
-requests[security]==2.7.0
-urllib3==1.11
-celery[mongodb]==3.1.20
+future==0.15.2
+pytz==2016.3
+requests[security]==2.9.1
+urllib3==1.15
+celery[mongodb]==3.1.23
 
 https://github.com/totem/fleet-py/archive/0.1.6.tar.gz
 https://github.com/totem/yoda-py/archive/v0.1.8b2.tar.gz

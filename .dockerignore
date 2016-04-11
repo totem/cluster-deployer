@@ -1,10 +1,11 @@
 .idea
 tests
 docs
-.git
+.git*
 *.md
 .travis.yml
 dev-requirements.txt
 *.iml
 LICENSE
 local-*
+docker-compose.yml

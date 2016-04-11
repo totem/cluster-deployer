@@ -1,11 +1,40 @@
 #!/bin/bash -le
 
 HOST_IP="${HOST_IP:-$(/sbin/ip route|awk '/default/ { print $3 }')}"
+ETCD_HOST="${ETCD_HOST:-$HOST_IP}"
+ETCD_PORT="${ETCD_PORT:-4001}"
+ETCD_URL="http://$ETCD_HOST:$ETCD_PORT"
+ETCD_TOTEM_BASE="${ETCD_TOTEM_BASE:-/totem}"
+ETCDCTL="etcdctl --peers $ETCD_URL"
+
+until $ETCDCTL cluster-health; do
+  >&2 echo "Etcdctl cluster not healthy - sleeping"
+  sleep 5
+done
+
+if [ "$DISCOVER_RABBITMQ" == "true" ]; then
+  AMQP_HOST="$($ETCDCTL ls ${ETCD_TOTEM_BASE}/rabbitmq/nodes | xargs -L1  etcdctl get | tr '\n' ',')"
+  if [ ! -z "$AMQP_HOST" ]; then
+    echo "No rabbitmq nodes could be discovered. Exiting cluster-deployer"
+    exit 1
+  fi
+fi
+
+if [ "$DISCOVER_MONGO" == "true" ]; then
+  MONGODB_SERVERS="$($ETCDCTL ls ${ETCD_TOTEM_BASE}/mongodb/nodes | xargs -L1  etcdctl get | tr '\n' ',')"
+  if [ ! -z "$MONGODB_SERVERS" ]; then
+    echo "No mongodb nodes could be discovered. Exiting cluster-deployer"
+    exit 1
+  fi
+fi
+
+
+
 
 cat <<END>> /etc/profile.d/cluster-deployer-env.sh
-export ETCD_HOST='${ETCD_HOST:-$HOST_IP}'
-export ETCD_PORT='${ETCD_PORT:-4001}'
-export ETCD_TOTEM_BASE='${ETCD_TOTEM_BASE:-/totem}'
+export ETCD_HOST='${ETCD_HOST}'
+export ETCD_PORT='${ETCD_PORT}'
+export ETCD_TOTEM_BASE='${ETCD_TOTEM_BASE}'
 export ETCD_YODA_BASE='${ETCD_YODA_BASE:-/yoda}'
 export CELERY_GEVENT_EXECUTORS='${CELERY_GEVENT_EXECUTORS:-1}'
 export CELERY_GEVENT_CONCURRENCY='${CELERY_GEVENT_CONCURRENCY:-50}'
@@ -19,6 +48,7 @@ export AMQP_USERNAME='${AMQP_USERNAME:-guest}'
 export AMQP_PASSWORD='${AMQP_PASSWORD:-guest}'
 export MONGODB_USERNAME='${MONGODB_USERNAME:-}'
 export MONGODB_PASSWORD='${MONGODB_PASSWORD:-}'
+export MONGODB_SERVERS='${MONGODB_SERVERS:-}'
 export MONGODB_HOST='${MONGODB_HOST:-$HOST_IP}'
 export MONGODB_PORT='${MONGODB_PORT:-27017}'
 export MONGODB_DB='${MONGODB_DB}'
@@ -45,16 +75,5 @@ export LOG_IDENTIFIER='${LOG_IDENTIFIER:-cluster-deployer}'
 export LOG_ROOT_LEVEL='${LOG_ROOT_LEVEL}'
 END
 
-echo "Registering shutdown hook prior to shutdown"
-function shutdown() {
-    set +e;
-    echo Stopping supervisor;
-    kill -s SIGTERM "$(cat /var/run/supervisord.pid)";
-    exit 0
-}
-trap 'shutdown' EXIT
-
 /bin/bash -le -c " envsubst  < /etc/supervisor/conf.d/supervisord.conf.template  > /etc/supervisor/conf.d/supervisord.conf; \
                     /usr/local/bin/supervisord -c /etc/supervisor/supervisord.conf"
-
-
