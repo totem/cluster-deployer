@@ -23,6 +23,8 @@ services:
       - rabbitmq
       - mongo
     restart: always
+    volumes:
+      - ".:/opt/cluster-deployer"
 
   rabbitmq:
     image: 'rabbitmq:3.6'
