@@ -152,15 +152,13 @@ def test_pre_create_undeploy_for_ab(m_stop, mock_filter_units, mock_undeploy):
 
     # Given: Deployment parameters
     deployment = _create_test_deployment_with_defaults_applied()
-    deployment['deployment']['mode'] = DEPLOYMENT_MODE_BLUEGREEN
+    deployment['deployment']['mode'] = 'a/b'
 
     # Mock implementation for filter_units
     mock_filter_units.return_value = []
 
     # When: I un-deploy in pre-create phase
-    result = _pre_create_undeploy.s(deployment, mock_callback.si())\
-        .apply_async()
-    result.get(timeout=1).result
+    _pre_create_undeploy(deployment, mock_callback.si())
 
     # Then: All versions of application are un-deployed.
     mock_undeploy.assert_not_called()
