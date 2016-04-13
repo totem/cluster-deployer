@@ -17,8 +17,11 @@ AMQP_USERNAME = os.getenv('AMQP_USERNAME', 'guest')
 AMQP_PASSWORD = os.getenv('AMQP_PASSWORD', 'guest')
 AMQP_HOST = os.getenv('AMQP_HOST', 'localhost')
 AMQP_PORT = int(os.getenv('AMQP_PORT', '5672'))
-DEFAULT_BROKER_URL = 'amqp://%s:%s@%s:%s' % (AMQP_USERNAME, AMQP_PASSWORD,
-                                             AMQP_HOST, AMQP_PORT)
+DEFAULT_BROKER_URL = [
+    'amqp://{}:{}@{}:{}'.format(
+        AMQP_USERNAME, AMQP_PASSWORD, host.strip(), AMQP_PORT
+    ) for host in AMQP_HOST.split(',') if host.strip()
+]
 BROKER_URL = os.getenv('BROKER_URL') or DEFAULT_BROKER_URL
 
 BROKER_CONNECTION_TIMEOUT = int(os.getenv('BROKER_CONNECTION_TIMEOUT', '20'))
@@ -59,6 +62,7 @@ CELERY_ROUTES = {
 }
 
 # Backend Settings
+print('Mongo URL %s', MONGODB_URL)
 CELERY_RESULT_BACKEND = MONGODB_URL
 CELERY_MONGODB_BACKEND_SETTINGS = {
     'database': MONGODB_DB,
@@ -112,12 +116,12 @@ CELERYBEAT_SCHEDULE = {
     },
     'deployer.tasks.deployment.sync_promoted_units': {
         'task': 'deployer.tasks.deployment.sync_promoted_units',
-        'schedule': crontab(minute='*/5'),
+        'schedule': crontab(minute='*/15'),
         'args': ()
     },
     'deployer.tasks.deployment.sync_promoted_upstreams': {
         'task': 'deployer.tasks.deployment.sync_promoted_upstreams',
-        'schedule': crontab(minute='*/2'),
+        'schedule': crontab(minute='*/15'),
         'args': ()
     }
 }
