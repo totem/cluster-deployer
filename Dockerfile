@@ -5,6 +5,7 @@ ENV ETCDCTL_VERSION v2.2.5
 ENV DUMB_INIT_VERSION 1.0.1
 ENV CONFD_VERSION 0.12.0-alpha3
 
+# Native dependencies
 RUN apk add --no-cache --update \
         pcre \
         bash \
