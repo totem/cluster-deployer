@@ -11,6 +11,7 @@ RUN apk add --no-cache --update \
         gettext \
         curl \
         openssl \
+        openssh-client \
 
     # Etcdctl
     && curl -L https://github.com/coreos/etcd/releases/download/$ETCDCTL_VERSION/etcd-$ETCDCTL_VERSION-linux-amd64.tar.gz -o /tmp/etcd-$ETCDCTL_VERSION-linux-amd64.tar.gz \
@@ -43,7 +44,7 @@ RUN apk add --no-cache --update --virtual build-dependencies \
       libffi-dev \
       openssl-dev \
 
-    # Python depdencies
+    # Python dependencies
     && pip install --ignore-installed  --no-cache-dir \
       supervisor==3.2.3 \
       supervisor-stdout  \
