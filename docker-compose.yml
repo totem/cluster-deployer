@@ -16,7 +16,7 @@ services:
       AMQP_HOST: 'rabbitmq.local'
       MONGODB_SERVERS: 'mongo.local:27017'
       DISCOVER_MONGO: 'false'
-      DISCOVER_RABBITMQ: 'true'
+      DISCOVER_RABBITMQ: 'false'
     expose:
       - 9000
 

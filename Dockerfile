@@ -7,6 +7,7 @@ ENV CONFD_VERSION 0.12.0-alpha3
 
 RUN apk add --no-cache --update \
         pcre \
+        bash \
         gettext \
         curl \
         openssl \
