@@ -1,13 +1,13 @@
 {%- set git = ctx.deployment['meta-info'].git or {} %}
 {%- set deployment = ctx.deployment.deployment or {} %}
-<b>Totem ({{ctx.cluster}} :: Deployer :: {{ctx.operation}})</b> :
+<b>Deployer ({{ctx.env}}-{{ctx.operation}}) : </b>
 {% if git.owner %}
   {% if git.type == 'github' %}
     <a href="https://github.com/{{git.owner}}">{{ git.owner }}</a>
   {% else %}
     {{ git.owner }}
   {% endif %}
-  :
+  /
 {% endif %}
 
 {% if git.repo %}
@@ -16,7 +16,7 @@
   {% else %}
     {{ git.repo }}
   {% endif %}
-  :
+  /
 {% endif %}
 
 {% if git.ref %}
@@ -25,7 +25,7 @@
   {% else %}
     {{ git.ref }}
   {% endif %}
-  :
+  /
 {% endif %}
 
 {% if git.commit %}
@@ -34,13 +34,13 @@
   {% else %}
     {{ git.commit }}
   {% endif %}
-  :
 {% endif %}
+:
 
 {% if notification.code %}
   (<b>{{ notification.code }}</b>)
 {% endif %}
 
 {% if notification.message %}
-  {{ notification.message }}
+  {{ notification.message | truncate(1000) }}
 {% endif %}

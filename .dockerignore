@@ -9,3 +9,6 @@ dev-requirements.txt
 LICENSE
 local-*
 docker-compose.yml
+local-server.py
+local-celery.py
+local-celery-beat.py
