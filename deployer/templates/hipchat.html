@@ -1,6 +1,6 @@
 {%- set git = ctx.deployment['meta-info'].git or {} %}
 {%- set deployment = ctx.deployment.deployment or {} %}
-<b>Deployer ({{ctx.env}}-{{ctx.operation}}) : </b>
+<b>Deployer ({{ctx.cluster}}-{{ctx.operation}}) : </b>
 {% if git.owner %}
   {% if git.type == 'github' %}
     <a href="https://github.com/{{git.owner}}">{{ git.owner }}</a>
