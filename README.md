@@ -105,6 +105,8 @@ sudo docker run -it --rm -h cluster-deployer-${USER} --name cluster-deployer -v 
 | MONGODB_PASSWORD | Mongo db password | | |
 | MONGODB_DB | Mongo db database | totem-{TOTEM_ENV} | totem-{TOTEM_ENV} |
 | LOG_ROOT_LEVEL | Root log level | INFO | INFO |
+| DISCOVER_RABBIMQ | Use static discovery for rabbitmq (true / false) | false | false |
+| DISCOVER_MONGO | Use static discovery for mongo (true / false) | false | false |
 
 ## Coding Standards and Guidelines
 

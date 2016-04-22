@@ -1,10 +1,14 @@
 .idea
 tests
 docs
-.git
+.git*
 *.md
 .travis.yml
 dev-requirements.txt
 *.iml
 LICENSE
 local-*
+docker-compose.yml
+local-server.py
+local-celery.py
+local-celery-beat.py
