@@ -12,6 +12,7 @@ RUN apk add --no-cache --update \
         gettext \
         curl \
         openssl \
+        libffi \
         openssh-client \
 
     # Etcdctl
