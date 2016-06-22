@@ -4,7 +4,8 @@ import pymongo
 import pytz
 from conf.appconfig import MONGODB_URL, MONGODB_DEPLOYMENT_COLLECTION, \
     MONGODB_DB, DEPLOYMENT_EXPIRY_SECONDS, MONGODB_EVENT_COLLECTION, \
-    DEPLOYMENT_STATE_PROMOTED, RUNNING_DEPLOYMENT_STATES, CLUSTER_NAME
+    DEPLOYMENT_STATE_PROMOTED, RUNNING_DEPLOYMENT_STATES, CLUSTER_NAME, \
+    EVENT_EXPIRY_SECONDS
 from deployer.services.storage.base import AbstractStore
 
 __author__ = 'sukrit'
@@ -45,7 +46,6 @@ class MongoStore(AbstractStore):
         :return:
         """
         idxs = self._deployments.index_information()
-        self._deployments.drop_indexes()
         if 'created_idx' not in idxs:
             self._deployments.create_index(
                 [('cluster', pymongo.ASCENDING),
@@ -68,6 +68,12 @@ class MongoStore(AbstractStore):
                 ('deployment.version', pymongo.ASCENDING)
 
             ], name='app_idx')
+
+        event_idxs = self._events.index_information()
+        if 'expiry_idx' not in event_idxs:
+            self._events.create_index(
+                [('_expiry', pymongo.DESCENDING)], name='expiry_idx',
+                background=True, expireAfterSeconds=EVENT_EXPIRY_SECONDS)
 
     @property
     def _db(self):

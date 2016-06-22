@@ -120,11 +120,14 @@ class TestMongoStore():
         # When I get the index informatiom
         # Note: Setup was already called
         indexes = self.store._deployments.index_information()
+        event_indexes = self.store._events.index_information()
 
         # Indexes are created as expected
         for idx in ('created_idx', 'identity_idx', 'app_idx',
                     'expiry_idx'):
             ok_(idx in indexes, '{} was not created'.format(idx))
+
+        ok_('expiry_idx' in event_indexes, 'Event expiry_idx was not created')
 
     def test_get_deployment(self):
 
