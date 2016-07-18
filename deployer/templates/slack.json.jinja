@@ -1,0 +1,28 @@
+{%- set git = ctx.deployment['meta-info'].git or {} %}
+{
+  "username": "Deployer ({{ctx.cluster}}-{{ctx.operation}})",
+  "channel": "{{ notification.channel or '#totem' }}",
+  "text":
+  {% if git.type == 'github' %}
+    "<https://github.com/{{git.owner}}|{{git.owner or 'NA'}}> / <https://github.com/{{git.owner}}/{{git.repo}}|{{git.repo or 'NA'}}> / <https://github.com/{{git.owner}}/{{git.repo}}/{{git.ref}}|{{git.ref or 'NA'}}> / <https://github.com/{{ctx.owner}}/{{ctx.repo}}/commits/{{ctx.commit or ctx.ref}}|{{ctx.commit or ctx.ref or 'NA'}}>"
+  {% else %}
+    "{{git.owner or 'NA'}} / {{git.repo or 'NA'}} / {{git.ref or 'NA'}} / {{git.commit or 'NA'}}"
+  {% endif %},
+
+  "attachments": [
+      {
+          "text": "{{ notification.code}}: {{ notification.message | truncate(1000) }}",
+          "color":
+          {% if level == 1 %}
+            "danger"
+          {% elif level == 2 %}
+            "warning"
+          {% elif level == 3 %}
+            "good"
+          {% else %}
+            "#439FE0"
+          {% endif %}
+      }
+  ]
+
+}

@@ -63,6 +63,23 @@ def notify_hipchat(obj, ctx, level, config, security_profile):
 
 
 @app.task
+def notify_slack(obj, ctx, level, config, security_profile):
+    config = decrypt_config(config, profile=security_profile)
+    url = config.get('url')
+    notification = util.as_dict(obj)
+    notification['channel'] = config.get('channel')
+    msg = templatefactory.render_template(
+        'slack.json.jinja', notification=notification, ctx=ctx,
+        level=level)
+    headers = {
+        'content-type': 'application/json',
+    }
+    if url:
+        requests.post(url, data=msg, headers=headers) \
+            .raise_for_status()
+
+
+@app.task
 def notify_github(obj, ctx, level, config, security_profile):
     config = decrypt_config(config, profile=security_profile)
     api_url = config.get('url') or 'https://api.github.com'
