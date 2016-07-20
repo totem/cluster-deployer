@@ -6,7 +6,7 @@
 
   "attachments": [
       {
-          "text": "{% if notification.code %}{{ notification.code}}: {% endif %}{{ notification.message | truncate(1000) }}",
+          "text": "{{ notification.code}}: {{ notification.message | truncate(1000) }}",
           "color":
               {% if level == 1 %}
                 "danger"
