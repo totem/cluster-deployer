@@ -19,9 +19,9 @@
               {% endif %},
           "footer":
               {% if git.type == 'github' %}
-                "<https://github.com/{{git.owner}}|{{git.owner or 'NA'}}> / <https://github.com/{{git.owner}}/{{git.repo}}|{{git.repo or 'NA'}}> / <https://github.com/{{git.owner}}/{{git.repo}}/tree/{{git.ref}}|{{git.ref or 'NA'}}> / <https://github.com/{{git.owner}}/{{git.repo}}/commit/{{git.commit or git.ref}}|{{(git.commit or git.ref or 'NA')[0:7]}}>\n"
+                "<https://github.com/{{git.owner}}|{{git.owner or 'NA'}}> / <https://github.com/{{git.owner}}/{{git.repo}}|{{git.repo or 'NA'}}> / <https://github.com/{{git.owner}}/{{git.repo}}/tree/{{git.ref}}|{{(git.ref or 'NA') | truncate(30)}}> / <https://github.com/{{git.owner}}/{{git.repo}}/commit/{{(git.commit or git.ref or 'NA')[0:7]}}|{{(git.commit or git.ref or 'NA')[0:7]}}>\n"
               {% else %}
-                "{{git.owner or 'NA'}}/{{git.repo or 'NA'}}/{{git.ref or 'NA'}}/{{(git.commit or 'NA')[0:7]}}"
+                "{{git.owner or 'NA'}}/{{git.repo or 'NA'}}/{{(git.ref or 'NA') | truncate(30)}}/{{(git.commit or 'NA')[0:7]}}"
               {% endif %},
           "ts": "{{ notification.date }}"
       }
