@@ -6,7 +6,7 @@
 
   "attachments": [
       {
-          "text": "{{ notification.code}}: {{ notification.message | truncate(1000) }}",
+          "text": "{% if notification.code %}{{ notification.code}}: {% endif %}{{ notification.message | truncate(1000) }}",
           "color":
               {% if level == 1 %}
                 "danger"
@@ -18,7 +18,7 @@
                 "#439FE0"
               {% endif %},
           "footer":
-              {% if ctx.github %}
+              {% if git.type == 'github' %}
                 "<https://github.com/{{git.owner}}|{{git.owner or 'NA'}}> / <https://github.com/{{git.owner}}/{{git.repo}}|{{git.repo or 'NA'}}> / <https://github.com/{{git.owner}}/{{git.repo}}/tree/{{git.ref}}|{{git.ref or 'NA'}}> / <https://github.com/{{git.owner}}/{{git.repo}}/commits/{{git.commit or git.ref}}|{{(git.commit or git.ref or 'NA')[0:7]}}>\n"
               {% else %}
                 "{{git.owner or 'NA'}}/{{git.repo or 'NA'}}/{{git.ref or 'NA'}}/{{(git.commit or 'NA')[0:7]}}"
