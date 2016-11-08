@@ -1,0 +1,30 @@
+{%- set git = ctx.deployment['meta-info'].git or {} %}
+{
+  "username": "Deployer ({{ctx.cluster}}-{{ctx.operation}})",
+  "channel": "{{ notification.channel or '#totem' }}",
+  "text": " ",
+
+  "attachments": [
+      {
+          "text": "{% if notification.code %}{{ notification.code}}: {% endif %}{{ notification.message | truncate(1000) }}",
+          "color":
+              {% if level == 1 %}
+                "danger"
+              {% elif level == 2 %}
+                "warning"
+              {% elif level == 3 %}
+                "good"
+              {% else %}
+                "#439FE0"
+              {% endif %},
+          "footer":
+              {% if git.type == 'github' %}
+                "<https://github.com/{{git.owner}}|{{git.owner or 'NA'}}> / <https://github.com/{{git.owner}}/{{git.repo}}|{{git.repo or 'NA'}}> / <https://github.com/{{git.owner}}/{{git.repo}}/tree/{{git.ref}}|{{git.ref | truncate(30, True) or 'NA'}}> / <https://github.com/{{git.owner}}/{{git.repo}}/commit/{{(git.commit or git.ref or 'NA')[0:7]}}|{{(git.commit or git.ref or 'NA')[0:7]}}>\n"
+              {% else %}
+                "{{git.owner or 'NA'}}/{{git.repo or 'NA'}}/{{git.ref | truncate(30, True) or 'NA' }}/{{(git.commit or 'NA')[0:7]}}"
+              {% endif %},
+          "ts": "{{ notification.date }}"
+      }
+  ]
+
+}
